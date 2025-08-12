@@ -21,6 +21,22 @@ const baseSchema = z.object({
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
 });
 
+const subjects = [
+    'Physics', 
+    'Chemistry', 
+    'Mathematics', 
+    'Biology',
+    'Computer Science',
+    'Python',
+    'Spanish',
+    'French',
+    'History',
+    'Literature',
+    'Art',
+    'Design',
+] as const;
+
+
 // Schema for the student
 const studentSchema = baseSchema.extend({
   accountType: z.literal('student'),
@@ -34,7 +50,7 @@ const tutorSchema = baseSchema.extend({
   college: z.string().optional(),
   location: z.string().optional(),
   experience: z.enum(['fresher', '1-2', '3-4', '5+'], { required_error: 'Experience is required.' }),
-  expertise: z.string().min(10, { message: 'Expertise must be at least 10 characters.' }),
+  expertise: z.enum(subjects, { required_error: 'Please select your primary subject.' }),
 });
 
 const formSchema = z.discriminatedUnion('accountType', [
@@ -61,7 +77,7 @@ export default function SignUpForm() {
         qualification: '',
         phoneNumber: '',
         experience: undefined,
-        expertise: '',
+        expertise: undefined,
         college: '',
         location: '',
       })
@@ -78,7 +94,7 @@ export default function SignUpForm() {
         qualification: '',
         phoneNumber: '',
         experience: undefined,
-        expertise: '',
+        expertise: undefined,
         college: '',
         location: '',
       })
@@ -123,7 +139,7 @@ export default function SignUpForm() {
                 id: `app-${Date.now()}`,
                 name: values.name,
                 email: values.email,
-                subject: values.expertise.split(',')[0].trim() || 'General', // Use first expertise as subject
+                subject: values.expertise,
                 status: 'Pending',
                 // Store all tutor data for later
                 ...values
@@ -181,7 +197,7 @@ export default function SignUpForm() {
                       qualification: '',
                       phoneNumber: '',
                       experience: undefined,
-                      expertise: '',
+                      expertise: undefined,
                       college: '',
                       location: '',
                     });
@@ -325,14 +341,20 @@ export default function SignUpForm() {
               name="expertise"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Expertise in Subjects</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="e.g., I specialize in advanced calculus and quantum mechanics for JEE preparation."
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
+                    <FormLabel>Primary Subject</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select your main subject of expertise" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                           {subjects.map(subject => (
+                             <SelectItem key={subject} value={subject}>{subject}</SelectItem>
+                           ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
                 </FormItem>
               )}
             />
