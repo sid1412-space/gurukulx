@@ -29,12 +29,12 @@ export default function Hero() {
           </div>
           <div className="relative animate-fade-in duration-700">
              <Image
-              src="https://placehold.co/600x400.png"
+              src="https://i.ibb.co/d2x1Q1j/pexels-julia-m-cameron-4144923.jpg"
               alt="Online tutoring session"
               width={600}
               height={400}
               className="rounded-xl shadow-2xl transform hover:scale-105 transition-transform duration-500"
-              data-ai-hint="online learning education"
+              data-ai-hint="online learning"
               priority
             />
           </div>
