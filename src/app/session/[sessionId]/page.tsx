@@ -128,8 +128,8 @@ export default function SessionPage() {
     }
     jitsiApi?.executeCommand('hangup');
     
-    // Redirect based on role
-    const destination = userRole === 'tutor' ? '/tutor/dashboard' : '/dashboard';
+    // Redirect based on role to the session history page
+    const destination = userRole === 'tutor' ? '/tutor/sessions' : '/dashboard/sessions';
     router.push(destination);
   };
 
