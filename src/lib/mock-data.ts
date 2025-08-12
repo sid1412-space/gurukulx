@@ -72,3 +72,46 @@ export const tutors = [
     price: 85,
   },
 ];
+
+export const sessionHistory = [
+  {
+    id: 'ses-001',
+    tutorName: 'Dr. Evelyn Reed',
+    tutorAvatar: 'https://placehold.co/100x100.png',
+    subject: 'Physics',
+    date: '2024-07-20T16:00:00Z',
+    duration: 60, // in minutes
+    status: 'Completed',
+    cost: 75,
+  },
+  {
+    id: 'ses-002',
+    tutorName: 'Samuel Chen',
+    tutorAvatar: 'https://placehold.co/100x100.png',
+    subject: 'Python',
+    date: '2024-07-18T10:00:00Z',
+    duration: 90, // in minutes
+    status: 'Completed',
+    cost: 90,
+  },
+  {
+    id: 'ses-003',
+    tutorName: 'Maria Garcia',
+    tutorAvatar: 'https://placehold.co/100x100.png',
+    subject: 'Spanish',
+    date: '2024-07-15T14:30:00Z',
+    duration: 45, // in minutes
+    status: 'Completed',
+    cost: 33.75,
+  },
+    {
+    id: 'ses-004',
+    tutorName: 'Aisha Khan',
+    tutorAvatar: 'https://placehold.co/100x100.png',
+    subject: 'Biology',
+    date: '2024-07-12T11:00:00Z',
+    duration: 60, // in minutes
+    status: 'Completed',
+    cost: 55,
+  },
+];
