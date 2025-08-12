@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Star, BookOpen, Clock, Briefcase, GraduationCap, Loader2 } from 'lucide-react';
+import { Star, BookOpen, Clock, Briefcase, GraduationCap, Loader2, Wallet } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import {
   AlertDialog,
@@ -39,6 +39,12 @@ export default function TutorProfilePage() {
   const [isWaiting, setIsWaiting] = useState(false);
   const [sessionRequestId, setSessionRequestId] = useState<string | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [walletBalance, setWalletBalance] = useState(0);
+
+  // In a real app, get current user from session/context.
+  const studentEmail = 'student@example.com';
+  const studentWalletKey = `student-wallet-${studentEmail}`;
+
 
   useEffect(() => {
      if (isClient && tutorId) {
@@ -55,7 +61,7 @@ export default function TutorProfilePage() {
                      setTutor({
                          ...currentTutor,
                          id: currentTutor.email,
-                         name: applicantData.name || currentTutor.name,
+                         name: applicantData.name,
                          avatar: 'https://placehold.co/128x128.png',
                          bio: applicantData.qualification || 'A passionate and experienced tutor.',
                          rating: 4.8 + Math.random() * 0.2, // Randomize rating slightly
@@ -64,8 +70,11 @@ export default function TutorProfilePage() {
                      });
                 }
             }
+
+            const storedBalance = localStorage.getItem(studentWalletKey) || '0';
+            setWalletBalance(parseFloat(storedBalance));
         }
-  }, [isClient, tutorId])
+  }, [isClient, tutorId, studentWalletKey])
 
   useEffect(() => {
     if (isClient && tutorId) {
@@ -175,6 +184,7 @@ export default function TutorProfilePage() {
 
   const statusText = isBusy ? 'In Session' : (isOnline ? 'Online' : 'Offline');
   const statusColor = isBusy ? 'bg-yellow-500' : (isOnline ? 'bg-green-500' : 'bg-gray-400');
+  const hasFunds = walletBalance > 0;
 
   return (
     <div className="bg-secondary/30">
@@ -248,8 +258,8 @@ export default function TutorProfilePage() {
                         <CardContent className="p-2">
                              <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                     <Button size="lg" className="w-full" disabled={!isOnline || isBusy}>
-                                        {isBusy ? 'In Session' : (isOnline ? 'Request Session' : 'Currently Offline')}
+                                     <Button size="lg" className="w-full" disabled={!isOnline || isBusy || !hasFunds}>
+                                        {isBusy ? 'In Session' : (isOnline ? (hasFunds ? 'Request Session' : 'Insufficient Funds') : 'Currently Offline')}
                                     </Button>
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
@@ -267,6 +277,11 @@ export default function TutorProfilePage() {
                                     </AlertDialogFooter>
                                 </AlertDialogContent>
                             </AlertDialog>
+                            {!hasFunds && (
+                                <p className="text-center text-sm text-destructive mt-2">
+                                    Please <Link href="/dashboard/recharge" className="underline font-semibold">recharge</Link> your wallet to continue.
+                                </p>
+                            )}
                             <Button variant="outline" className="w-full mt-2">Message Tutor</Button>
                         </CardContent>
                     </Card>

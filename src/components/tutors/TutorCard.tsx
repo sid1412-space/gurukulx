@@ -47,26 +47,36 @@ export default function TutorCard({ tutor }: TutorCardProps) {
   const [isWaiting, setIsWaiting] = useState(false);
   const [sessionRequestId, setSessionRequestId] = useState<string | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [walletBalance, setWalletBalance] = useState(0);
+
+  // In a real app, get current user from session/context.
+  const studentEmail = 'student@example.com';
+  const studentWalletKey = `student-wallet-${studentEmail}`;
 
 
   useEffect(() => {
     if (isClient) {
-      const checkStatus = () => {
+      const checkStatusAndBalance = () => {
+        // Check Tutor Status
         const onlineStatus = localStorage.getItem(`tutor-status-${tutor.id}`) !== 'offline';
         const busyStatus = localStorage.getItem(`tutor-busy-${tutor.id}`) === 'true';
         setIsOnline(onlineStatus);
         setIsBusy(busyStatus);
+        
+        // Check Student Balance
+        const storedBalance = localStorage.getItem(studentWalletKey) || '0';
+        setWalletBalance(parseFloat(storedBalance));
       };
 
-      checkStatus();
+      checkStatusAndBalance();
       
-      // Listen for storage events to update status from other tabs
-      window.addEventListener('storage', checkStatus);
+      // Listen for storage events to update status and balance from other tabs
+      window.addEventListener('storage', checkStatusAndBalance);
       return () => {
-        window.removeEventListener('storage', checkStatus);
+        window.removeEventListener('storage', checkStatusAndBalance);
       };
     }
-  }, [isClient, tutor.id]);
+  }, [isClient, tutor.id, studentWalletKey]);
 
   useEffect(() => {
     if (!isWaiting || !sessionRequestId) {
@@ -149,6 +159,7 @@ export default function TutorCard({ tutor }: TutorCardProps) {
 
   const statusText = isBusy ? 'In Session' : (isOnline ? 'Online' : 'Offline');
   const statusColor = isBusy ? 'bg-yellow-500' : (isOnline ? 'bg-green-500' : 'bg-gray-400');
+  const hasFunds = walletBalance > 0;
 
   return (
     <Card className="h-full flex flex-col hover:shadow-lg transition-shadow duration-300">
@@ -189,8 +200,8 @@ export default function TutorCard({ tutor }: TutorCardProps) {
         <p className="text-xl font-bold text-primary">₹{tutor.price}<span className="text-sm font-normal text-muted-foreground">/min</span></p>
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button disabled={!isOnline || isBusy}>
-                {isBusy ? 'In Session' : (isOnline ? 'Request Session' : 'Offline')}
+            <Button disabled={!isOnline || isBusy || !hasFunds}>
+                {isBusy ? 'In Session' : (isOnline ? (hasFunds ? 'Request Session' : 'No Funds') : 'Offline')}
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
