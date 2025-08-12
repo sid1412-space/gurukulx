@@ -1,15 +1,29 @@
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Activity, Calendar, MessageSquare, PlusCircle } from 'lucide-react';
+import { Activity, Calendar, MessageSquare, PlusCircle, Wallet } from 'lucide-react';
 import Link from 'next/link';
 
 export default function DashboardPage() {
   return (
     <div className="space-y-8 animate-fade-in">
-      <header>
-        <h1 className="text-3xl font-bold tracking-tight font-headline">Welcome back, User!</h1>
-        <p className="text-muted-foreground">Here's a quick overview of your account.</p>
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 className="text-3xl font-bold tracking-tight font-headline">Welcome back, User!</h1>
+            <p className="text-muted-foreground">Here's a quick overview of your account.</p>
+        </div>
+         <div className="flex items-center gap-4">
+            <div className="text-right">
+                <p className="text-sm text-muted-foreground">Wallet Balance</p>
+                <p className="text-2xl font-bold">$125.50</p>
+            </div>
+            <Link href="/dashboard/recharge">
+                 <Button size="lg" className="flex items-center gap-2">
+                    <Wallet className="h-5 w-5" />
+                    Recharge
+                </Button>
+            </Link>
+        </div>
       </header>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

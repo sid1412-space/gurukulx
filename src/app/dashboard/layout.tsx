@@ -12,7 +12,7 @@ import {
   SidebarInset,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
-import { User, LayoutDashboard, Settings, BookOpen, ClipboardPen } from 'lucide-react';
+import { User, LayoutDashboard, Settings, BookOpen, ClipboardPen, Wallet } from 'lucide-react';
 import Logo from '@/components/Logo';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -23,9 +23,10 @@ import { useIsClient } from '@/hooks/use-is-client';
 
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/dashboard/profile', label: 'Profile', icon: User },
+  { href: '/dashboard/recharge', label: 'Recharge Wallet', icon: Wallet },
   { href: '/dashboard/sessions', label: 'My Sessions', icon: BookOpen },
   { href: '/dashboard/practice', label: 'Practice', icon: ClipboardPen },
+  { href: '/dashboard/profile', label: 'Profile', icon: User },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ];
 

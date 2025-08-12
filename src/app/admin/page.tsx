@@ -1,6 +1,8 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, DollarSign, BookOpen, UserPlus } from 'lucide-react';
+import { Users, DollarSign, BookOpen, UserPlus, Hourglass } from 'lucide-react';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 export default function AdminOverviewPage() {
   const stats = [
@@ -8,16 +10,20 @@ export default function AdminOverviewPage() {
     { title: 'Active Students', value: '15,830', icon: Users },
     { title: 'Sessions This Month', value: '5,120', icon: BookOpen },
     { title: 'Monthly Revenue', value: '$85,450', icon: DollarSign },
-    { title: 'New Tutor Applicants', value: '42', icon: UserPlus },
+  ];
+
+  const actionItems = [
+    { title: 'New Tutor Applicants', value: '42', icon: UserPlus, href: '/admin/tutors' },
+    { title: 'Pending Recharges', value: '8', icon: Hourglass, href: '#' }, // Add href later if a dedicated page is made
   ];
 
   return (
     <div className="space-y-8 animate-fade-in">
       <header>
         <h1 className="text-3xl font-bold tracking-tight font-headline">Admin Overview</h1>
-        <p className="text-muted-foreground">Key metrics for the TutorConnect platform.</p>
+        <p className="text-muted-foreground">Key metrics and action items for the TutorConnect platform.</p>
       </header>
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, index) => (
           <Card key={index} className="hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -30,7 +36,26 @@ export default function AdminOverviewPage() {
           </Card>
         ))}
       </div>
-      {/* Additional sections for charts and recent activities can be added here */}
+      
+       <div className="grid gap-6 md:grid-cols-2">
+         {actionItems.map((item, index) => (
+            <Card key={index} className="hover:shadow-md transition-shadow flex flex-row items-center">
+                <CardHeader className="flex-shrink-0">
+                    <item.icon className="h-8 w-8 text-primary" />
+                </CardHeader>
+                <CardContent className="py-4 flex-grow">
+                     <p className="text-sm text-muted-foreground">{item.title}</p>
+                    <p className="text-3xl font-bold">{item.value}</p>
+                </CardContent>
+                <div className="pr-6">
+                    <Link href={item.href}>
+                        <Button variant="outline">View</Button>
+                    </Link>
+                </div>
+            </Card>
+         ))}
+      </div>
+
     </div>
   );
 }
