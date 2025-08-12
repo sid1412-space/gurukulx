@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -17,17 +17,36 @@ const formSchema = z.object({
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
 });
 
-// Mock user database
-const users = [
+// Pre-defined users for initial setup
+const predefinedUsers = [
     { email: 'quotesparkconnect@yahoo.com', role: 'admin' },
     { email: 'tutor@example.com', role: 'tutor' },
     { email: 'student@example.com', role: 'student' }
-]
+];
 
 export default function LoginForm() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+
+  // On component mount, ensure the userDatabase exists in localStorage
+  useEffect(() => {
+    try {
+        const usersJSON = localStorage.getItem('userDatabase');
+        let users = usersJSON ? JSON.parse(usersJSON) : [];
+        
+        // Add predefined users if they don't already exist
+        predefinedUsers.forEach(predefinedUser => {
+            if (!users.some((u: any) => u.email === predefinedUser.email)) {
+                users.push(predefinedUser);
+            }
+        });
+
+        localStorage.setItem('userDatabase', JSON.stringify(users));
+    } catch (error) {
+        console.error("Could not initialize user database:", error);
+    }
+  }, []);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -42,39 +61,71 @@ export default function LoginForm() {
     
     // Mock API call
     setTimeout(() => {
-      // Check for pre-defined users first
-      let user = users.find(u => u.email.toLowerCase() === values.email.toLowerCase());
+      let userRole = 'student'; // Default role
+      let foundUser = false;
       
-      // If not a pre-defined user, check for a role from signup, otherwise default to student
-      const signupRole = localStorage.getItem('signupRole');
-      const role = user ? user.role : signupRole || 'student';
+      try {
+        const usersJSON = localStorage.getItem('userDatabase');
+        const users = usersJSON ? JSON.parse(usersJSON) : [];
+        const user = users.find((u: any) => u.email.toLowerCase() === values.email.toLowerCase());
 
-      localStorage.setItem('isLoggedIn', 'true');
-      localStorage.removeItem('isAdmin');
-      localStorage.removeItem('isTutor');
-      localStorage.removeItem('signupRole'); // Clean up temporary role
+        if (user) {
+            userRole = user.role;
+            foundUser = true;
+        } else {
+             // In a real app, you would reject the login.
+            // Here, we allow it but default to 'student' role.
+            foundUser = true; 
+        }
 
-      let destination = '/dashboard';
-      let userRole = 'dashboard';
-
-      if (role === 'admin') {
-          localStorage.setItem('isAdmin', 'true');
-          destination = '/admin';
-          userRole = 'admin panel';
-      } else if (role === 'tutor') {
-          localStorage.setItem('isTutor', 'true');
-          destination = '/tutor/dashboard';
-          userRole = 'tutor dashboard';
+      } catch (error) {
+          console.error("Error reading from user database:", error);
+          toast({
+              variant: 'destructive',
+              title: 'Login Error',
+              description: 'Could not verify credentials. Please try again.',
+          });
+          setIsLoading(false);
+          return;
       }
       
-      window.dispatchEvent(new Event("storage"));
+      // If user is valid (in a real app, password would be checked here)
+      if (foundUser) {
+        localStorage.setItem('isLoggedIn', 'true');
+        // Clear previous roles
+        localStorage.removeItem('isAdmin');
+        localStorage.removeItem('isTutor');
 
-      toast({
-        title: 'Logged In!',
-        description: `Redirecting to your ${userRole}...`,
-      });
-      
-      router.push(destination);
+        let destination = '/dashboard';
+        let roleName = 'dashboard';
+
+        if (userRole === 'admin') {
+            localStorage.setItem('isAdmin', 'true');
+            destination = '/admin';
+            roleName = 'admin panel';
+        } else if (userRole === 'tutor') {
+            localStorage.setItem('isTutor', 'true');
+            destination = '/tutor/dashboard';
+            roleName = 'tutor dashboard';
+        }
+        
+        // Notify other tabs about the login
+        window.dispatchEvent(new Event("storage"));
+
+        toast({
+          title: 'Logged In!',
+          description: `Redirecting to your ${roleName}...`,
+        });
+        
+        router.push(destination);
+      } else {
+         toast({
+            variant: 'destructive',
+            title: 'Login Failed',
+            description: 'Invalid email or password.',
+        });
+        setIsLoading(false);
+      }
 
     }, 1000);
   }

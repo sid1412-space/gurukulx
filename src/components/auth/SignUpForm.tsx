@@ -94,19 +94,43 @@ export default function SignUpForm() {
     setIsLoading(true);
     console.log(values);
     
-    // Store the selected role so the login form can use it.
-    // In a real app, this would be handled by your backend.
-    localStorage.setItem('signupRole', values.accountType);
+    // In a real app, you'd send this to your backend.
+    // Here, we simulate a user database in localStorage.
+    try {
+        const usersJSON = localStorage.getItem('userDatabase');
+        const users = usersJSON ? JSON.parse(usersJSON) : [];
 
-    // Mock API call
-    setTimeout(() => {
-      toast({
-        title: 'Account Created!',
-        description: 'Welcome to TutorConnect. Please log in.',
-      });
-      setIsLoading(false);
-      router.push('/login');
-    }, 1500);
+        if (users.find((u: any) => u.email === values.email)) {
+            toast({
+                variant: 'destructive',
+                title: 'Sign Up Failed',
+                description: 'An account with this email already exists.',
+            });
+            setIsLoading(false);
+            return;
+        }
+
+        users.push({ email: values.email, role: values.accountType });
+        localStorage.setItem('userDatabase', JSON.stringify(users));
+
+        // Mock API call
+        setTimeout(() => {
+          toast({
+            title: 'Account Created!',
+            description: 'Welcome to TutorConnect. Please log in.',
+          });
+          setIsLoading(false);
+          router.push('/login');
+        }, 1500);
+
+    } catch (error) {
+         toast({
+            variant: 'destructive',
+            title: 'Sign Up Error',
+            description: 'Could not save user data. Please try again.',
+        });
+        setIsLoading(false);
+    }
   }
 
   return (
