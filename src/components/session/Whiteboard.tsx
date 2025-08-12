@@ -4,7 +4,6 @@
 import { Tldraw, useEditor } from '@tldraw/tldraw'
 import '@tldraw/tldraw/tldraw.css'
 import { useEffect, useRef } from 'react'
-import JitsiMeetComponent from './JitsiMeetComponent'
 
 const EditorEvents = () => {
 	const editor = useEditor();
@@ -60,11 +59,10 @@ Use the image tool in the toolbar (7th icon from the top).
 	return null;
 }
 
-export default function Whiteboard({ children }: { children?: React.ReactNode }) {
+export default function Whiteboard() {
 	return (
 		<div style={{ position: 'fixed', inset: 0 }}>
 			<Tldraw persistenceKey="gurukulx-whiteboard-stable">
-                {children}
                 <EditorEvents />
 			</Tldraw>
 		</div>
