@@ -17,6 +17,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from '@/components/ui/input';
 import { getExerciseSuggestions } from '@/lib/actions';
 import { Separator } from '@/components/ui/separator';
+import Lobby from '@/components/session/Lobby';
 
 const Whiteboard = dynamic(() => import('@/components/session/Whiteboard'), { ssr: false });
 const JitsiMeetComponent = dynamic(() => import('@/components/session/JitsiMeetComponent'), { ssr: false });
@@ -35,6 +36,7 @@ export default function SessionPage() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [jitsiLoadFailed, setJitsiLoadFailed] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [hasAgreedToTerms, setHasAgreedToTerms] = useState(false);
   const practiceTopicRef = useRef<HTMLInputElement>(null);
 
   // Session timer and wallet states
@@ -47,31 +49,33 @@ export default function SessionPage() {
 
    // Set tutor as busy when session starts
   useEffect(() => {
-    if (tutorId) {
+    if (hasAgreedToTerms && tutorId) {
       localStorage.setItem(`tutor-busy-${tutorId}`, 'true');
       // Notify other tabs that tutor status has changed
       window.dispatchEvent(new Event('storage'));
     }
-  }, [tutorId]);
+  }, [hasAgreedToTerms, tutorId]);
 
   // Timer and wallet deduction logic
   useEffect(() => {
+    if (!hasAgreedToTerms) return;
+
     const timerInterval = setInterval(() => {
       setSessionDuration(prev => prev + 1);
     }, 1000);
 
     return () => clearInterval(timerInterval);
-  }, []);
+  }, [hasAgreedToTerms]);
 
   useEffect(() => {
-    if (!tutor || userRole !== 'student') return;
+    if (!hasAgreedToTerms || !tutor || userRole !== 'student') return;
 
     // Deduct funds every 60 seconds (1 minute)
     if (sessionDuration > 0 && sessionDuration % 60 === 0) {
         setWalletBalance(currentBalance => {
             const newBalance = currentBalance - pricePerMinute;
             
-             if (newBalance < 0) {
+             if (newBalance <= 0) {
                 toast({
                   variant: 'destructive',
                   title: 'Insufficient Funds',
@@ -89,7 +93,7 @@ export default function SessionPage() {
         });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionDuration]);
+  }, [sessionDuration, hasAgreedToTerms]);
 
 
   useEffect(() => {
@@ -177,6 +181,14 @@ export default function SessionPage() {
     setIsGenerating(false);
   };
 
+  if (!isClient) {
+    return null; // Or a loading spinner
+  }
+
+  if (!hasAgreedToTerms) {
+    return <Lobby onAgree={() => setHasAgreedToTerms(true)} />;
+  }
+
   return (
     <div className="h-screen w-screen bg-background flex flex-col">
        <header className="p-2 border-b bg-background z-20">
@@ -262,7 +274,7 @@ export default function SessionPage() {
                         <AlertTitle>Audio Connection Error</AlertTitle>
                         <AlertDescription>
                             The audio service failed to load. Please check your network and try again.
-                        </AlertDescription>
+                        </Description>
                     </Alert>
                 </div>
             )}
