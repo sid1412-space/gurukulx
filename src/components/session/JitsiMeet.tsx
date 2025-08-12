@@ -41,7 +41,7 @@ export default function JitsiMeet({ roomName }: JitsiMeetProps) {
         SHOW_BRAND_WATERMARK: false,
         BRAND_WATERMARK_LINK: '',
         TOOLBAR_BUTTONS: [
-            'microphone', 'camera', 'desktop', 'hangup', 'tileview'
+            'microphone', 'camera', 'desktop', 'hangup', 'tileview', 'chat'
         ],
         SETTINGS_SECTIONS: [
             'devices', 'moderator'
