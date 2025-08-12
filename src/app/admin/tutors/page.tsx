@@ -87,29 +87,25 @@ export default function TutorManagementPage() {
       return;
     }
 
-    // Update the status in the applicants list
     const updatedApplicants = applicants.map(applicant =>
       applicant.id === approvingApplicant.id ? { ...applicant, status: 'Approved' } : applicant
     );
     setApplicants(updatedApplicants);
     updateLocalStorage(updatedApplicants);
 
-    // Add them to the main user database as a tutor with the specified rate
     try {
       const usersJSON = localStorage.getItem('userDatabase') || '[]';
       const users = JSON.parse(usersJSON);
 
-      // Prevent duplicate entries
       if (!users.some((u: any) => u.email === approvingApplicant.email)) {
         users.push({
           email: approvingApplicant.email,
           role: 'tutor',
           name: approvingApplicant.name,
-          price: +tutorRate // Save the per-minute rate
+          price: +tutorRate
         });
         localStorage.setItem('userDatabase', JSON.stringify(users));
       } else {
-        // If user exists, update their role and price
         const updatedUsers = users.map((u:any) => u.email === approvingApplicant.email ? {...u, role: 'tutor', price: +tutorRate} : u);
         localStorage.setItem('userDatabase', JSON.stringify(updatedUsers));
       }
@@ -127,44 +123,42 @@ export default function TutorManagementPage() {
       title: `Applicant Approved`,
       description: `${approvingApplicant.name} has been approved with a rate of ₹${tutorRate}/minute.`,
     });
-    
-    // Reset states
+
     setApprovingApplicant(null);
     setTutorRate('');
   };
-  
+
   const handleReject = (id: string) => {
     const applicantToUpdate = applicants.find(applicant => applicant.id === id);
     if (!applicantToUpdate) return;
-    
-    const updatedApplicants = applicants.map(applicant => 
+
+    const updatedApplicants = applicants.map(applicant =>
       applicant.id === id ? { ...applicant, status: 'Rejected' } : applicant
     );
     setApplicants(updatedApplicants);
     updateLocalStorage(updatedApplicants);
-    
+
      toast({
       title: `Applicant Rejected`,
       description: `${applicantToUpdate.name} has been rejected.`,
     });
-  }
+  };
 
   const handleReconsider = (id: string) => {
     const applicantToUpdate = applicants.find(applicant => applicant.id === id);
     if (!applicantToUpdate) return;
-    
-    const updatedApplicants = applicants.map(applicant => 
+
+    const updatedApplicants = applicants.map(applicant =>
       applicant.id === id ? { ...applicant, status: 'Pending' } : applicant
     );
     setApplicants(updatedApplicants);
     updateLocalStorage(updatedApplicants);
-    
+
      toast({
       title: `Applicant Status Reset`,
       description: `${applicantToUpdate.name}'s application is now pending.`,
     });
   };
-
 
   const handleViewApplication = (applicantName: string) => {
     toast({
@@ -220,7 +214,7 @@ export default function TutorManagementPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                     {applicant.status === 'Approved' ? (
+                    {applicant.status === 'Approved' ? (
                        <span className="text-xs text-muted-foreground">Processed</span>
                     ) : (
                       <DropdownMenu>
@@ -233,21 +227,22 @@ export default function TutorManagementPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuItem onClick={() => handleViewApplication(applicant.name)}>View Application</DropdownMenuItem>
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             className="text-green-600 focus:text-green-600"
                             onClick={() => setApprovingApplicant(applicant)}
                           >
                             Approve
                           </DropdownMenuItem>
-                          {applicant.status === 'Pending' ? (
-                             <DropdownMenuItem 
+                          {applicant.status === 'Pending' && (
+                             <DropdownMenuItem
                                 className="text-red-600 focus:text-red-600"
                                 onClick={() => handleReject(applicant.id)}
                               >
                                 Reject
                               </DropdownMenuItem>
-                          ) : (
-                             <DropdownMenuItem 
+                          )}
+                          {applicant.status === 'Rejected' && (
+                             <DropdownMenuItem
                                 onClick={() => handleReconsider(applicant.id)}
                               >
                                 Reconsider
@@ -268,7 +263,7 @@ export default function TutorManagementPage() {
            )}
         </CardContent>
       </Card>
-      
+
       {approvingApplicant && (
         <AlertDialog open={!!approvingApplicant} onOpenChange={() => setApprovingApplicant(null)}>
             <AlertDialogContent>
@@ -280,9 +275,9 @@ export default function TutorManagementPage() {
                 </Header>
                 <div className="grid gap-2">
                     <Label htmlFor="tutor-rate">Rate per minute (₹)</Label>
-                    <Input 
-                        id="tutor-rate" 
-                        type="number" 
+                    <Input
+                        id="tutor-rate"
+                        type="number"
                         placeholder="e.g., 80"
                         value={tutorRate}
                         onChange={(e) => setTutorRate(e.target.value)}
@@ -296,7 +291,6 @@ export default function TutorManagementPage() {
         </AlertDialog>
       )}
 
-       {/* A similar card can be created here for managing existing tutors */}
     </div>
   );
 }
