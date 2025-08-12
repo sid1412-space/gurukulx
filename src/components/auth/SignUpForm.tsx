@@ -203,13 +203,12 @@ export default function SignUpForm() {
   }
   
   const setupRecaptcha = () => {
-    if (window.recaptchaVerifier) {
-      window.recaptchaVerifier.clear();
+    if (!window.recaptchaVerifier) {
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container-signup', {
+        'size': 'invisible',
+        'callback': (response: any) => {},
+      });
     }
-    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container-signup', {
-      'size': 'invisible',
-      'callback': (response: any) => {},
-    });
   }
 
   const onPhoneSignUp = async () => {

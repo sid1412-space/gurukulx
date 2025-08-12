@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Loader2, Phone } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Separator } from '../ui/separator';
@@ -154,16 +154,14 @@ export default function LoginForm() {
   };
   
   const setupRecaptcha = () => {
-    // This function might be called multiple times, so we need to clear previous instances
-    if (window.recaptchaVerifier) {
-      window.recaptchaVerifier.clear();
+    if (!window.recaptchaVerifier) {
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        'size': 'invisible',
+        'callback': (response: any) => {
+          // reCAPTCHA solved, allow signInWithPhoneNumber.
+        }
+      });
     }
-    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-      'size': 'invisible',
-      'callback': (response: any) => {
-        // reCAPTCHA solved, allow signInWithPhoneNumber.
-      }
-    });
   }
 
   const onPhoneSignIn = async () => {
@@ -175,6 +173,7 @@ export default function LoginForm() {
         setConfirmationResult(result);
         toast({ title: 'OTP Sent!', description: 'Please check your phone for the verification code.' });
     } catch (error: any) {
+        console.error(error);
         toast({
             variant: 'destructive',
             title: 'Phone Sign-In Failed',
