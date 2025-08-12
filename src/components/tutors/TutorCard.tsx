@@ -19,6 +19,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useIsClient } from '@/hooks/use-is-client';
+import { cn } from '@/lib/utils';
 
 
 type Tutor = {
@@ -37,16 +40,41 @@ type TutorCardProps = {
 
 export default function TutorCard({ tutor }: TutorCardProps) {
   const router = useRouter();
+  const isClient = useIsClient();
+  const [isOnline, setIsOnline] = useState(false);
+  const [isBusy, setIsBusy] = useState(false);
+
+  useEffect(() => {
+    if (isClient) {
+      const checkStatus = () => {
+        const onlineStatus = localStorage.getItem(`tutor-status-${tutor.id}`) !== 'offline';
+        const busyStatus = localStorage.getItem(`tutor-busy-${tutor.id}`) === 'true';
+        setIsOnline(onlineStatus);
+        setIsBusy(busyStatus);
+      };
+
+      checkStatus();
+      
+      // Listen for storage events to update status from other tabs
+      window.addEventListener('storage', checkStatus);
+      return () => {
+        window.removeEventListener('storage', checkStatus);
+      };
+    }
+  }, [isClient, tutor.id]);
 
   const handleBookSession = () => {
     const sessionId = Math.random().toString(36).substring(2, 15);
     router.push(`/session/${sessionId}?tutorId=${tutor.id}&role=student`);
   };
 
+  const statusText = isBusy ? 'In Session' : (isOnline ? 'Online' : 'Offline');
+  const statusColor = isBusy ? 'bg-yellow-500' : (isOnline ? 'bg-green-500' : 'bg-gray-400');
+
   return (
     <Card className="h-full flex flex-col hover:shadow-lg transition-shadow duration-300">
       <CardHeader>
-        <div className="flex flex-row items-center gap-4">
+        <div className="flex flex-row items-start gap-4">
           <Link href={`/tutors/${tutor.id}`}>
             <Avatar className="h-16 w-16">
               <AvatarImage src={tutor.avatar} alt={tutor.name} data-ai-hint="person portrait" />
@@ -61,6 +89,12 @@ export default function TutorCard({ tutor }: TutorCardProps) {
               <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
               <span className="text-muted-foreground font-semibold">{tutor.rating.toFixed(1)}</span>
             </div>
+             {isClient && (
+                <div className="flex items-center gap-2 mt-2 text-xs">
+                    <span className={cn("h-2.5 w-2.5 rounded-full", statusColor)}></span>
+                    <span>{statusText}</span>
+                </div>
+            )}
           </div>
         </div>
       </CardHeader>
@@ -70,13 +104,15 @@ export default function TutorCard({ tutor }: TutorCardProps) {
             <Badge key={subject} variant="secondary">{subject}</Badge>
           ))}
         </div>
-        <CardDescription>{tutor.bio}</CardDescription>
+        <CardDescription className="line-clamp-3">{tutor.bio}</CardDescription>
       </CardContent>
       <CardFooter className="flex justify-between items-center">
         <p className="text-xl font-bold text-primary">₹{tutor.price}<span className="text-sm font-normal text-muted-foreground">/min</span></p>
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button>Book Session</Button>
+            <Button disabled={!isOnline || isBusy}>
+                {isBusy ? 'In Session' : (isOnline ? 'Book Session' : 'Offline')}
+            </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>

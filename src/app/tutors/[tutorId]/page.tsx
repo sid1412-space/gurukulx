@@ -22,13 +22,38 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { useIsClient } from '@/hooks/use-is-client';
+import { cn } from '@/lib/utils';
 
 export default function TutorProfilePage() {
   const params = useParams();
   const router = useRouter();
   const { tutorId } = params;
+  const isClient = useIsClient();
 
   const tutor = tutors.find((t) => t.id === tutorId);
+
+  const [isOnline, setIsOnline] = useState(false);
+  const [isBusy, setIsBusy] = useState(false);
+
+  useEffect(() => {
+    if (isClient && tutorId) {
+      const checkStatus = () => {
+        const onlineStatus = localStorage.getItem(`tutor-status-${tutorId}`) !== 'offline';
+        const busyStatus = localStorage.getItem(`tutor-busy-${tutorId}`) === 'true';
+        setIsOnline(onlineStatus);
+        setIsBusy(busyStatus);
+      };
+
+      checkStatus();
+      
+      window.addEventListener('storage', checkStatus);
+      return () => {
+        window.removeEventListener('storage', checkStatus);
+      };
+    }
+  }, [isClient, tutorId]);
 
   const handleBookSession = () => {
     if (tutor) {
@@ -49,6 +74,9 @@ export default function TutorProfilePage() {
     );
   }
 
+  const statusText = isBusy ? 'In Session' : (isOnline ? 'Online' : 'Offline');
+  const statusColor = isBusy ? 'bg-yellow-500' : (isOnline ? 'bg-green-500' : 'bg-gray-400');
+
   return (
     <div className="bg-secondary/30">
         <div className="container mx-auto max-w-5xl px-4 py-8 sm:py-12">
@@ -60,6 +88,14 @@ export default function TutorProfilePage() {
                 <AvatarFallback className="text-4xl">{tutor.name.charAt(0)}</AvatarFallback>
             </Avatar>
             <h1 className="text-3xl font-bold mt-4 font-headline">{tutor.name}</h1>
+            
+            {isClient && (
+                 <div className="flex items-center justify-center gap-2 mt-2">
+                    <div className={cn("h-3 w-3 rounded-full", statusColor)}></div>
+                    <span className="text-sm font-semibold text-muted-foreground">{statusText}</span>
+                </div>
+            )}
+
             <div className="flex items-center justify-center gap-2 mt-2 text-muted-foreground">
                 <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
                 <span className="font-semibold text-lg">{tutor.rating.toFixed(1)}</span>
@@ -113,7 +149,9 @@ export default function TutorProfilePage() {
                         <CardContent className="p-2">
                              <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                    <Button size="lg" className="w-full">Book a Session</Button>
+                                     <Button size="lg" className="w-full" disabled={!isOnline || isBusy}>
+                                        {isBusy ? 'In Session' : (isOnline ? 'Book a Session' : 'Currently Offline')}
+                                    </Button>
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                     <AlertDialogHeader>
