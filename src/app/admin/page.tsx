@@ -9,8 +9,18 @@ import { Button } from '@/components/ui/button';
 import { useIsClient } from '@/hooks/use-is-client';
 
 export default function AdminOverviewPage() {
-  const [pendingPayouts, setPendingPayouts] = useState(0);
-  const [pendingRecharges, setPendingRecharges] = useState(0);
+  const [stats, setStats] = useState({
+    totalTutors: 0,
+    activeStudents: 0,
+    sessionsThisMonth: 0,
+    monthlyRevenue: 0,
+  });
+  const [actionItemsData, setActionItemsData] = useState({
+      pendingPayouts: 0,
+      pendingRecharges: 0,
+      newApplicants: 0,
+  });
+
   const isClient = useIsClient();
 
   useEffect(() => {
@@ -19,13 +29,30 @@ export default function AdminOverviewPage() {
     }
 
     const updateAllCounts = () => {
-      // Payouts
-      const storedPayouts = localStorage.getItem('pendingPayoutRequests');
-      setPendingPayouts(parseInt(storedPayouts || '0'));
+      // Main Stats
+      const usersJSON = localStorage.getItem('userDatabase') || '[]';
+      const users = JSON.parse(usersJSON);
+      const tutors = users.filter((u: any) => u.role === 'tutor').length;
+      const students = users.filter((u: any) => u.role === 'student').length;
       
-      // Recharges
+      setStats(prev => ({
+          ...prev,
+          totalTutors: tutors,
+          activeStudents: students
+      }));
+
+      // Action Items
+      const storedPayouts = localStorage.getItem('pendingPayoutRequests');
       const storedRecharges = localStorage.getItem('rechargeRequests') || '[]';
-      setPendingRecharges(JSON.parse(storedRecharges).length);
+      const storedApplicants = localStorage.getItem('tutorApplicants') || '[]';
+      
+      const pendingApplicants = JSON.parse(storedApplicants).filter((app: any) => app.status === 'Pending').length;
+
+      setActionItemsData({
+          pendingPayouts: parseInt(storedPayouts || '0'),
+          pendingRecharges: JSON.parse(storedRecharges).length,
+          newApplicants: pendingApplicants,
+      });
     };
 
     updateAllCounts();
@@ -39,17 +66,17 @@ export default function AdminOverviewPage() {
     };
   }, [isClient]);
 
-  const stats = [
-    { title: 'Total Tutors', value: '1,250', icon: Users },
-    { title: 'Active Students', value: '15,830', icon: Users },
-    { title: 'Sessions This Month', value: '5,120', icon: BookOpen },
-    { title: 'Monthly Revenue', value: '₹85,450', icon: DollarSign },
+  const statCards = [
+    { title: 'Total Tutors', value: stats.totalTutors.toLocaleString(), icon: Users },
+    { title: 'Active Students', value: stats.activeStudents.toLocaleString(), icon: Users },
+    { title: 'Sessions This Month', value: '0', icon: BookOpen },
+    { title: 'Monthly Revenue', value: '₹0', icon: DollarSign },
   ];
 
   const actionItems = [
-    { title: 'New Tutor Applicants', value: '42', icon: UserPlus, href: '/admin/tutors' },
-    { title: 'Pending Payout Requests', value: pendingPayouts.toString(), icon: Banknote, href: '/admin/finances', isVisible: pendingPayouts > 0 },
-    { title: 'Pending Recharges', value: pendingRecharges.toString(), icon: Hourglass, href: '/admin/finances', isVisible: pendingRecharges > 0 },
+    { title: 'New Tutor Applicants', value: actionItemsData.newApplicants.toString(), icon: UserPlus, href: '/admin/tutors' },
+    { title: 'Pending Payout Requests', value: actionItemsData.pendingPayouts.toString(), icon: Banknote, href: '/admin/finances', isVisible: actionItemsData.pendingPayouts > 0 },
+    { title: 'Pending Recharges', value: actionItemsData.pendingRecharges.toString(), icon: Hourglass, href: '/admin/finances', isVisible: actionItemsData.pendingRecharges > 0 },
   ];
 
   return (
@@ -59,7 +86,7 @@ export default function AdminOverviewPage() {
         <p className="text-muted-foreground">Key metrics and action items for the GurukulX platform.</p>
       </header>
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat, index) => (
+        {statCards.map((stat, index) => (
           <Card key={index} className="hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
