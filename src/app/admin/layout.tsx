@@ -19,7 +19,6 @@ import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import React, { useEffect, useState } from 'react';
-import { useIsClient } from '@/hooks/use-is-client';
 
 const adminMenuItems = [
   { href: '/admin', label: 'Overview', icon: LayoutDashboard },
@@ -35,21 +34,18 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const isClient = useIsClient();
   const [authStatus, setAuthStatus] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
 
   useEffect(() => {
-    if (isClient) {
-      const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
-      const isAdmin = localStorage.getItem('isAdmin') === 'true';
-      if (loggedIn && isAdmin) {
-        setAuthStatus('authenticated');
-      } else {
-        setAuthStatus('unauthenticated');
-        router.push('/login');
-      }
+    const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    const isAdmin = localStorage.getItem('isAdmin') === 'true';
+    if (loggedIn && isAdmin) {
+      setAuthStatus('authenticated');
+    } else {
+      setAuthStatus('unauthenticated');
+      router.push('/login');
     }
-  }, [isClient, router, pathname]);
+  }, [router, pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem('isLoggedIn');

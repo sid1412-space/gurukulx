@@ -19,7 +19,6 @@ import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import React, { useEffect, useState } from 'react';
-import { useIsClient } from '@/hooks/use-is-client';
 
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -37,26 +36,26 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const isClient = useIsClient();
   const [authStatus, setAuthStatus] = useState<'loading' | 'authenticated' | 'unauthorized'>('loading');
 
   useEffect(() => {
-    if (isClient) {
-      const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
-      const isTutor = localStorage.getItem('isTutor') === 'true';
-      const isAdmin = localStorage.getItem('isAdmin') === 'true';
-      
-      if (loggedIn && !isTutor && !isAdmin) {
-        setAuthStatus('authenticated');
-      } else {
-        setAuthStatus('unauthorized');
-        // Let other layouts handle redirection if necessary.
-        if (!loggedIn) {
-          router.push('/login');
-        }
+    const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    const isTutor = localStorage.getItem('isTutor') === 'true';
+    const isAdmin = localStorage.getItem('isAdmin') === 'true';
+    
+    if (loggedIn && !isTutor && !isAdmin) {
+      setAuthStatus('authenticated');
+    } else {
+      setAuthStatus('unauthorized');
+      if (!loggedIn) {
+        router.push('/login');
+      } else if (isTutor) {
+         router.push('/tutor/dashboard');
+      } else if (isAdmin) {
+        router.push('/admin');
       }
     }
-  }, [isClient, router]);
+  }, [router, pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem('isLoggedIn');
@@ -71,7 +70,7 @@ export default function DashboardLayout({
      return (
         <div className="flex items-center justify-center h-screen bg-background">
             <div className="flex flex-col items-center gap-2">
-                 <p className="text-muted-foreground">Loading...</p>
+                 <p className="text-muted-foreground">Redirecting...</p>
             </div>
         </div>
     );
