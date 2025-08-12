@@ -12,11 +12,24 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { MoreHorizontal } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { useToast } from '@/hooks/use-toast';
 import { useIsClient } from '@/hooks/use-is-client';
+import { Label } from '@/components/ui/label';
 
 type Applicant = {
     id: string;
@@ -30,6 +43,8 @@ export default function TutorManagementPage() {
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const { toast } = useToast();
   const isClient = useIsClient();
+  const [approvingApplicant, setApprovingApplicant] = useState<Applicant | null>(null);
+  const [tutorRate, setTutorRate] = useState<number | string>('');
 
   useEffect(() => {
     if (isClient) {
@@ -45,44 +60,73 @@ export default function TutorManagementPage() {
   };
 
 
-  const handleUpdateStatus = (id: string, newStatus: 'Approved' | 'Rejected') => {
+  const handleApprove = () => {
+    if (!approvingApplicant || !tutorRate || +tutorRate <= 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid Rate',
+        description: 'Please enter a valid positive number for the hourly rate.',
+      });
+      return;
+    }
+
+    // Update the status in the applicants list
+    const updatedApplicants = applicants.map(applicant =>
+      applicant.id === approvingApplicant.id ? { ...applicant, status: 'Approved' } : applicant
+    );
+    setApplicants(updatedApplicants);
+    updateLocalStorage(updatedApplicants);
+
+    // Add them to the main user database as a tutor with the specified rate
+    try {
+      const usersJSON = localStorage.getItem('userDatabase') || '[]';
+      const users = JSON.parse(usersJSON);
+
+      // Prevent duplicate entries
+      if (!users.some((u: any) => u.email === approvingApplicant.email)) {
+        users.push({
+          email: approvingApplicant.email,
+          role: 'tutor',
+          name: approvingApplicant.name,
+          price: +tutorRate // Save the hourly rate
+        });
+        localStorage.setItem('userDatabase', JSON.stringify(users));
+      }
+    } catch (error) {
+      console.error('Failed to update user database:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error Approving Applicant',
+        description: `Could not add ${approvingApplicant.name} to the user list.`,
+      });
+      return;
+    }
+
+    toast({
+      title: `Applicant Approved`,
+      description: `${approvingApplicant.name} has been approved with an hourly rate of ₹${tutorRate}.`,
+    });
+    
+    // Reset states
+    setApprovingApplicant(null);
+    setTutorRate('');
+  };
+  
+  const handleReject = (id: string) => {
     const applicantToUpdate = applicants.find(applicant => applicant.id === id);
     if (!applicantToUpdate) return;
     
-    // Update the status in the applicants list
     const updatedApplicants = applicants.map(applicant => 
-      applicant.id === id ? { ...applicant, status: newStatus } : applicant
+      applicant.id === id ? { ...applicant, status: 'Rejected' } : applicant
     );
     setApplicants(updatedApplicants);
     updateLocalStorage(updatedApplicants);
     
-    // If approved, add them to the main user database as a tutor
-    if (newStatus === 'Approved') {
-        try {
-            const usersJSON = localStorage.getItem('userDatabase') || '[]';
-            const users = JSON.parse(usersJSON);
-
-            // Prevent duplicate entries
-            if (!users.some((u: any) => u.email === applicantToUpdate.email)) {
-                users.push({ email: applicantToUpdate.email, role: 'tutor', name: applicantToUpdate.name });
-                localStorage.setItem('userDatabase', JSON.stringify(users));
-            }
-        } catch (error) {
-            console.error('Failed to update user database:', error);
-             toast({
-              variant: 'destructive',
-              title: `Error Approving Applicant`,
-              description: `Could not add ${applicantToUpdate.name} to the user list.`,
-            });
-            return;
-        }
-    }
-
-    toast({
-      title: `Applicant ${newStatus}`,
-      description: `${applicantToUpdate.name} has been ${newStatus.toLowerCase()}.`,
+     toast({
+      title: `Applicant Rejected`,
+      description: `${applicantToUpdate.name} has been rejected.`,
     });
-  };
+  }
 
 
   const handleViewApplication = (applicantName: string) => {
@@ -103,7 +147,6 @@ export default function TutorManagementPage() {
         return 'outline';
     }
   };
-
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -153,13 +196,13 @@ export default function TutorManagementPage() {
                           <DropdownMenuItem onClick={() => handleViewApplication(applicant.name)}>View Application</DropdownMenuItem>
                           <DropdownMenuItem 
                             className="text-green-600 focus:text-green-600"
-                            onClick={() => handleUpdateStatus(applicant.id, 'Approved')}
+                            onClick={() => setApprovingApplicant(applicant)}
                           >
                             Approve
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             className="text-red-600 focus:text-red-600"
-                             onClick={() => handleUpdateStatus(applicant.id, 'Rejected')}
+                             onClick={() => handleReject(applicant.id)}
                           >
                             Reject
                           </DropdownMenuItem>
@@ -176,8 +219,34 @@ export default function TutorManagementPage() {
         </CardContent>
       </Card>
       
-       {/* A similar card can be created here for managing existing tutors */}
+      {approvingApplicant && (
+        <AlertDialog open={!!approvingApplicant} onOpenChange={() => setApprovingApplicant(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                <AlertDialogTitle>Approve Tutor & Set Rate</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Set the hourly rate for <span className="font-bold">{approvingApplicant.name}</span>. This will be used for billing students.
+                </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="grid gap-2">
+                    <Label htmlFor="tutor-rate">Hourly Rate (₹)</Label>
+                    <Input 
+                        id="tutor-rate" 
+                        type="number" 
+                        placeholder="e.g., 5000"
+                        value={tutorRate}
+                        onChange={(e) => setTutorRate(e.target.value)}
+                    />
+                </div>
+                <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setTutorRate('')}>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleApprove}>Confirm Approval</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+      )}
 
+       {/* A similar card can be created here for managing existing tutors */}
     </div>
   );
 }
