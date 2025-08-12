@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -16,28 +16,74 @@ import { MoreHorizontal } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { useIsClient } from '@/hooks/use-is-client';
 
-const initialApplicants = [
-  { id: 'app-01', name: 'John Appleseed', email: 'john.appleseed@example.com', subject: 'Quantum Mechanics', status: 'Pending' },
-  { id: 'app-02', name: 'Maria Rodriguez', email: 'maria.r@example.com', subject: 'Creative Writing', status: 'Pending' },
-  { id: 'app-03', name: 'Chen Wei', email: 'chen.wei@example.com', subject: 'Mandarin Chinese', status: 'Pending' },
-];
-
-type ApplicantStatus = 'Pending' | 'Approved' | 'Rejected';
+type Applicant = {
+    id: string;
+    name: string;
+    email: string;
+    subject: string;
+    status: 'Pending' | 'Approved' | 'Rejected';
+};
 
 export default function TutorManagementPage() {
-  const [applicants, setApplicants] = useState(initialApplicants.map(a => ({...a, status: a.status as ApplicantStatus})));
+  const [applicants, setApplicants] = useState<Applicant[]>([]);
   const { toast } = useToast();
+  const isClient = useIsClient();
 
-  const handleUpdateStatus = (id: string, newStatus: ApplicantStatus) => {
-    setApplicants(applicants.map(applicant => 
+  useEffect(() => {
+    if (isClient) {
+        const storedApplicants = localStorage.getItem('tutorApplicants');
+        if (storedApplicants) {
+            setApplicants(JSON.parse(storedApplicants));
+        }
+    }
+  }, [isClient]);
+
+  const updateLocalStorage = (updatedApplicants: Applicant[]) => {
+    localStorage.setItem('tutorApplicants', JSON.stringify(updatedApplicants));
+  };
+
+
+  const handleUpdateStatus = (id: string, newStatus: 'Approved' | 'Rejected') => {
+    const applicantToUpdate = applicants.find(applicant => applicant.id === id);
+    if (!applicantToUpdate) return;
+    
+    // Update the status in the applicants list
+    const updatedApplicants = applicants.map(applicant => 
       applicant.id === id ? { ...applicant, status: newStatus } : applicant
-    ));
+    );
+    setApplicants(updatedApplicants);
+    updateLocalStorage(updatedApplicants);
+    
+    // If approved, add them to the main user database as a tutor
+    if (newStatus === 'Approved') {
+        try {
+            const usersJSON = localStorage.getItem('userDatabase') || '[]';
+            const users = JSON.parse(usersJSON);
+
+            // Prevent duplicate entries
+            if (!users.some((u: any) => u.email === applicantToUpdate.email)) {
+                users.push({ email: applicantToUpdate.email, role: 'tutor', name: applicantToUpdate.name });
+                localStorage.setItem('userDatabase', JSON.stringify(users));
+            }
+        } catch (error) {
+            console.error('Failed to update user database:', error);
+             toast({
+              variant: 'destructive',
+              title: `Error Approving Applicant`,
+              description: `Could not add ${applicantToUpdate.name} to the user list.`,
+            });
+            return;
+        }
+    }
+
     toast({
       title: `Applicant ${newStatus}`,
-      description: `${applicants.find(a => a.id === id)?.name} has been ${newStatus.toLowerCase()}.`,
+      description: `${applicantToUpdate.name} has been ${newStatus.toLowerCase()}.`,
     });
   };
+
 
   const handleViewApplication = (applicantName: string) => {
     toast({
@@ -46,7 +92,7 @@ export default function TutorManagementPage() {
     });
   };
 
-  const getBadgeVariant = (status: ApplicantStatus) => {
+  const getBadgeVariant = (status: 'Pending' | 'Approved' | 'Rejected') => {
     switch (status) {
       case 'Approved':
         return 'default';

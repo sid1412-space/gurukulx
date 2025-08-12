@@ -45,13 +45,13 @@ export default function TutorDashboardPage() {
   ];
 
   const upcomingSessions = [
-      { studentName: 'Jane Doe', topic: 'Calculus II', time: '4:00 PM - 5:00 PM', sessionId: 'session-jane-doe' },
-      { studentName: 'John Smith', topic: 'Physics', time: '6:00 PM - 7:00 PM', sessionId: 'session-john-smith' },
+      { studentName: 'Jane Doe', topic: 'Calculus II', time: '4:00 PM - 5:00 PM' },
+      { studentName: 'John Smith', topic: 'Physics', time: '6:00 PM - 7:00 PM' },
   ];
 
-  const handleJoinSession = (sessionId: string) => {
-    // In a real app, you'd have a specific session ID. We'll simulate it.
-    router.push(`/session/${sessionId}`);
+  const handleJoinSession = (studentName: string) => {
+    const sessionId = Math.random().toString(36).substring(2, 15);
+    router.push(`/session/${sessionId}?tutorId=${TUTOR_ID}`);
   };
 
   const handleStatusChange = (online: boolean) => {
@@ -119,7 +119,7 @@ export default function TutorDashboardPage() {
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleJoinSession(session.sessionId)}>
+                                <AlertDialogAction onClick={() => handleJoinSession(session.studentName)}>
                                     Continue
                                 </AlertDialogAction>
                                 </AlertDialogFooter>

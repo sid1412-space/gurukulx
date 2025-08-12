@@ -38,8 +38,9 @@ type TutorCardProps = {
 export default function TutorCard({ tutor }: TutorCardProps) {
   const router = useRouter();
 
-  const handleContinue = () => {
-    router.push(`/session/${tutor.id}?start_recording=true`);
+  const handleBookSession = () => {
+    const sessionId = Math.random().toString(36).substring(2, 15);
+    router.push(`/session/${sessionId}?tutorId=${tutor.id}`);
   };
 
   return (
@@ -87,7 +88,7 @@ export default function TutorCard({ tutor }: TutorCardProps) {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleContinue}>
+              <AlertDialogAction onClick={handleBookSession}>
                 Continue
               </AlertDialogAction>
             </AlertDialogFooter>

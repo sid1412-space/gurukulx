@@ -37,8 +37,6 @@ const tutorSchema = baseSchema.extend({
   expertise: z.string().min(10, { message: 'Expertise must be at least 10 characters.' }),
 });
 
-// The final discriminated union schema ensures that when 'tutor' is selected,
-// the tutor-specific fields are validated.
 const formSchema = z.discriminatedUnion('accountType', [
   studentSchema,
   tutorSchema,
@@ -92,33 +90,53 @@ export default function SignUpForm() {
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    console.log(values);
     
-    // In a real app, you'd send this to your backend.
-    // Here, we simulate a user database in localStorage.
     try {
-        const usersJSON = localStorage.getItem('userDatabase');
-        const users = usersJSON ? JSON.parse(usersJSON) : [];
+        const usersJSON = localStorage.getItem('userDatabase') || '[]';
+        const users = JSON.parse(usersJSON);
 
-        if (users.find((u: any) => u.email === values.email)) {
+        const applicantsJSON = localStorage.getItem('tutorApplicants') || '[]';
+        const applicants = JSON.parse(applicantsJSON);
+
+        const existingUser = users.find((u: any) => u.email === values.email);
+        const existingApplicant = applicants.find((a: any) => a.email === values.email);
+
+        if (existingUser || existingApplicant) {
             toast({
                 variant: 'destructive',
                 title: 'Sign Up Failed',
-                description: 'An account with this email already exists.',
+                description: 'An account with this email already exists or is pending approval.',
             });
             setIsLoading(false);
             return;
         }
 
-        users.push({ email: values.email, role: values.accountType });
-        localStorage.setItem('userDatabase', JSON.stringify(users));
-
-        // Mock API call
+        if (values.accountType === 'student') {
+            users.push({ email: values.email, role: 'student', name: values.name });
+            localStorage.setItem('userDatabase', JSON.stringify(users));
+            toast({
+                title: 'Account Created!',
+                description: 'Welcome to TutorConnect. Please log in.',
+            });
+        } else if (values.accountType === 'tutor') {
+            const newApplicant = {
+                id: `app-${Date.now()}`,
+                name: values.name,
+                email: values.email,
+                subject: values.expertise.split(',')[0].trim() || 'General', // Use first expertise as subject
+                status: 'Pending',
+                // Store all tutor data for later
+                ...values
+            };
+            applicants.push(newApplicant);
+            localStorage.setItem('tutorApplicants', JSON.stringify(applicants));
+            toast({
+                title: 'Application Submitted!',
+                description: 'Your application to become a tutor is pending approval. You can log in as a student for now.',
+            });
+        }
+        
         setTimeout(() => {
-          toast({
-            title: 'Account Created!',
-            description: 'Welcome to TutorConnect. Please log in.',
-          });
           setIsLoading(false);
           router.push('/login');
         }, 1500);

@@ -35,7 +35,7 @@ export default function SessionPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const params = useParams();
-  const { tutorId } = params;
+  const tutorId = searchParams.get('tutorId');
   const { toast } = useToast();
 
   const [jitsiApi, setJitsiApi] = useState<JitsiAPI | null>(null);
@@ -420,4 +420,124 @@ export default function SessionPage() {
                 <AlertTitle>Video Connection Error</AlertTitle>
                 <AlertDescription>
                     The video conferencing service failed to load. This might be due to a network issue or browser incompatibility. Please check your connection and try again, or use a different browser.
-                </
+                </AlertDescription>
+            </Alert>
+         </div>
+      )}
+
+      <div className="absolute inset-0 z-10 pointer-events-none">
+        <Whiteboard />
+      </div>
+
+       <div
+        ref={controlsRef}
+        className={cn(
+          "absolute z-20 pointer-events-auto transition-opacity",
+          isDragging ? 'opacity-70' : 'opacity-100',
+        )}
+        style={{
+          transform: `translate(${position.x}px, ${position.y}px)`,
+        }}
+        onMouseDown={handleMouseDown}
+        onTouchStart={handleTouchStart}
+      >
+        <Card className="shadow-2xl rounded-full">
+            <CardContent className="p-2 flex items-center gap-1">
+                 <div
+                    data-drag-handle
+                    className="cursor-grab p-2 text-muted-foreground"
+                    >
+                    <GripVertical />
+                </div>
+                <TooltipProvider>
+                    <div className="flex items-center gap-1">
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="rounded-full" onClick={toggleMute}>
+                                    {isMuted ? <MicOff /> : <Mic />}
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>{isMuted ? 'Unmute' : 'Mute'}</p>
+                            </TooltipContent>
+                        </Tooltip>
+
+                        {!isMobile && (
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="rounded-full" onClick={toggleScreenShare}>
+                                        {isScreenSharing ? <ScreenShareOff /> : <ScreenShare />}
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>{isScreenSharing ? 'Stop Sharing' : 'Share Screen'}</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        )}
+                        
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setIsChatOpen(prev => !prev)}>
+                                    <MessageSquare />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Toggle Chat</p>
+                            </TooltipContent>
+                        </Tooltip>
+
+                        {!isMobile && (
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="rounded-full">
+                                        <Wand2 />
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                    <AlertDialogTitle>Generate Practice Problems</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Enter a topic, and the AI will generate exercises and add them to the whiteboard.
+                                    </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <Input ref={practiceTopicRef} placeholder="e.g., Photosynthesis" />
+                                    <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleGenerateExercises} disabled={isGenerating}>
+                                        {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                        Generate
+                                    </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        )}
+
+                        <Button variant="destructive" size="icon" className="rounded-full" onClick={hangUp}>
+                            <PhoneOff />
+                        </Button>
+                    </div>
+                </TooltipProvider>
+            </CardContent>
+        </Card>
+      </div>
+
+       <div className="absolute top-4 left-4 z-20 flex flex-col gap-2">
+           <Card className="p-2">
+                <div className="flex items-center gap-2 text-sm">
+                    <Timer className="text-primary"/>
+                    <span>{formatDuration(sessionDuration)}</span>
+                </div>
+            </Card>
+             <Card className="p-2">
+                <div className="flex items-center gap-2 text-sm">
+                    <Wallet className="text-green-600"/>
+                    <span className="font-semibold">₹{walletBalance.toFixed(2)}</span>
+                </div>
+            </Card>
+       </div>
+      
+      <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+
+    </div>
+  );
+}

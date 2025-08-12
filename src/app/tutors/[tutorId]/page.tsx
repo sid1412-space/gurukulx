@@ -30,9 +30,10 @@ export default function TutorProfilePage() {
 
   const tutor = tutors.find((t) => t.id === tutorId);
 
-  const handleContinue = () => {
+  const handleBookSession = () => {
     if (tutor) {
-      router.push(`/session/${tutor.id}?start_recording=true`);
+      const sessionId = Math.random().toString(36).substring(2, 15);
+      router.push(`/session/${sessionId}?tutorId=${tutor.id}&start_recording=true`);
     }
   };
 
@@ -124,7 +125,7 @@ export default function TutorProfilePage() {
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={handleContinue}>
+                                    <AlertDialogAction onClick={handleBookSession}>
                                         Continue
                                     </AlertDialogAction>
                                     </AlertDialogFooter>

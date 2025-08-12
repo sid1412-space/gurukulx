@@ -17,13 +17,6 @@ const formSchema = z.object({
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
 });
 
-// Pre-defined users for initial setup
-const predefinedUsers = [
-    { email: 'quotesparkconnect@yahoo.com', role: 'admin' },
-    { email: 'tutor@example.com', role: 'tutor' },
-    { email: 'student@example.com', role: 'student' }
-];
-
 export default function LoginForm() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -33,16 +26,21 @@ export default function LoginForm() {
   useEffect(() => {
     try {
         const usersJSON = localStorage.getItem('userDatabase');
-        let users = usersJSON ? JSON.parse(usersJSON) : [];
-        
-        // Add predefined users if they don't already exist
-        predefinedUsers.forEach(predefinedUser => {
-            if (!users.some((u: any) => u.email === predefinedUser.email)) {
-                users.push(predefinedUser);
-            }
-        });
+        if (!usersJSON) {
+             const initialUsers = [
+                { email: 'quotesparkconnect@yahoo.com', role: 'admin' },
+                // Approved tutor - for demonstration
+                { email: 'tutor@example.com', role: 'tutor' }, 
+                { email: 'student@example.com', role: 'student' }
+            ];
+            localStorage.setItem('userDatabase', JSON.stringify(initialUsers));
+        }
 
-        localStorage.setItem('userDatabase', JSON.stringify(users));
+        const applicantsJSON = localStorage.getItem('tutorApplicants');
+        if (!applicantsJSON) {
+            localStorage.setItem('tutorApplicants', '[]');
+        }
+
     } catch (error) {
         console.error("Could not initialize user database:", error);
     }
@@ -59,7 +57,6 @@ export default function LoginForm() {
   function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     
-    // Mock API call
     setTimeout(() => {
       let userRole = 'student'; // Default role
       let foundUser = false;
@@ -71,11 +68,12 @@ export default function LoginForm() {
 
         if (user) {
             // In a real app, password would be checked here. We'll assume it's correct.
+            // This logic correctly checks the *approved* user list.
             userRole = user.role;
             foundUser = true;
         } else {
-             // If user does not exist, we still log them in as a student for demo purposes.
-             // In a real app, this would be an error.
+             // If user does not exist in the main database, they are treated as a student.
+             // An unapproved tutor applicant will also fall into this category.
             foundUser = true; 
         }
 
@@ -91,10 +89,8 @@ export default function LoginForm() {
       }
       
       if (foundUser) {
-        // Set flags in localStorage
         localStorage.setItem('isLoggedIn', 'true');
         
-        // Clear previous roles to ensure a clean state
         localStorage.removeItem('isAdmin');
         localStorage.removeItem('isTutor');
 
@@ -111,7 +107,6 @@ export default function LoginForm() {
             roleName = 'Tutor';
         }
         
-        // Notify other tabs about the login
         window.dispatchEvent(new Event("storage"));
 
         toast({
@@ -119,7 +114,6 @@ export default function LoginForm() {
           description: `Redirecting to ${roleName} dashboard...`,
         });
         
-        // Centralized redirection
         router.push(destination);
       } else {
          toast({
