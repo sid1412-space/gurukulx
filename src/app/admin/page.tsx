@@ -12,23 +12,25 @@ export default function AdminOverviewPage() {
   const [pendingPayouts, setPendingPayouts] = useState(0);
   const isClient = useIsClient();
 
-  const updatePayouts = () => {
-    const storedPayouts = localStorage.getItem('pendingPayoutRequests');
-    setPendingPayouts(parseInt(storedPayouts || '0'));
-  };
-  
   useEffect(() => {
-    if (isClient) {
-      updatePayouts();
-
-      // Listen for changes from other tabs
-      window.addEventListener('storage', updatePayouts);
-
-      // Cleanup
-      return () => {
-        window.removeEventListener('storage', updatePayouts);
-      };
+    if (!isClient) {
+      return;
     }
+
+    const updatePayouts = () => {
+      const storedPayouts = localStorage.getItem('pendingPayoutRequests');
+      setPendingPayouts(parseInt(storedPayouts || '0'));
+    };
+
+    updatePayouts();
+
+    // Listen for changes from other tabs
+    window.addEventListener('storage', updatePayouts);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('storage', updatePayouts);
+    };
   }, [isClient]);
 
   const stats = [
