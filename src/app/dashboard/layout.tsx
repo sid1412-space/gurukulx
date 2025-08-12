@@ -24,7 +24,7 @@ const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/dashboard/recharge', label: 'Recharge Wallet', icon: Wallet },
   { href: '/dashboard/sessions', label: 'My Sessions', icon: BookOpen },
-  { href: ' /dashboard/practice', label: 'Practice', icon: ClipboardPen },
+  { href: '/dashboard/practice', label: 'Practice', icon: ClipboardPen },
   { href: '/dashboard/profile', label: 'Profile', icon: User },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ];
@@ -36,26 +36,21 @@ export default function DashboardLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [authStatus, setAuthStatus] = useState<'pending' | 'authorized' | 'unauthorized'>('pending');
+  const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
+    // This effect runs on the client-side
     const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
     const isTutor = localStorage.getItem('isTutor') === 'true';
     const isAdmin = localStorage.getItem('isAdmin') === 'true';
 
-    if (!loggedIn) {
-      setAuthStatus('unauthorized');
+    // A student is someone who is logged in but is NOT a tutor and NOT an admin.
+    if (loggedIn && !isTutor && !isAdmin) {
+      setIsAuthorized(true);
+    } else {
+      // If the user is not a valid student, redirect to login.
+      // This prevents tutors/admins from seeing the student dashboard.
       router.push('/login');
-    } else if (isTutor) {
-      router.push('/tutor/dashboard');
-      setAuthStatus('unauthorized'); // Effectively, as they are being redirected
-    } else if (isAdmin) {
-      router.push('/admin');
-      setAuthStatus('unauthorized'); // Effectively, as they are being redirected
-    }
-    else {
-      // This is a student
-      setAuthStatus('authorized');
     }
   }, [router, pathname]);
 
@@ -63,12 +58,12 @@ export default function DashboardLayout({
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('isAdmin');
     localStorage.removeItem('isTutor');
-    setAuthStatus('unauthorized');
+    setIsAuthorized(false);
     window.dispatchEvent(new Event("storage"));
     router.push('/');
   }
 
-  if (authStatus !== 'authorized') {
+  if (!isAuthorized) {
      return (
         <div className="flex items-center justify-center h-screen bg-background">
             <div className="flex flex-col items-center gap-2">

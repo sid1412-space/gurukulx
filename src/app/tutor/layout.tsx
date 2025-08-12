@@ -39,9 +39,12 @@ export default function TutorLayout({
   useEffect(() => {
     const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
     const isTutor = localStorage.getItem('isTutor') === 'true';
+
+    // This layout should only render if the user is a logged-in tutor.
     if (loggedIn && isTutor) {
       setIsAuthorized(true);
     } else {
+      // If they are not a logged-in tutor, send them to the login page.
       router.push('/login');
     }
   }, [router, pathname]);

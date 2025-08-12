@@ -40,9 +40,11 @@ export default function AdminLayout({
     const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
     const isAdmin = localStorage.getItem('isAdmin') === 'true';
 
+    // This layout should only render if the user is a logged-in admin.
     if (loggedIn && isAdmin) {
       setIsAuthorized(true);
     } else {
+      // If they are not a logged-in admin, send them to the login page.
       router.push('/login');
     }
   }, [router, pathname]);
