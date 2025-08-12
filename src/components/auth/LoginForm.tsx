@@ -8,11 +8,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Loader2, Phone } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Separator } from '../ui/separator';
+import { auth, db } from '@/lib/firebase';
+import { signInWithEmailAndPassword, sendPasswordResetEmail, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -34,29 +37,6 @@ export default function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  // On component mount, ensure the userDatabase exists in localStorage
-  useEffect(() => {
-    try {
-        const usersJSON = localStorage.getItem('userDatabase');
-        if (!usersJSON) {
-             const initialUsers = [
-                { email: 'quotesparkconnect@yahoo.com', role: 'admin', name: 'Admin User' },
-                { email: 'tutor@example.com', role: 'tutor', name: 'Dr. Evelyn Reed' }, 
-                { email: 'student@example.com', role: 'student', name: 'Jane Doe' }
-            ];
-            localStorage.setItem('userDatabase', JSON.stringify(initialUsers));
-        }
-
-        const applicantsJSON = localStorage.getItem('tutorApplicants');
-        if (!applicantsJSON) {
-            localStorage.setItem('tutorApplicants', '[]');
-        }
-
-    } catch (error) {
-        console.error("Could not initialize user database:", error);
-    }
-  }, []);
-
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -64,79 +44,78 @@ export default function LoginForm() {
       password: '',
     },
   });
-
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsLoading(true);
-    
-    setTimeout(() => {
-      let userRole = '';
-      let foundUser = false;
-      
-      try {
-        const usersJSON = localStorage.getItem('userDatabase');
-        const users = usersJSON ? JSON.parse(usersJSON) : [];
-        const user = users.find((u: any) => u.email.toLowerCase() === values.email.toLowerCase());
-
-        if (user) {
-            // In a real app, password would be checked here. We'll assume it's correct.
-            userRole = user.role;
-            foundUser = true;
-        }
-
-      } catch (error) {
-          console.error("Error reading from user database:", error);
-          toast({
-              variant: 'destructive',
-              title: 'Login Error',
-              description: 'Could not verify credentials. Please try again.',
-          });
-          setIsLoading(false);
-          return;
-      }
-      
-      if (foundUser) {
-        localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('loggedInUser', values.email);
-        
-        localStorage.removeItem('isAdmin');
-        localStorage.removeItem('isTutor');
-
-        let destination = '/dashboard';
-        let roleName = 'Student';
-
-        if (userRole === 'admin') {
-            localStorage.setItem('isAdmin', 'true');
-            destination = '/admin';
-            roleName = 'Admin';
-        } else if (userRole === 'tutor') {
-            localStorage.setItem('isTutor', 'true');
-            destination = '/tutor/dashboard';
-            roleName = 'Tutor';
-        } else {
-             // This branch is for students
-             destination = '/dashboard';
-             roleName = 'Student';
-        }
-        
-        window.dispatchEvent(new Event("storage"));
-
-        toast({
-          title: 'Logged In!',
-          description: `Redirecting to ${roleName} dashboard...`,
-        });
-        
-        router.push(destination);
-      } else {
-         toast({
-            variant: 'destructive',
-            title: 'Login Failed',
-            description: 'Invalid email or password.',
-        });
-        setIsLoading(false);
-      }
-
-    }, 1000);
+  
+  const handleRedirect = async (user: any) => {
+    const userDoc = await getDoc(doc(db, "users", user.uid));
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      let destination = '/dashboard';
+      if (userData.role === 'admin') destination = '/admin';
+      if (userData.role === 'tutor') destination = '/tutor/dashboard';
+      router.push(destination);
+    } else {
+      // New user from social login, default to student dashboard
+      router.push('/dashboard');
+    }
   }
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    setIsLoading(true);
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
+      toast({ title: 'Logged In!', description: 'Redirecting to your dashboard...' });
+      await handleRedirect(userCredential.user);
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Login Failed',
+        description: error.message,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  const handlePasswordReset = async () => {
+    const email = form.getValues('email');
+    if (!email) {
+      toast({
+        variant: 'destructive',
+        title: 'Email Required',
+        description: 'Please enter your email address to reset your password.',
+      });
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email);
+      toast({
+        title: 'Password Reset Email Sent',
+        description: 'Check your inbox for instructions to reset your password.',
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message,
+      });
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      toast({ title: 'Logged In with Google!', description: 'Redirecting...' });
+      await handleRedirect(result.user);
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Google Sign-In Failed',
+        description: error.message,
+      });
+    }
+  };
+
 
   return (
     <Form {...form}>
@@ -161,9 +140,9 @@ export default function LoginForm() {
             <FormItem>
                 <div className="flex justify-between items-center">
                     <FormLabel>Password</FormLabel>
-                    <Link href="#" className="text-sm font-medium text-primary hover:underline">
+                    <button type="button" onClick={handlePasswordReset} className="text-sm font-medium text-primary hover:underline">
                         Forgot password?
-                    </Link>
+                    </button>
                 </div>
               <FormControl>
                 <Input type="password" placeholder="••••••••" {...field} />
@@ -190,11 +169,11 @@ export default function LoginForm() {
      </div>
 
      <div className="grid grid-cols-2 gap-2">
-        <Button variant="outline">
+        <Button variant="outline" onClick={handleGoogleSignIn}>
             <GoogleIcon />
             Google
         </Button>
-         <Button variant="outline">
+         <Button variant="outline" disabled>
             <Phone />
             Phone
         </Button>
