@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Textarea } from '../ui/textarea';
+import { useRouter } from 'next/navigation';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -37,6 +38,7 @@ const formSchema = z.object({
 export default function SignUpForm() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -64,7 +66,7 @@ export default function SignUpForm() {
         description: 'Welcome to TutorConnect. Please log in.',
       });
       setIsLoading(false);
-      // router.push('/login');
+      router.push('/login');
     }, 1500);
   }
 
