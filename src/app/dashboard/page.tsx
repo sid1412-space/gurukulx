@@ -17,38 +17,50 @@ export default function DashboardPage() {
 
     useEffect(() => {
         if (isClient) {
-            // In a real app, this data would come from an API
-            const usersJSON = localStorage.getItem('userDatabase');
-            if (usersJSON) {
-                const users = JSON.parse(usersJSON);
-                const tutors = users.filter((u: any) => u.role === 'tutor');
-                
-                const applicantsJSON = localStorage.getItem('tutorApplicants') || '[]';
-                const applicants = JSON.parse(applicantsJSON);
+            const fetchAllData = () => {
+                // In a real app, this data would come from an API
+                const usersJSON = localStorage.getItem('userDatabase');
+                if (usersJSON) {
+                    const users = JSON.parse(usersJSON);
+                    const tutors = users.filter((u: any) => u.role === 'tutor');
+                    
+                    const applicantsJSON = localStorage.getItem('tutorApplicants') || '[]';
+                    const applicants = JSON.parse(applicantsJSON);
 
-                const tutorsWithFullData = tutors.map((t: any) => {
-                    const applicantData = applicants.find((a:any) => a.email === t.email) || {};
-                    return {
-                        ...t,
-                        id: t.email,
-                        name: applicantData.name || t.name, // Ensure name is included
-                        avatar: 'https://placehold.co/100x100.png',
-                        bio: applicantData.qualification || 'A passionate and experienced tutor.',
-                        rating: 4.8 + Math.random() * 0.2,
-                        subjects: applicantData.expertise ? [applicantData.expertise] : ['Subject'],
+                    const tutorsWithFullData = tutors.map((t: any) => {
+                        const applicantData = applicants.find((a:any) => a.email === t.email) || {};
+                        return {
+                            ...t,
+                            id: t.email,
+                            name: applicantData.name || t.name, // Ensure name is included
+                            avatar: 'https://placehold.co/100x100.png',
+                            bio: applicantData.qualification || 'A passionate and experienced tutor.',
+                            rating: 4.8 + Math.random() * 0.2,
+                            subjects: applicantData.expertise ? [applicantData.expertise] : ['Subject'],
+                        }
+                    });
+                    setAllTutors(tutorsWithFullData);
+
+                    // This is a mock for demo. In real app, get current user from session/context.
+                    const studentEmail = 'student@example.com';
+                    const currentUser = users.find((u:any) => u.email === studentEmail);
+                    if (currentUser && currentUser.name) {
+                        setStudentName(currentUser.name);
                     }
-                });
-                setAllTutors(tutorsWithFullData);
+                }
+                const storedBalance = localStorage.getItem('student-wallet-student@example.com') || '0';
+                setWalletBalance(parseFloat(storedBalance));
+            };
 
-                 // This is a mock for demo. In real app, get current user from session/context.
-                 const studentEmail = 'student@example.com';
-                 const currentUser = users.find((u:any) => u.email === studentEmail);
-                 if (currentUser && currentUser.name) {
-                    setStudentName(currentUser.name);
-                 }
-            }
-             const storedBalance = localStorage.getItem('student-wallet-student@example.com') || '0';
-             setWalletBalance(parseFloat(storedBalance));
+            fetchAllData();
+
+            // Listen for changes from other tabs
+            window.addEventListener('storage', fetchAllData);
+
+            // Cleanup
+            return () => {
+                window.removeEventListener('storage', fetchAllData);
+            };
         }
     }, [isClient]);
 

@@ -60,6 +60,7 @@ export default function FinancialManagementPage() {
     const currentBalance = parseFloat(localStorage.getItem(studentWalletKey) || '0');
     const newBalance = currentBalance + values.amount;
     localStorage.setItem(studentWalletKey, newBalance.toString());
+    window.dispatchEvent(new Event('storage'));
 
     toast({
       title: 'Funds Added',
