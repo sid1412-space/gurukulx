@@ -6,6 +6,7 @@ import { Video, Edit3, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Whiteboard = dynamic(() => import('@/components/session/Whiteboard'), {
   ssr: false,
@@ -21,33 +22,25 @@ export default function SessionPage({ params }: { params: { sessionId: string } 
   const { sessionId } = params;
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col lg:flex-row gap-4 p-4 bg-secondary/30">
-      <div className="flex-grow h-full lg:h-auto lg:w-3/4 flex flex-col gap-4">
-        <div className="h-1/2 flex-grow">
-          <Card className="h-full flex flex-col">
-            <CardHeader className="flex flex-row items-center justify-between p-3 border-b">
-                <CardTitle className="text-base flex items-center gap-2">
-                    <Video className="h-5 w-5 text-primary" />
-                    Video Chat
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="flex-grow p-0 relative">
-                <JitsiMeet roomName={sessionId} />
-            </CardContent>
-          </Card>
-        </div>
-        <div className="h-1/2 flex-grow">
-           <Card className="h-full flex flex-col">
-             <CardHeader className="flex flex-row items-center justify-between p-3 border-b">
-                <CardTitle className="text-base flex items-center gap-2">
-                    <Edit3 className="h-5 w-5 text-primary" />
-                    Whiteboard
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="flex-grow p-0 relative">
-                <Whiteboard />
-            </CardContent>
-          </Card>
-        </div>
+      <div className="flex-grow h-full lg:h-auto lg:w-3/4">
+         <Tabs defaultValue="video" className="h-full w-full flex flex-col">
+            <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="video" className="gap-2">
+                    <Video className="h-4 w-4" /> Video Chat
+                </TabsTrigger>
+                <TabsTrigger value="whiteboard" className="gap-2">
+                    <Edit3 className="h-4 w-4" /> Whiteboard
+                </TabsTrigger>
+            </TabsList>
+            <div className="flex-grow relative mt-2">
+                <TabsContent value="video" className="w-full h-full absolute top-0 left-0 m-0">
+                    <JitsiMeet roomName={sessionId} />
+                </TabsContent>
+                <TabsContent value="whiteboard" className="w-full h-full absolute top-0 left-0 m-0">
+                    <Whiteboard />
+                </TabsContent>
+            </div>
+        </Tabs>
       </div>
       <div className="w-full lg:w-1/4 h-full lg:h-auto">
         <Card className="h-full flex flex-col">
