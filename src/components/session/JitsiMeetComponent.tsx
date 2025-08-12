@@ -15,9 +15,6 @@ export default function JitsiMeetComponent({ onApiReady, onError, isMobile }: Ji
   const sessionId = pathname.split('/').pop() || `tutorconnect-session-${Math.random().toString(36).substring(2, 15)}`;
 
   const toolbarButtons = ['camera', 'microphone', 'hangup', 'chat', 'fullscreen', 'tileview'];
-  if (!isMobile) {
-    toolbarButtons.splice(2, 0, 'desktop'); // Add desktop sharing button for non-mobile
-  }
 
 
   return (
@@ -34,7 +31,6 @@ export default function JitsiMeetComponent({ onApiReady, onError, isMobile }: Ji
           p2p: {
             enabled: true,
           },
-          desktopSharingSources: ['screen', 'window', 'tab'],
         }}
         interfaceConfigOverwrite={{
           DISABLE_VIDEO_BACKGROUND: true,
