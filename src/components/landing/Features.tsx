@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Video, Edit3, BrainCircuit, Search } from 'lucide-react';
+import { Video, Edit3, Search, Users } from 'lucide-react';
 
 const features = [
   {
@@ -13,9 +13,9 @@ const features = [
     description: 'Collaborate in real-time on our shared whiteboard for effective problem-solving.',
   },
   {
-    icon: <BrainCircuit className="h-8 w-8 text-primary" />,
-    title: 'AI Tutoring Tool',
-    description: 'Get AI-powered exercise and resource recommendations tailored to your learning needs.',
+    icon: <Users className="h-8 w-8 text-primary" />,
+    title: 'Session Transcripts',
+    description: 'Review your past sessions anytime with automatic video and chat transcripts.',
   },
   {
     icon: <Search className="h-8 w-8 text-primary" />,

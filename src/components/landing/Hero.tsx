@@ -10,10 +10,10 @@ export default function Hero() {
           <div className="animate-slide-in-from-bottom duration-500">
             <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl font-headline">
               <span className="block">Unlock Your Potential with</span>
-              <span className="block text-primary">AI-Powered Tutoring</span>
+              <span className="block text-primary">Online Tutoring</span>
             </h1>
             <p className="mt-6 text-lg text-muted-foreground max-w-lg">
-              TutorConnect provides an immersive, one-on-one learning experience with expert tutors, an interactive whiteboard, and AI-driven tools to help you succeed.
+              TutorConnect provides an immersive, one-on-one learning experience with expert tutors and an interactive whiteboard to help you succeed.
             </p>
             <div className="mt-10 flex flex-wrap gap-4">
               <Link href="/tutors">
@@ -29,11 +29,11 @@ export default function Hero() {
           <div className="relative animate-fade-in duration-700">
              <Image
               src="https://placehold.co/600x400.png"
-              alt="Futuristic tutoring session"
+              alt="Online tutoring session"
               width={600}
               height={400}
               className="rounded-xl shadow-2xl transform hover:scale-105 transition-transform duration-500"
-              data-ai-hint="online learning futuristic"
+              data-ai-hint="online learning education"
             />
           </div>
         </div>
