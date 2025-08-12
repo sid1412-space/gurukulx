@@ -3,7 +3,7 @@
 
 import dynamic from 'next/dynamic';
 import { useState, useEffect, useRef, MouseEvent as ReactMouseEvent } from 'react';
-import { Mic, MicOff, ScreenShare, ScreenShareOff, PhoneOff, GripVertical, MessageSquare } from 'lucide-react';
+import { Mic, MicOff, ScreenShare, ScreenShareOff, PhoneOff, GripVertical, MessageSquare, Video, VideoOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useRouter } from 'next/navigation';
@@ -12,6 +12,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useIsClient } from '@/hooks/use-is-client';
 import { cn } from '@/lib/utils';
 import ChatPanel from '@/components/session/ChatPanel';
+import { useToast } from '@/hooks/use-toast';
+
 
 const JitsiMeetComponent = dynamic(() => import('@/components/session/JitsiMeetComponent'), {
   ssr: false,
@@ -23,10 +25,18 @@ const Whiteboard = dynamic(() => import('@/components/session/Whiteboard'), {
 
 export default function SessionPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [jitsiApi, setJitsiApi] = useState<JitsiAPI | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
+  const screenStreamRef = useRef<MediaStream | null>(null);
+
+
   const isMobile = useIsMobile();
   const isClient = useIsClient();
 
@@ -69,7 +79,115 @@ export default function SessionPage() {
     jitsiApi?.executeCommand('toggleShareScreen');
   };
 
+  const downloadRecording = () => {
+      if (recordedChunksRef.current.length === 0) {
+        toast({
+            variant: 'destructive',
+            title: 'Recording Error',
+            description: 'No video was recorded.',
+        });
+        return;
+      }
+      const blob = new Blob(recordedChunksRef.current, { type: 'video/mp4' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `tutorconnect-session-${new Date().toISOString()}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      recordedChunksRef.current = [];
+      toast({
+          title: 'Download Started',
+          description: 'Your session recording is downloading.',
+      });
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.stop();
+    }
+     if (screenStreamRef.current) {
+        screenStreamRef.current.getTracks().forEach(track => track.stop());
+        screenStreamRef.current = null;
+    }
+    setIsRecording(false);
+  };
+
+  const startRecording = async () => {
+    if (isRecording) return;
+    try {
+        const displayStream = await navigator.mediaDevices.getDisplayMedia({
+            video: true,
+            audio: true // Capture system audio
+        });
+        
+        screenStreamRef.current = displayStream; // Store stream to stop it later
+
+        // For simplicity, we'll record the screen share audio.
+        // A more complex implementation could merge Jitsi's audio track.
+        const audioStream = displayStream.getAudioTracks().length > 0 
+            ? new MediaStream(displayStream.getAudioTracks())
+            : new MediaStream(); // empty stream if no audio
+
+        const combinedStream = new MediaStream([
+            ...displayStream.getVideoTracks(),
+            ...audioStream.getAudioTracks(),
+        ]);
+
+        mediaRecorderRef.current = new MediaRecorder(combinedStream, { mimeType: 'video/webm' });
+        
+        mediaRecorderRef.current.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+                recordedChunksRef.current.push(event.data);
+            }
+        };
+
+        mediaRecorderRef.current.onstop = downloadRecording;
+
+        mediaRecorderRef.current.start();
+        setIsRecording(true);
+        toast({
+            title: 'Recording Started',
+            description: 'Your session is now being recorded.',
+        });
+
+        // Stop recording if the user stops sharing from the browser's native UI
+        displayStream.getVideoTracks()[0].onended = () => {
+            if(mediaRecorderRef.current?.state === 'recording'){
+                stopRecording();
+                toast({
+                    title: 'Recording Stopped',
+                    description: 'Screen sharing ended.',
+                });
+            }
+        };
+        
+    } catch (error) {
+        console.error("Error starting recording:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Recording Failed',
+            description: 'Could not start screen recording. Please ensure you have given permission.',
+        });
+        setIsRecording(false);
+    }
+  };
+  
+  const toggleRecording = () => {
+      if (isRecording) {
+          stopRecording();
+      } else {
+          startRecording();
+      }
+  };
+
   const hangUp = () => {
+    if (isRecording) {
+      stopRecording();
+    }
     jitsiApi?.executeCommand('hangup');
     router.push('/dashboard');
   };
@@ -182,6 +300,19 @@ export default function SessionPage() {
                   </Tooltip>
                 )}
 
+                {!isMobile && (
+                  <Tooltip>
+                      <TooltipTrigger asChild>
+                          <Button variant="outline" size="icon" onClick={toggleRecording} className={cn("rounded-full", isRecording ? "bg-red-500 text-white" : "")}>
+                             {isRecording ? <VideoOff /> : <Video />}
+                          </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                          <p>{isRecording ? 'Stop Recording' : 'Record Session'}</p>
+                      </TooltipContent>
+                  </Tooltip>
+                )}
+
                 <Tooltip>
                     <TooltipTrigger asChild>
                          <Button variant="outline" size="icon" onClick={() => setIsChatOpen(!isChatOpen)} className={cn("rounded-full", isChatOpen ? "bg-primary text-primary-foreground" : "")}>
@@ -209,3 +340,6 @@ export default function SessionPage() {
     </div>
   );
 }
+
+
+    
