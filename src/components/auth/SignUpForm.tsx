@@ -146,6 +146,9 @@ export default function SignUpForm() {
             };
             applicants.push(newApplicant);
             localStorage.setItem('tutorApplicants', JSON.stringify(applicants));
+             // Also add them to the user database as a student for now
+            users.push({ email: values.email, role: 'student', name: values.name });
+            localStorage.setItem('userDatabase', JSON.stringify(users));
             toast({
                 title: 'Application Submitted!',
                 description: 'Your application to become a tutor is pending approval. You can log in as a student for now.',

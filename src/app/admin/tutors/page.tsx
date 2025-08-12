@@ -51,7 +51,9 @@ export default function TutorManagementPage() {
             const storedApplicants = localStorage.getItem('tutorApplicants');
             if (storedApplicants) {
                 try {
-                    setApplicants(JSON.parse(storedApplicants));
+                    const allApplicants = JSON.parse(storedApplicants);
+                    // Filter out already approved applicants so they don't clutter the main view
+                    setApplicants(allApplicants.filter((app: Applicant) => app.status !== 'Approved'));
                 } catch (error) {
                     console.error("Failed to parse tutor applicants from localStorage", error);
                     setApplicants([]);
@@ -72,7 +74,14 @@ export default function TutorManagementPage() {
 
   const updateLocalStorage = (updatedApplicants: Applicant[]) => {
     if(isClient) {
-        localStorage.setItem('tutorApplicants', JSON.stringify(updatedApplicants));
+        // When updating, we need to merge with any already approved applicants
+        const storedApplicants = localStorage.getItem('tutorApplicants') || '[]';
+        const allApplicants = JSON.parse(storedApplicants);
+        const approvedApplicants = allApplicants.filter((app: Applicant) => app.status === 'Approved');
+
+        const currentApplicants = updatedApplicants.filter(app => app.status !== 'Approved');
+
+        localStorage.setItem('tutorApplicants', JSON.stringify([...approvedApplicants, ...currentApplicants]));
         window.dispatchEvent(new Event('storage'));
     }
   };
@@ -91,25 +100,17 @@ export default function TutorManagementPage() {
     const updatedApplicants = applicants.map(applicant =>
       applicant.id === approvingApplicant.id ? { ...applicant, status: 'Approved' } : applicant
     );
-    setApplicants(updatedApplicants);
+    setApplicants(updatedApplicants.filter(app => app.status !== 'Approved')); // Remove from view
     updateLocalStorage(updatedApplicants);
 
     try {
       const usersJSON = localStorage.getItem('userDatabase') || '[]';
       const users = JSON.parse(usersJSON);
 
-      if (!users.some((u: any) => u.email === approvingApplicant.email)) {
-        users.push({
-          email: approvingApplicant.email,
-          role: 'tutor',
-          name: approvingApplicant.name,
-          price: +tutorRate
-        });
-        localStorage.setItem('userDatabase', JSON.stringify(users));
-      } else {
-        const updatedUsers = users.map((u:any) => u.email === approvingApplicant.email ? {...u, role: 'tutor', price: +tutorRate} : u);
-        localStorage.setItem('userDatabase', JSON.stringify(updatedUsers));
-      }
+      // Update the user's role from 'student' to 'tutor' and set their price
+      const updatedUsers = users.map((u:any) => u.email === approvingApplicant.email ? {...u, role: 'tutor', price: +tutorRate} : u);
+      localStorage.setItem('userDatabase', JSON.stringify(updatedUsers));
+      
     } catch (error) {
       console.error('Failed to update user database:', error);
       toast({
@@ -117,6 +118,12 @@ export default function TutorManagementPage() {
         title: 'Error Approving Applicant',
         description: `Could not add ${approvingApplicant.name} to the user list.`,
       });
+      // Revert local state on error
+       const revertedApplicants = applicants.map(applicant =>
+            applicant.id === approvingApplicant.id ? { ...applicant, status: 'Pending' } : applicant
+        );
+       setApplicants(revertedApplicants);
+       updateLocalStorage(revertedApplicants);
       return;
     }
 
@@ -215,42 +222,42 @@ export default function TutorManagementPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    {applicant.status === 'Approved' ? (
-                       <span className="text-xs text-muted-foreground">Processed</span>
-                    ) : (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => handleViewApplication(applicant.name)}>View Application</DropdownMenuItem>
-                          <DropdownMenuItem
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Open menu</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => handleViewApplication(applicant.name)}>View Application</DropdownMenuItem>
+                        
+                        {applicant.status !== 'Approved' && (
+                           <DropdownMenuItem
                             className="text-green-600 focus:text-green-600"
                             onClick={() => setApprovingApplicant(applicant)}
-                          >
+                           >
                             Approve
-                          </DropdownMenuItem>
-                          {applicant.status === 'Pending' ? (
-                             <DropdownMenuItem
-                                className="text-red-600 focus:text-red-600"
-                                onClick={() => handleReject(applicant.id)}
-                              >
-                                Reject
-                              </DropdownMenuItem>
-                          ) : (
-                             <DropdownMenuItem
-                                onClick={() => handleReconsider(applicant.id)}
-                              >
-                                Reconsider
-                              </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
+                           </DropdownMenuItem>
+                        )}
+
+                        {applicant.status === 'Pending' ? (
+                           <DropdownMenuItem
+                              className="text-red-600 focus:text-red-600"
+                              onClick={() => handleReject(applicant.id)}
+                            >
+                              Reject
+                            </DropdownMenuItem>
+                        ) : (
+                           <DropdownMenuItem
+                              onClick={() => handleReconsider(applicant.id)}
+                            >
+                              Reconsider
+                            </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))}

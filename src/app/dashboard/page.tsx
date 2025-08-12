@@ -25,16 +25,21 @@ export default function DashboardPage() {
                 const users = JSON.parse(usersJSON);
                 const tutors = users.filter((u: any) => u.role === 'tutor');
                 
+                const applicantsJSON = localStorage.getItem('tutorApplicants') || '[]';
+                const applicants = JSON.parse(applicantsJSON);
+
                 // The 'price' was stored on approval, but let's add mock data for others for display
-                const tutorsWithFullData = tutors.map((t: any) => ({
-                    ...t, // Contains name, email, role, subjects from signup
-                    id: t.email, // Use email as a unique ID
-                    avatar: 'https://placehold.co/100x100.png',
-                    bio: t.qualification || 'A passionate and experienced tutor.',
-                    rating: 4.8 + Math.random() * 0.2, // Randomize rating slightly
-                    price: t.price || 50 + Math.floor(Math.random() * 50), // Use saved price or mock one
-                    subjects: t.expertise ? [t.expertise] : ['Subject'], // Use saved subject
-                }));
+                const tutorsWithFullData = tutors.map((t: any) => {
+                    const applicantData = applicants.find((a:any) => a.email === t.email) || {};
+                    return {
+                        ...t, // Contains name, email, role, price from approval
+                        id: t.email, // Use email as a unique ID
+                        avatar: 'https://placehold.co/100x100.png',
+                        bio: applicantData.qualification || 'A passionate and experienced tutor.',
+                        rating: 4.8 + Math.random() * 0.2, // Randomize rating slightly
+                        subjects: applicantData.expertise ? [applicantData.expertise] : ['Subject'], // Use saved subject
+                    }
+                });
                 setAllTutors(tutorsWithFullData);
             }
         }
