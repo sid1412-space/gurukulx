@@ -25,15 +25,26 @@ export default function JitsiMeetComponent({ onApiReady }: JitsiMeetComponentPro
           p2p: {
             enabled: true,
           },
-          // Enable screen sharing
           desktopSharingSources: ['screen', 'window', 'tab'],
         }}
         interfaceConfigOverwrite={{
           DISABLE_VIDEO_BACKGROUND: true,
           SHOW_JITSI_WATERMARK: false,
           SHOW_WATERMARK_FOR_GUESTS: false,
-          // We hide the toolbar as we have a custom one
-          TOOLBAR_BUTTONS: [],
+          // The toolbar must contain the 'desktop' button for screen sharing to be enabled.
+          // We will hide the toolbar with CSS, but the button needs to be in the config.
+          TOOLBAR_BUTTONS: [
+            'camera',
+            'microphone',
+            'desktop',
+            'fullscreen',
+            'hangup',
+            'chat',
+            'settings',
+            'raisehand',
+            'videoquality',
+            'tileview',
+          ],
           TOOLBAR_ALWAYS_VISIBLE: false,
         }}
         onApiReady={onApiReady}
