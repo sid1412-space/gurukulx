@@ -9,12 +9,6 @@ import Footer from '@/components/Footer';
 import { usePathname } from 'next/navigation';
 import React from 'react';
 
-// Using metadata object for server components, but we need client for pathname
-// export const metadata: Metadata = {
-//   title: 'TutorConnect',
-//   description: 'The future of online tutoring.',
-// };
-
 export default function RootLayout({
   children,
 }: Readonly<{
