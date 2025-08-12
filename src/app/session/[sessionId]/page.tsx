@@ -68,32 +68,32 @@ export default function SessionPage() {
   }, [hasAgreedToTerms]);
 
   useEffect(() => {
-    if (!hasAgreedToTerms || !tutor || userRole !== 'student') return;
+    if (!hasAgreedToTerms || !tutor || userRole !== 'student' || sessionDuration === 0) return;
 
     // Deduct funds every 60 seconds (1 minute)
     if (sessionDuration > 0 && sessionDuration % 60 === 0) {
-        setWalletBalance(currentBalance => {
-            const newBalance = currentBalance - pricePerMinute;
-            
-             if (newBalance <= 0) {
-                toast({
-                  variant: 'destructive',
-                  title: 'Insufficient Funds',
-                  description: 'Your wallet balance is empty. The session will now end.',
-                });
-                hangUp();
-                return 0;
-            } else {
-                 toast({
-                    title: 'Charge Applied',
-                    description: `₹${pricePerMinute.toFixed(2)} deducted for the last minute. New balance: ₹${newBalance.toFixed(2)}`,
-                });
-                return newBalance;
-            }
+      setWalletBalance(currentBalance => {
+        const newBalance = currentBalance - pricePerMinute;
+        
+        if (newBalance <= 0) {
+            toast({
+              variant: 'destructive',
+              title: 'Insufficient Funds',
+              description: 'Your wallet balance is empty. The session will now end.',
+            });
+            hangUp();
+            return 0;
+        }
+        
+        toast({
+            title: 'Charge Applied',
+            description: `₹${pricePerMinute.toFixed(2)} deducted for the last minute. New balance: ₹${newBalance.toFixed(2)}`,
         });
+        return newBalance;
+      });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionDuration, hasAgreedToTerms]);
+  }, [sessionDuration, hasAgreedToTerms, tutor, userRole, pricePerMinute]);
 
 
   useEffect(() => {
@@ -274,7 +274,7 @@ export default function SessionPage() {
                         <AlertTitle>Audio Connection Error</AlertTitle>
                         <AlertDescription>
                             The audio service failed to load. Please check your network and try again.
-                        </Description>
+                        </AlertDescription>
                     </Alert>
                 </div>
             )}
@@ -295,3 +295,5 @@ export default function SessionPage() {
     </div>
   );
 }
+
+    
