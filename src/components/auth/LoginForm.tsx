@@ -58,7 +58,7 @@ export default function LoginForm() {
     setIsLoading(true);
     
     setTimeout(() => {
-      let userRole = 'student'; // Default role
+      let userRole = '';
       let foundUser = false;
       
       try {
@@ -68,13 +68,8 @@ export default function LoginForm() {
 
         if (user) {
             // In a real app, password would be checked here. We'll assume it's correct.
-            // This logic correctly checks the *approved* user list.
             userRole = user.role;
             foundUser = true;
-        } else {
-             // If user does not exist in the main database, they are treated as a student.
-             // An unapproved tutor applicant will also fall into this category.
-            foundUser = true; 
         }
 
       } catch (error) {
@@ -105,6 +100,10 @@ export default function LoginForm() {
             localStorage.setItem('isTutor', 'true');
             destination = '/tutor/dashboard';
             roleName = 'Tutor';
+        } else {
+             // This branch is for students
+             destination = '/dashboard';
+             roleName = 'Student';
         }
         
         window.dispatchEvent(new Event("storage"));

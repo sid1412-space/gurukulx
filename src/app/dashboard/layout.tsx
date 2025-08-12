@@ -19,6 +19,7 @@ import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import React, { useEffect, useState } from 'react';
+import { useIsClient } from '@/hooks/use-is-client';
 
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -37,22 +38,24 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [isAuthorized, setIsAuthorized] = useState(false);
+  const isClient = useIsClient();
 
   useEffect(() => {
-    // This effect runs on the client-side
-    const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    const isTutor = localStorage.getItem('isTutor') === 'true';
-    const isAdmin = localStorage.getItem('isAdmin') === 'true';
+    if (isClient) {
+        const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
+        const isTutor = localStorage.getItem('isTutor') === 'true';
+        const isAdmin = localStorage.getItem('isAdmin') === 'true';
 
-    // A student is someone who is logged in but is NOT a tutor and NOT an admin.
-    if (loggedIn && !isTutor && !isAdmin) {
-      setIsAuthorized(true);
-    } else {
-      // If the user is not a valid student, redirect to login.
-      // This prevents tutors/admins from seeing the student dashboard.
-      router.push('/login');
+        // A student is someone who is logged in but is NOT a tutor and NOT an admin.
+        if (loggedIn && !isTutor && !isAdmin) {
+            setIsAuthorized(true);
+        } else {
+            // If the user is not a valid student, redirect to login.
+            // This prevents tutors/admins from seeing the student dashboard.
+            router.push('/login');
+        }
     }
-  }, [router, pathname]);
+  }, [isClient, router, pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem('isLoggedIn');
