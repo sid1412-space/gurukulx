@@ -32,17 +32,16 @@ export default function TutorLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
   const router = useRouter();
-  const [authStatus, setAuthStatus] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
+  const pathname = usePathname();
+  const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
     const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
     const isTutor = localStorage.getItem('isTutor') === 'true';
     if (loggedIn && isTutor) {
-      setAuthStatus('authenticated');
+      setIsAuthorized(true);
     } else {
-      setAuthStatus('unauthenticated');
       router.push('/login');
     }
   }, [router, pathname]);
@@ -51,15 +50,15 @@ export default function TutorLayout({
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('isAdmin');
     localStorage.removeItem('isTutor');
-    setAuthStatus('unauthenticated');
+    setIsAuthorized(false);
     window.dispatchEvent(new Event("storage"));
     router.push('/');
   }
 
-  if (authStatus !== 'authenticated') {
+  if (!isAuthorized) {
      return (
         <div className="flex items-center justify-center h-screen bg-background">
-            <p>Loading...</p>
+            <p>Redirecting...</p>
         </div>
     );
   }

@@ -34,9 +34,9 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
   const router = useRouter();
-  const [authStatus, setAuthStatus] = useState<'loading' | 'authenticated' | 'unauthorized'>('loading');
+  const pathname = usePathname();
+  const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
     const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
@@ -45,9 +45,8 @@ export default function DashboardLayout({
     
     // This layout is ONLY for students.
     if (loggedIn && !isTutor && !isAdmin) {
-        setAuthStatus('authenticated');
+        setIsAuthorized(true);
     } else {
-      setAuthStatus('unauthorized');
       router.push('/login');
     }
   }, [router, pathname]);
@@ -56,16 +55,16 @@ export default function DashboardLayout({
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('isAdmin');
     localStorage.removeItem('isTutor');
-    setAuthStatus('unauthorized');
+    setIsAuthorized(false);
     window.dispatchEvent(new Event("storage"));
     router.push('/');
   }
 
-  if (authStatus !== 'authenticated') {
+  if (!isAuthorized) {
      return (
         <div className="flex items-center justify-center h-screen bg-background">
             <div className="flex flex-col items-center gap-2">
-                 <p className="text-muted-foreground">Loading...</p>
+                 <p className="text-muted-foreground">Redirecting...</p>
             </div>
         </div>
     );
