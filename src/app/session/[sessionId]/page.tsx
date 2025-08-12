@@ -64,10 +64,10 @@ export default function SessionPage() {
   }, []);
 
   useEffect(() => {
-    if (!tutor) return;
+    if (!tutor || userRole !== 'student') return;
 
     // Deduct funds every 60 seconds (1 minute)
-    if (userRole === 'student' && sessionDuration > 0 && sessionDuration % 60 === 0) {
+    if (sessionDuration > 0 && sessionDuration % 60 === 0) {
         setWalletBalance(currentBalance => {
             const newBalance = currentBalance - pricePerMinute;
             
@@ -89,7 +89,7 @@ export default function SessionPage() {
         });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionDuration, pricePerMinute, tutor, userRole]);
+  }, [sessionDuration]);
 
 
   useEffect(() => {
@@ -175,7 +175,7 @@ export default function SessionPage() {
     }
 
     setIsGenerating(false);
-  }
+  };
 
   return (
     <div className="h-screen w-screen bg-background flex flex-col">
@@ -283,5 +283,3 @@ export default function SessionPage() {
     </div>
   );
 }
-
-    
