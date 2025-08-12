@@ -36,17 +36,17 @@ export default function AdminLayout({
   const pathname = usePathname();
   const router = useRouter();
   const isClient = useIsClient();
-  const [isAuthenticated, setIsAuthenticated] = useState(true); // Assume true to prevent flicker
+  const [authStatus, setAuthStatus] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
 
   useEffect(() => {
     if (isClient) {
       const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
       const isAdmin = localStorage.getItem('isAdmin') === 'true';
-      if (!loggedIn || !isAdmin) {
-        setIsAuthenticated(false);
-        router.push('/login'); // Or a dedicated "unauthorized" page
+      if (loggedIn && isAdmin) {
+        setAuthStatus('authenticated');
       } else {
-        setIsAuthenticated(true);
+        setAuthStatus('unauthenticated');
+        router.push('/login');
       }
     }
   }, [isClient, router, pathname]);
@@ -54,13 +54,13 @@ export default function AdminLayout({
   const handleLogout = () => {
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('isAdmin');
-    setIsAuthenticated(false);
+    setAuthStatus('unauthenticated');
     // Dispatch a storage event to notify other tabs/windows (like the header)
     window.dispatchEvent(new Event("storage"));
     router.push('/');
   }
 
-  if (!isClient || !isAuthenticated) {
+  if (authStatus === 'loading') {
      return (
         <div className="flex items-center justify-center h-screen bg-background">
             <p>Loading...</p>
@@ -68,6 +68,15 @@ export default function AdminLayout({
     );
   }
 
+  if (authStatus === 'unauthenticated') {
+    // This can be a brief flash before the router push completes, or a dedicated "access denied" page.
+    return (
+        <div className="flex items-center justify-center h-screen bg-background">
+            <p>Redirecting to login...</p>
+        </div>
+    );
+  }
+  
   return (
     <SidebarProvider>
       <Sidebar>
