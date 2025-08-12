@@ -10,7 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useState } from 'react';
-import { Loader2, KeyRound, Bank, User } from 'lucide-react';
+import { Loader2, KeyRound, Landmark, User } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
@@ -164,7 +164,7 @@ export default function TutorSettingsPage() {
               </Card>
              <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2"><Bank/> Payout Details</CardTitle>
+                  <CardTitle className="flex items-center gap-2"><Landmark/> Payout Details</CardTitle>
                   <CardDescription>How you'll get paid.</CardDescription>
                 </CardHeader>
                 <CardContent>
