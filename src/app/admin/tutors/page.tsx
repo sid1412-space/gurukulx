@@ -210,7 +210,7 @@ export default function TutorManagementPage() {
             </TableHeader>
             <TableBody>
               {applicants.map((applicant) => (
-                <TableRow key={applicant.id} className={applicant.status === 'Approved' ? 'opacity-50' : ''}>
+                <TableRow key={applicant.id}>
                   <TableCell className="font-medium">{applicant.name}</TableCell>
                   <TableCell>{applicant.email}</TableCell>
                   <TableCell>{applicant.subject}</TableCell>
@@ -220,7 +220,9 @@ export default function TutorManagementPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                     {applicant.status !== 'Approved' ? (
+                     {applicant.status === 'Approved' ? (
+                       <span className="text-xs text-muted-foreground">Processed</span>
+                    ) : (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" className="h-8 w-8 p-0">
@@ -253,8 +255,6 @@ export default function TutorManagementPage() {
                           )}
                         </DropdownMenuContent>
                       </DropdownMenu>
-                    ) : (
-                       <span className="text-xs text-muted-foreground">Processed</span>
                     )}
                   </TableCell>
                 </TableRow>
