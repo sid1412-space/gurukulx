@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MoreHorizontal } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   AlertDialog,
@@ -53,6 +53,7 @@ export default function TutorManagementPage() {
   const { toast } = useToast();
   const isClient = useIsClient();
   const [approvingApplicant, setApprovingApplicant] = useState<Applicant | null>(null);
+  const [deletingTutor, setDeletingTutor] = useState<Tutor | null>(null);
   const [tutorRate, setTutorRate] = useState<number | string>('');
 
   const fetchAllData = () => {
@@ -227,6 +228,32 @@ export default function TutorManagementPage() {
     fetchAllData();
   };
 
+  const handleDeleteTutor = () => {
+    if (!deletingTutor) return;
+
+    // Remove from userDatabase
+    const usersJSON = localStorage.getItem('userDatabase') || '[]';
+    const users = JSON.parse(usersJSON);
+    const updatedUsers = users.filter((u:any) => u.email !== deletingTutor.email);
+    localStorage.setItem('userDatabase', JSON.stringify(updatedUsers));
+
+    // Remove from tutorApplicants
+    const applicantsJSON = localStorage.getItem('tutorApplicants') || '[]';
+    const applicants = JSON.parse(applicantsJSON);
+    const updatedApplicants = applicants.filter((a:any) => a.email !== deletingTutor.email);
+    localStorage.setItem('tutorApplicants', JSON.stringify(updatedApplicants));
+
+    window.dispatchEvent(new Event('storage'));
+    toast({
+        variant: 'destructive',
+        title: 'Tutor Deleted',
+        description: `${deletingTutor.name} has been permanently removed from the system.`
+    });
+    
+    setDeletingTutor(null);
+    fetchAllData();
+  };
+
 
   const getApplicantBadgeVariant = (status: 'Pending' | 'Approved' | 'Rejected') => {
     switch (status) {
@@ -364,9 +391,15 @@ export default function TutorManagementPage() {
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuLabel>Moderation</DropdownMenuLabel>
                                         {tutor.role === 'banned' ? (
-                                             <DropdownMenuItem onClick={() => handleUnban(tutor.email, tutor.name)}>
-                                                Unban Tutor
-                                            </DropdownMenuItem>
+                                            <>
+                                                <DropdownMenuItem onClick={() => handleUnban(tutor.email, tutor.name)}>
+                                                    Unban Tutor
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => setDeletingTutor(tutor)}>
+                                                    Delete Tutor
+                                                </DropdownMenuItem>
+                                            </>
                                         ) : (
                                             <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => handleBan(tutor.email, tutor.name)}>
                                                 Ban Tutor
@@ -410,6 +443,25 @@ export default function TutorManagementPage() {
                 <AlertDialogFooter>
                 <AlertDialogCancel onClick={() => setTutorRate('')}>Cancel</AlertDialogCancel>
                 <AlertDialogAction onClick={handleApprove}>Confirm Approval</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+      )}
+
+      {deletingTutor && (
+        <AlertDialog open={!!deletingTutor} onOpenChange={() => setDeletingTutor(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the tutor account for <span className="font-bold">{deletingTutor.name}</span> and remove all of their data from the servers.
+                </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteTutor} className="bg-destructive hover:bg-destructive/90">
+                    Yes, delete tutor
+                </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
