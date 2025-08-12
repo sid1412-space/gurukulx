@@ -1,9 +1,25 @@
+
+'use client';
+
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { useRouter } from 'next/navigation';
+
 
 type Tutor = {
   id: string;
@@ -20,6 +36,12 @@ type TutorCardProps = {
 };
 
 export default function TutorCard({ tutor }: TutorCardProps) {
+  const router = useRouter();
+
+  const handleContinue = () => {
+    router.push(`/session/new-session-${tutor.id}`);
+  };
+
   return (
     <Card className="h-full flex flex-col hover:shadow-lg transition-shadow duration-300">
       <CardHeader className="flex flex-row items-center gap-4">
@@ -45,9 +67,27 @@ export default function TutorCard({ tutor }: TutorCardProps) {
       </CardContent>
       <CardFooter className="flex justify-between items-center">
         <p className="text-xl font-bold text-primary">${tutor.price}<span className="text-sm font-normal text-muted-foreground">/hr</span></p>
-        <Link href={`/session/new-session-${tutor.id}`}>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
             <Button>Book Session</Button>
-        </Link>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Start a new session?</AlertDialogTitle>
+              <AlertDialogDescription>
+                You are about to start a new tutoring session.
+                <br /><br />
+                Once you enter the whiteboard, please use the image upload tool (7th icon from the top) to add a picture of your question.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleContinue}>
+                Continue
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardFooter>
     </Card>
   );
