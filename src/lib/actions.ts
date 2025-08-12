@@ -1,6 +1,7 @@
 'use server';
 
-import { suggestExercises, type SuggestExercisesInput } from '@/ai/flows/suggest-exercises';
+import { suggestExercises } from '@/ai/flows/suggest-exercises';
+import type { SuggestExercisesInput } from '@/ai/flows/suggest-exercises-types';
 
 export async function getExerciseSuggestions(input: SuggestExercisesInput) {
   try {
