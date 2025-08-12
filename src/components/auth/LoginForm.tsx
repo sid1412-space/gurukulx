@@ -35,13 +35,16 @@ export default function LoginForm() {
     
     // Mock API call
     setTimeout(() => {
+      const isAdminUser = values.email.toLowerCase() === 'quotesparkconnect@yahoo.com';
+      
       // In a real app, upon successful login, you'd set a session/token.
       // Here, we'll use localStorage to mock the logged-in state.
       localStorage.setItem('isLoggedIn', 'true');
       
-      // Mock check for admin user
-      if (values.email.toLowerCase() === 'quotesparkconnect@yahoo.com') {
+      if (isAdminUser) {
           localStorage.setItem('isAdmin', 'true');
+      } else {
+          localStorage.removeItem('isAdmin');
       }
 
       // Dispatch a storage event to notify other tabs/windows
@@ -49,17 +52,16 @@ export default function LoginForm() {
 
       toast({
         title: 'Logged In!',
-        description: 'Redirecting to your dashboard...',
+        description: `Redirecting to your ${isAdminUser ? 'admin panel' : 'dashboard'}...`,
       });
       
       // Redirect based on role
-      if (values.email.toLowerCase() === 'quotesparkconnect@yahoo.com') {
+      if (isAdminUser) {
         router.push('/admin');
       } else {
         router.push('/dashboard');
       }
 
-      // No need to setIsLoading(false) as we are navigating away
     }, 1000);
   }
 
