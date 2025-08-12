@@ -13,10 +13,12 @@ import {
 } from '@/components/ui/sidebar';
 import { Users, DollarSign, LayoutDashboard, Settings } from 'lucide-react';
 import Logo from '@/components/Logo';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { useEffect } from 'react';
+
 
 const adminMenuItems = [
   { href: '/admin', label: 'Overview', icon: LayoutDashboard },
@@ -25,12 +27,35 @@ const adminMenuItems = [
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ];
 
+
+// Mock authentication check
+const useAuth = () => {
+    // In a real app, this would be a hook that checks a JWT, a session, etc.
+    return { isAuthenticated: false }; 
+};
+
+
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    // Here you would check if the user is an admin as well
+    if (!isAuthenticated) {
+      router.push('/login');
+    }
+  }, [isAuthenticated, router]);
+
+  if (!isAuthenticated) {
+    // You can render a loading spinner here while redirecting
+    return null;
+  }
+
 
   return (
     <SidebarProvider>

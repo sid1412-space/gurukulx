@@ -14,10 +14,11 @@ import {
 } from '@/components/ui/sidebar';
 import { User, LayoutDashboard, Settings, BookOpen } from 'lucide-react';
 import Logo from '@/components/Logo';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { useEffect } from 'react';
 
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -26,12 +27,32 @@ const menuItems = [
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ];
 
+// Mock authentication check
+const useAuth = () => {
+    // In a real app, this would be a hook that checks a JWT, a session, etc.
+    return { isAuthenticated: false }; 
+};
+
+
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/login');
+    }
+  }, [isAuthenticated, router]);
+
+  if (!isAuthenticated) {
+    // You can render a loading spinner here while redirecting
+    return null;
+  }
 
   return (
     <SidebarProvider>
