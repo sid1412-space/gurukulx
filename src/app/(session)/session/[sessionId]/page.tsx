@@ -2,14 +2,15 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useState, useEffect } from 'react';
-import { Mic, MicOff, ScreenShare, ScreenShareOff, PhoneOff } from 'lucide-react';
+import { useState, useEffect, useRef, MouseEvent as ReactMouseEvent } from 'react';
+import { Mic, MicOff, ScreenShare, ScreenShareOff, PhoneOff, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useRouter } from 'next/navigation';
 import type { JitsiAPI } from '@jitsi/react-sdk';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useIsClient } from '@/hooks/use-is-client';
+import { cn } from '@/lib/utils';
 
 const JitsiMeetComponent = dynamic(() => import('@/components/session/JitsiMeetComponent'), {
   ssr: false,
@@ -26,6 +27,12 @@ export default function SessionPage() {
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const isMobile = useIsMobile();
   const isClient = useIsClient();
+
+  const [position, setPosition] = useState({ x: 0, y: 20 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
+  const controlsRef = useRef<HTMLDivElement>(null);
+
 
   useEffect(() => {
     if (jitsiApi) {
@@ -64,6 +71,58 @@ export default function SessionPage() {
     jitsiApi?.executeCommand('hangup');
     router.push('/dashboard');
   };
+  
+  const handleMouseDown = (e: ReactMouseEvent<HTMLDivElement, MouseEvent>) => {
+    if (e.target !== e.currentTarget && (e.target as HTMLElement).closest('button')) {
+      return;
+    }
+    setIsDragging(true);
+    dragStartRef.current = {
+        x: e.clientX - position.x,
+        y: e.clientY - position.y,
+    };
+     if (controlsRef.current) {
+      controlsRef.current.style.cursor = 'grabbing';
+    }
+  };
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (isDragging) {
+      const newX = e.clientX - dragStartRef.current.x;
+      const newY = e.clientY - dragStartRef.current.y;
+      setPosition({ x: newX, y: newY });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    if (controlsRef.current) {
+        controlsRef.current.style.cursor = 'grab';
+    }
+  };
+
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    } else {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
+
+  useEffect(() => {
+    // Center the controls horizontally on initial render
+     if (controlsRef.current) {
+      const { offsetWidth } = controlsRef.current;
+      setPosition(pos => ({ ...pos, x: (window.innerWidth - offsetWidth) / 2 }));
+    }
+  }, []);
 
   return (
     <div className="h-screen w-screen relative">
@@ -74,11 +133,17 @@ export default function SessionPage() {
       {isClient && <Whiteboard />}
 
       <TooltipProvider>
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20">
-            <div className="flex items-center gap-2 p-2 bg-background border rounded-full shadow-lg">
+        <div
+            ref={controlsRef}
+            className="absolute z-20"
+            style={{ left: `${position.x}px`, bottom: `${position.y}px` }}
+            onMouseDown={handleMouseDown}
+        >
+            <div className="flex items-center gap-2 p-2 bg-background border rounded-full shadow-lg cursor-grab">
+                <GripVertical className="h-5 w-5 text-muted-foreground" />
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <Button variant="outline" size="icon" onClick={toggleMute} className={isMuted ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}>
+                        <Button variant="outline" size="icon" onClick={toggleMute} className={cn("rounded-full", isMuted ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : "")}>
                             {isMuted ? <MicOff /> : <Mic />}
                         </Button>
                     </TooltipTrigger>
@@ -90,7 +155,7 @@ export default function SessionPage() {
                 {!isMobile && (
                   <Tooltip>
                       <TooltipTrigger asChild>
-                          <Button variant="outline" size="icon" onClick={toggleScreenShare} className={isScreenSharing ? "bg-primary text-primary-foreground" : ""}>
+                          <Button variant="outline" size="icon" onClick={toggleScreenShare} className={cn("rounded-full", isScreenSharing ? "bg-primary text-primary-foreground" : "")}>
                              {isScreenSharing ? <ScreenShareOff /> : <ScreenShare />}
                           </Button>
                       </TooltipTrigger>
@@ -102,7 +167,7 @@ export default function SessionPage() {
                 
                  <Tooltip>
                     <TooltipTrigger asChild>
-                        <Button variant="destructive" size="icon" onClick={hangUp}>
+                        <Button variant="destructive" size="icon" onClick={hangUp} className="rounded-full">
                            <PhoneOff />
                         </Button>
                     </TooltipTrigger>
