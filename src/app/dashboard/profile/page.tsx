@@ -114,7 +114,7 @@ export default function ProfilePage() {
     }, 1000);
   }
 
-  if (!isClient) {
+  if (!isClient || !currentUser.email) {
     return (
       <div className="space-y-8 animate-fade-in">
         <header>
