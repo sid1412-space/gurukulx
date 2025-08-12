@@ -64,22 +64,23 @@ type WhiteboardProps = {
 
 export default function Whiteboard({ children }: WhiteboardProps) {
 	return (
-		<div style={{ position: 'relative', width: '100%', height: '100%' }}>
-            <div
-                style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    zIndex: 0, // Behind the whiteboard
-                }}
-            >
-                {children}
-            </div>
+		<div style={{ position: 'fixed', inset: 0 }}>
 			<Tldraw persistenceKey="tutorconnect-whiteboard">
                 <EditorEvents />
-            </Tldraw>
+                <div 
+                    style={{ 
+                        position: 'absolute', 
+                        top: '50%', 
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        width: '320px', 
+                        height: '240px',
+                        pointerEvents: 'none'
+                    }}
+                >
+                     {children}
+                </div>
+			</Tldraw>
 		</div>
 	)
 }

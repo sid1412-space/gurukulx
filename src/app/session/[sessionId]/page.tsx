@@ -13,22 +13,18 @@ import { useIsClient } from '@/hooks/use-is-client';
 import ChatPanel from '@/components/session/ChatPanel';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Card, CardContent } from '@/components/ui/card';
 import { tutors } from '@/lib/mock-data';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { getExerciseSuggestions } from '@/lib/actions';
 import { Separator } from '@/components/ui/separator';
-
-const Whiteboard = dynamic(() => import('@/components/session/Whiteboard'), {
-  ssr: false,
-  loading: () => <div className="h-full w-full flex items-center justify-center bg-muted"><p>Loading Whiteboard...</p></div>,
-});
+import Whiteboard from '@/components/session/Whiteboard';
 
 const JitsiMeetComponent = dynamic(() => import('@/components/session/JitsiMeetComponent'), {
     ssr: false,
     loading: () => <div className="h-full w-full flex items-center justify-center bg-muted"><p>Loading Video...</p></div>,
 });
+
 
 type RecordingSupport = 'pending' | 'supported' | 'unsupported';
 
@@ -44,9 +40,7 @@ export default function SessionPage() {
   const [isMuted, setIsMuted] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
   const [jitsiLoadFailed, setJitsiLoadFailed] = useState(false);
-  const [recordingSupport, setRecordingSupport] = useState<RecordingSupport>('pending');
   const [isGenerating, setIsGenerating] = useState(false);
   const practiceTopicRef = useRef<HTMLInputElement>(null);
 
@@ -55,12 +49,6 @@ export default function SessionPage() {
   const [walletBalance, setWalletBalance] = useState(12550); // mock initial balance
   const tutor = tutors.find(t => t.id === tutorId);
   const pricePerMinute = tutor ? tutor.price : 1; 
-
-
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const recordedChunksRef = useRef<Blob[]>([]);
-  const screenStreamRef = useRef<MediaStream | null>(null);
-
 
   const isMobile = useIsMobile();
   const isClient = useIsClient();
@@ -88,7 +76,9 @@ export default function SessionPage() {
 
     // Deduct funds every 60 seconds (1 minute)
     if (sessionDuration > 0 && sessionDuration % 60 === 0) {
-      const newBalance = walletBalance - pricePerMinute;
+      const costForMinute = pricePerMinute;
+      const newBalance = walletBalance - costForMinute;
+
       if (newBalance < 0) {
         toast({
           variant: 'destructive',
@@ -100,12 +90,12 @@ export default function SessionPage() {
         setWalletBalance(newBalance);
         toast({
           title: 'Charge Applied',
-          description: `₹${pricePerMinute.toFixed(2)} deducted for the last minute. New balance: ₹${newBalance.toFixed(2)}`,
+          description: `₹${costForMinute.toFixed(2)} deducted for the last minute. New balance: ₹${newBalance.toFixed(2)}`,
         });
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionDuration, pricePerMinute]);
+  }, [sessionDuration, pricePerMinute, walletBalance, tutor]);
 
 
   useEffect(() => {
@@ -210,20 +200,18 @@ export default function SessionPage() {
        <header className="p-2 border-b bg-background z-20">
          <div className="flex items-center justify-between gap-4">
              <div className="flex items-center gap-4">
-                 <Card className="p-2">
+                 <div className="p-2 border rounded-lg">
                     <div className="flex items-center gap-2 text-sm">
                         <Timer className="text-primary"/>
                         <span>{formatDuration(sessionDuration)}</span>
                     </div>
-                </Card>
-                 <Card>
-                    <CardContent className="p-2">
-                        <div className="flex items-center gap-2 text-sm">
-                            <Wallet className="text-green-600"/>
-                            <span className="font-semibold">₹{walletBalance.toFixed(2)}</span>
-                        </div>
-                    </CardContent>
-                </Card>
+                </div>
+                 <div className="p-2 border rounded-lg">
+                    <div className="flex items-center gap-2 text-sm">
+                        <Wallet className="text-green-600"/>
+                        <span className="font-semibold">₹{walletBalance.toFixed(2)}</span>
+                    </div>
+                </div>
             </div>
 
             <div className="flex items-center gap-1">
@@ -298,12 +286,6 @@ export default function SessionPage() {
          </div>
        </header>
        <main className="flex-grow relative bg-muted/20">
-            <Whiteboard>
-                 {!jitsiLoadFailed && (
-                    <JitsiMeetComponent onApiReady={handleApiReady} onError={handleJitsiError} isMobile={isMobile} />
-                )}
-            </Whiteboard>
-
             {jitsiLoadFailed && (
                 <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50">
                     <Alert variant="destructive" className="max-w-lg">
@@ -315,6 +297,12 @@ export default function SessionPage() {
                     </Alert>
                 </div>
             )}
+            
+            <Whiteboard>
+                {!jitsiLoadFailed && (
+                     <JitsiMeetComponent onApiReady={handleApiReady} onError={handleJitsiError} />
+                )}
+            </Whiteboard>
 
             {isClient && <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />}
        </main>
