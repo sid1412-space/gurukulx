@@ -32,14 +32,17 @@ export default function TutorsLayout({
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    // Only redirect if authentication has been checked
+    if (isChecking) return;
+    // Only redirect if authentication has been checked and is false
     if (isAuthenticated === false) {
       router.push('/login');
     }
+  }, [isAuthenticated, isChecking, router]);
+
+  useEffect(() => {
      // Finished checking auth status
     setIsChecking(false);
-
-  }, [isAuthenticated, router]);
+  }, []);
 
   // Render a loading state while checking authentication to prevent flashing the page content.
   if (isChecking || !isAuthenticated) {

@@ -44,16 +44,22 @@ export default function TutorCard({ tutor }: TutorCardProps) {
 
   return (
     <Card className="h-full flex flex-col hover:shadow-lg transition-shadow duration-300">
-      <CardHeader className="flex flex-row items-center gap-4">
-        <Avatar className="h-16 w-16">
-          <AvatarImage src={tutor.avatar} alt={tutor.name} data-ai-hint="person portrait" />
-          <AvatarFallback>{tutor.name.charAt(0)}</AvatarFallback>
-        </Avatar>
-        <div className="flex-1">
-          <CardTitle>{tutor.name}</CardTitle>
-          <div className="flex items-center gap-2 mt-1">
-            <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-            <span className="text-muted-foreground font-semibold">{tutor.rating.toFixed(1)}</span>
+      <CardHeader>
+        <div className="flex flex-row items-center gap-4">
+          <Link href={`/tutors/${tutor.id}`}>
+            <Avatar className="h-16 w-16">
+              <AvatarImage src={tutor.avatar} alt={tutor.name} data-ai-hint="person portrait" />
+              <AvatarFallback>{tutor.name.charAt(0)}</AvatarFallback>
+            </Avatar>
+          </Link>
+          <div className="flex-1">
+             <Link href={`/tutors/${tutor.id}`} className="hover:underline">
+              <CardTitle>{tutor.name}</CardTitle>
+             </Link>
+            <div className="flex items-center gap-2 mt-1">
+              <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+              <span className="text-muted-foreground font-semibold">{tutor.rating.toFixed(1)}</span>
+            </div>
           </div>
         </div>
       </CardHeader>

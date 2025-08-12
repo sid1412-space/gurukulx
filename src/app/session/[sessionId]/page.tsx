@@ -3,7 +3,7 @@
 
 import dynamic from 'next/dynamic';
 import { useState, useEffect, useRef, MouseEvent as ReactMouseEvent } from 'react';
-import { Mic, MicOff, ScreenShare, ScreenShareOff, PhoneOff, GripVertical } from 'lucide-react';
+import { Mic, MicOff, ScreenShare, ScreenShareOff, PhoneOff, GripVertical, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useRouter } from 'next/navigation';
@@ -11,6 +11,7 @@ import type { JitsiAPI } from '@jitsi/react-sdk';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useIsClient } from '@/hooks/use-is-client';
 import { cn } from '@/lib/utils';
+import ChatPanel from '@/components/session/ChatPanel';
 
 const JitsiMeetComponent = dynamic(() => import('@/components/session/JitsiMeetComponent'), {
   ssr: false,
@@ -25,6 +26,7 @@ export default function SessionPage() {
   const [jitsiApi, setJitsiApi] = useState<JitsiAPI | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const isMobile = useIsMobile();
   const isClient = useIsClient();
 
@@ -138,6 +140,9 @@ export default function SessionPage() {
 
       {isClient && <Whiteboard />}
 
+      {isClient && <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />}
+
+
       <TooltipProvider>
         <div
             ref={controlsRef}
@@ -176,6 +181,17 @@ export default function SessionPage() {
                       </TooltipContent>
                   </Tooltip>
                 )}
+
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                         <Button variant="outline" size="icon" onClick={() => setIsChatOpen(!isChatOpen)} className={cn("rounded-full", isChatOpen ? "bg-primary text-primary-foreground" : "")}>
+                           <MessageSquare />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Chat</p>
+                    </TooltipContent>
+                </Tooltip>
                 
                  <Tooltip>
                     <TooltipTrigger asChild>
