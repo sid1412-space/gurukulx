@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -14,12 +13,24 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 const amountSchema = z.object({
-  amount: z.coerce.number().min(50, 'Minimum recharge amount is ₹50.'),
+  amount: z.coerce.number().min(10, 'Minimum recharge amount is ₹10.'),
 });
 
 type Step = 'amount' | 'payment' | 'confirmation' | 'pending';
+
+const predefinedAmounts = [50, 100, 200, 500, 1000];
+
+const qrCodeMapping: { [key: number]: string } = {
+  50: 'https://i.ibb.co/GcVBFw1/qr-50.png',
+  100: 'https://i.ibb.co/3kM2sW4/qr-100.png',
+  200: 'https://i.ibb.co/dG7pD4g/qr-200.png',
+  500: 'https://i.ibb.co/X3s5T3r/qr-500.png',
+  1000: 'https://i.ibb.co/vYv2TfS/qr-1000.png',
+  default: 'https://i.ibb.co/Mx48YJYX/photo-2025-08-11-20-34-51.jpg' // Fallback for custom amounts
+};
 
 export default function RechargePage() {
   const [step, setStep] = useState<Step>('amount');
@@ -34,6 +45,15 @@ export default function RechargePage() {
   function onAmountSubmit(values: z.infer<typeof amountSchema>) {
     setRechargeAmount(values.amount);
     setStep('payment');
+  }
+
+  const handlePredefinedAmountClick = (amount: number) => {
+    setRechargeAmount(amount);
+    setStep('payment');
+  };
+  
+  const getQrCode = () => {
+    return qrCodeMapping[rechargeAmount] || qrCodeMapping.default;
   }
 
   const handleFormSubmitted = () => {
@@ -74,24 +94,42 @@ export default function RechargePage() {
     switch (step) {
       case 'amount':
         return (
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onAmountSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="amount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-lg">Recharge Amount (₹)</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="Enter amount, e.g., 5000" {...field} className="h-12 text-lg" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" size="lg" className="w-full">Proceed to Pay</Button>
-            </form>
-          </Form>
+          <div className="space-y-6">
+            <div>
+              <FormLabel className="text-lg">Select an Amount</FormLabel>
+              <div className="grid grid-cols-3 gap-4 mt-2">
+                {predefinedAmounts.map((amount) => (
+                  <Button
+                    key={amount}
+                    variant="outline"
+                    className="h-16 text-lg"
+                    onClick={() => handlePredefinedAmountClick(amount)}
+                  >
+                    ₹{amount}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <Separator />
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onAmountSubmit)} className="space-y-4">
+                 <FormField
+                  control={form.control}
+                  name="amount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-lg">Or Enter a Custom Amount</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="e.g., 150" {...field} className="h-12 text-lg" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" size="lg" className="w-full">Proceed to Pay</Button>
+              </form>
+            </Form>
+          </div>
         );
       case 'payment':
         return (
@@ -102,8 +140,8 @@ export default function RechargePage() {
             </p>
             <div className="flex justify-center">
                <Image
-                    src="https://i.ibb.co/Mx48YJYX/photo-2025-08-11-20-34-51.jpg"
-                    alt="Payment QR Code"
+                    src={getQrCode()}
+                    alt={`Payment QR Code for ₹${rechargeAmount}`}
                     width={250}
                     height={250}
                     className="rounded-lg border-4 border-primary p-1 shadow-lg"
@@ -166,7 +204,7 @@ export default function RechargePage() {
    const getCardDescription = () => {
     switch (step) {
       case 'amount':
-        return 'Enter the amount you want to add to your wallet.';
+        return 'Select a predefined amount or enter your own.';
       case 'payment':
         return 'Scan the QR code with your payment app.';
       case 'confirmation':
