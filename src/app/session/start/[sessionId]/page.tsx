@@ -49,9 +49,17 @@ export default function SessionStartPage() {
       const reader = new FileReader();
       reader.readAsDataURL(selectedFile);
       reader.onload = () => {
-        const params = new URLSearchParams();
-        params.set('questionImage', reader.result as string);
-        navigateToSession(params);
+        try {
+          sessionStorage.setItem('questionImage', reader.result as string);
+          navigateToSession(new URLSearchParams());
+        } catch (error) {
+           toast({
+            variant: 'destructive',
+            title: 'Could not store image',
+            description: 'The image you selected is too large. Please select a smaller one.',
+          });
+          setIsLoading(false);
+        }
       };
       reader.onerror = () => {
         toast({
@@ -66,7 +74,6 @@ export default function SessionStartPage() {
       params.set('questionText', questionText);
       navigateToSession(params);
     } else {
-      // No question provided, just start the session
       router.push(`/session/${sessionId}`);
     }
   };
