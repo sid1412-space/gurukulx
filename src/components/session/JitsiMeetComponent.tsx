@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import JitsiMeet, { type JitsiAPI } from '@jitsi/react-sdk';
+import { JitsiMeeting, type JitsiAPI } from '@jitsi/react-sdk';
 
 interface JitsiMeetComponentProps {
   onApiReady: (api: JitsiAPI) => void;
@@ -14,7 +13,7 @@ export default function JitsiMeetComponent({ onApiReady }: JitsiMeetComponentPro
 
   return (
     <div className="h-full w-full">
-      <JitsiMeet
+      <JitsiMeeting
         roomName={sessionId}
         configOverwrite={{
           startWithAudioMuted: false,
