@@ -10,6 +10,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useState, useEffect } from 'react';
+import { useIsClient } from '@/hooks/use-is-client';
 
 const addFundsSchema = z.object({
   studentEmail: z.string().email(),
@@ -21,9 +24,25 @@ const updateEarningsSchema = z.object({
   earnings: z.coerce.number().positive('Earnings must be positive'),
 });
 
+type RechargeRequest = {
+  id: string;
+  studentEmail: string;
+  amount: number;
+  status: 'pending';
+};
+
 
 export default function FinancialManagementPage() {
   const { toast } = useToast();
+  const isClient = useIsClient();
+  const [rechargeRequests, setRechargeRequests] = useState<RechargeRequest[]>([]);
+
+  useEffect(() => {
+    if(isClient) {
+      const storedRequests = localStorage.getItem('rechargeRequests') || '[]';
+      setRechargeRequests(JSON.parse(storedRequests));
+    }
+  }, [isClient]);
 
   const addFundsForm = useForm<z.infer<typeof addFundsSchema>>({
     resolver: zodResolver(addFundsSchema),
@@ -54,12 +73,43 @@ export default function FinancialManagementPage() {
     updateEarningsForm.reset();
   }
 
-
   const handleProcessPayouts = () => {
     toast({
       title: 'Processing Payouts',
       description: 'Pending payouts are being processed.',
     });
+  };
+  
+  const updateRechargeRequests = (updatedRequests: RechargeRequest[]) => {
+      setRechargeRequests(updatedRequests);
+      localStorage.setItem('rechargeRequests', JSON.stringify(updatedRequests));
+      window.dispatchEvent(new Event('storage'));
+  };
+
+  const handleApproveRecharge = (requestId: string) => {
+    const request = rechargeRequests.find(r => r.id === requestId);
+    if (!request) return;
+
+    // In a real app, you'd add this to the student's actual balance.
+    const updatedRequests = rechargeRequests.filter(r => r.id !== requestId);
+    updateRechargeRequests(updatedRequests);
+    toast({
+        title: 'Recharge Approved',
+        description: `₹${request.amount} has been added to ${request.studentEmail}'s wallet.`
+    });
+  };
+  
+  const handleRejectRecharge = (requestId: string) => {
+      const request = rechargeRequests.find(r => r.id === requestId);
+      if (!request) return;
+
+      const updatedRequests = rechargeRequests.filter(r => r.id !== requestId);
+      updateRechargeRequests(updatedRequests);
+      toast({
+          variant: 'destructive',
+          title: 'Recharge Rejected',
+          description: `The recharge request for ${request.studentEmail} has been rejected.`
+      });
   };
 
   return (
@@ -68,6 +118,44 @@ export default function FinancialManagementPage() {
         <h1 className="text-3xl font-bold tracking-tight font-headline">Financial Management</h1>
         <p className="text-muted-foreground">Manage tutor payouts and student wallets.</p>
       </header>
+      
+      <Card>
+          <CardHeader>
+              <CardTitle>Pending Wallet Recharges</CardTitle>
+              <CardDescription>Review and approve manual recharge requests from students.</CardDescription>
+          </CardHeader>
+          <CardContent>
+              <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Student Email</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {isClient && rechargeRequests.length === 0 && (
+                        <TableRow>
+                            <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                                No pending recharge requests.
+                            </TableCell>
+                        </TableRow>
+                    )}
+                    {rechargeRequests.map(request => (
+                        <TableRow key={request.id}>
+                            <TableCell className="font-medium">{request.studentEmail}</TableCell>
+                            <TableCell>₹{request.amount.toFixed(2)}</TableCell>
+                            <TableCell className="text-right space-x-2">
+                                 <Button size="sm" onClick={() => handleApproveRecharge(request.id)}>Approve</Button>
+                                 <Button size="sm" variant="destructive" onClick={() => handleRejectRecharge(request.id)}>Reject</Button>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+          </CardContent>
+      </Card>
+
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
         <div className="space-y-8">

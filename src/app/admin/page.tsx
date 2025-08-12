@@ -10,6 +10,7 @@ import { useIsClient } from '@/hooks/use-is-client';
 
 export default function AdminOverviewPage() {
   const [pendingPayouts, setPendingPayouts] = useState(0);
+  const [pendingRecharges, setPendingRecharges] = useState(0);
   const isClient = useIsClient();
 
   useEffect(() => {
@@ -17,19 +18,24 @@ export default function AdminOverviewPage() {
       return;
     }
 
-    const updatePayouts = () => {
+    const updateAllCounts = () => {
+      // Payouts
       const storedPayouts = localStorage.getItem('pendingPayoutRequests');
       setPendingPayouts(parseInt(storedPayouts || '0'));
+      
+      // Recharges
+      const storedRecharges = localStorage.getItem('rechargeRequests') || '[]';
+      setPendingRecharges(JSON.parse(storedRecharges).length);
     };
 
-    updatePayouts();
+    updateAllCounts();
 
     // Listen for changes from other tabs
-    window.addEventListener('storage', updatePayouts);
+    window.addEventListener('storage', updateAllCounts);
 
     // Cleanup
     return () => {
-      window.removeEventListener('storage', updatePayouts);
+      window.removeEventListener('storage', updateAllCounts);
     };
   }, [isClient]);
 
@@ -43,7 +49,7 @@ export default function AdminOverviewPage() {
   const actionItems = [
     { title: 'New Tutor Applicants', value: '42', icon: UserPlus, href: '/admin/tutors' },
     { title: 'Pending Payout Requests', value: pendingPayouts.toString(), icon: Banknote, href: '/admin/finances', isVisible: pendingPayouts > 0 },
-    { title: 'Pending Recharges', value: '8', icon: Hourglass, href: '#' },
+    { title: 'Pending Recharges', value: pendingRecharges.toString(), icon: Hourglass, href: '/admin/finances', isVisible: pendingRecharges > 0 },
   ];
 
   return (

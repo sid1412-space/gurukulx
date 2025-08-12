@@ -13,6 +13,7 @@ import { DollarSign, QrCode, UploadCloud, Hourglass } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/hooks/use-toast';
 
 const amountSchema = z.object({
   amount: z.coerce.number().min(50, 'Minimum recharge amount is ₹50.'),
@@ -23,6 +24,7 @@ type Step = 'amount' | 'payment' | 'confirmation' | 'pending';
 export default function RechargePage() {
   const [step, setStep] = useState<Step>('amount');
   const [rechargeAmount, setRechargeAmount] = useState(0);
+  const { toast } = useToast();
 
   const form = useForm<z.infer<typeof amountSchema>>({
     resolver: zodResolver(amountSchema),
@@ -32,6 +34,35 @@ export default function RechargePage() {
   function onAmountSubmit(values: z.infer<typeof amountSchema>) {
     setRechargeAmount(values.amount);
     setStep('payment');
+  }
+
+  const handleFormSubmitted = () => {
+    try {
+        const storedRequests = localStorage.getItem('rechargeRequests') || '[]';
+        const requests = JSON.parse(storedRequests);
+        const newRequest = {
+            id: `recharge-${Date.now()}`,
+            // In a real app, get email from user session/context
+            studentEmail: 'student@example.com',
+            amount: rechargeAmount,
+            status: 'pending'
+        };
+        requests.push(newRequest);
+        localStorage.setItem('rechargeRequests', JSON.stringify(requests));
+        window.dispatchEvent(new Event('storage'));
+        toast({
+            title: 'Request Submitted',
+            description: 'Your recharge request has been sent for admin approval.'
+        });
+        setStep('pending');
+    } catch (e) {
+        console.error("Failed to create recharge request", e);
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Could not submit your request. Please try again.'
+        })
+    }
   }
 
   const renderStep = () => {
@@ -95,7 +126,7 @@ export default function RechargePage() {
                 <Link href="https://forms.gle/Hy5tR6SbseoRWX9S7" target="_blank" rel="noopener noreferrer">
                     <Button size="lg" className="w-full">Open Confirmation Form</Button>
                 </Link>
-                <Button variant="outline" onClick={() => setStep('pending')} className="w-full">I have submitted the form</Button>
+                <Button variant="outline" onClick={handleFormSubmitted} className="w-full">I have submitted the form</Button>
             </div>
         )
       case 'pending':
