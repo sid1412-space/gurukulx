@@ -33,7 +33,7 @@ export default function TutorProfilePage() {
   const handleBookSession = () => {
     if (tutor) {
       const sessionId = Math.random().toString(36).substring(2, 15);
-      router.push(`/session/${sessionId}?tutorId=${tutor.id}&start_recording=true`);
+      router.push(`/session/${sessionId}?tutorId=${tutor.id}&start_recording=true&role=student`);
     }
   };
 
@@ -120,7 +120,7 @@ export default function TutorProfilePage() {
                                     <AlertDialogTitle>Start a new session?</AlertDialogTitle>
                                     <AlertDialogDescription>
                                         You are about to start a new tutoring session with {tutor.name}.
-                                        Session recording will start automatically.
+                                        Session recording will start automatically for students.
                                     </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
@@ -142,3 +142,5 @@ export default function TutorProfilePage() {
     </div>
   );
 }
+
+    

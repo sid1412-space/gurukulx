@@ -20,24 +20,43 @@ import { useRouter } from 'next/navigation';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { useIsClient } from '@/hooks/use-is-client';
 
-const TUTOR_ID = 'tutor@example.com'; // Mock tutor ID for localStorage key
+const TUTOR_ID = '1'; // Corresponds to Dr. Evelyn Reed in mock data
 
 export default function TutorDashboardPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isOnline, setIsOnline] = useState(true);
+  const [isBusy, setIsBusy] = useState(false);
+  const isClient = useIsClient();
 
   // Load status from localStorage on mount
   useEffect(() => {
-    const storedStatus = localStorage.getItem(`tutor-status-${TUTOR_ID}`);
-    if (storedStatus) {
-      setIsOnline(storedStatus === 'online');
-    } else {
-      // Default to online if no status is set
-      localStorage.setItem(`tutor-status-${TUTOR_ID}`, 'online');
+    if (isClient) {
+        const storedStatus = localStorage.getItem(`tutor-status-${TUTOR_ID}`);
+        if (storedStatus) {
+        setIsOnline(storedStatus === 'online');
+        } else {
+        // Default to online if no status is set
+        localStorage.setItem(`tutor-status-${TUTOR_ID}`, 'online');
+        }
+
+        const busyStatus = localStorage.getItem(`tutor-busy-${TUTOR_ID}`) === 'true';
+        setIsBusy(busyStatus);
+        
+        const handleStorageChange = () => {
+            const updatedBusyStatus = localStorage.getItem(`tutor-busy-${TUTOR_ID}`) === 'true';
+            setIsBusy(updatedBusyStatus);
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+        };
     }
-  }, []);
+  }, [isClient]);
 
   const dailyStats = [
     { title: "Today's Sessions", value: '4', icon: CalendarCheck },
@@ -51,13 +70,14 @@ export default function TutorDashboardPage() {
 
   const handleJoinSession = (studentName: string) => {
     const sessionId = Math.random().toString(36).substring(2, 15);
-    router.push(`/session/${sessionId}?tutorId=${TUTOR_ID}`);
+    router.push(`/session/${sessionId}?tutorId=${TUTOR_ID}&role=tutor`);
   };
 
   const handleStatusChange = (online: boolean) => {
     setIsOnline(online);
     const newStatus = online ? 'online' : 'offline';
     localStorage.setItem(`tutor-status-${TUTOR_ID}`, newStatus);
+    window.dispatchEvent(new Event('storage')); // Notify other tabs
     toast({
         title: `You are now ${online ? 'Online' : 'Offline'}`,
         description: online ? 'You will now appear in search results.' : 'You will be hidden from students.'
@@ -72,9 +92,9 @@ export default function TutorDashboardPage() {
             <p className="text-muted-foreground">Here's your summary for today.</p>
         </div>
          <div className="flex items-center space-x-2 p-2 border rounded-lg bg-secondary/50">
-          <Switch id="online-status" checked={isOnline} onCheckedChange={handleStatusChange} />
+          <Switch id="online-status" checked={isOnline} onCheckedChange={handleStatusChange} disabled={isBusy} />
           <Label htmlFor="online-status" className="font-semibold">
-            {isOnline ? 'Online' : 'Offline'}
+            {isBusy ? 'Busy' : (isOnline ? 'Online' : 'Offline')}
           </Label>
         </div>
       </header>
@@ -108,7 +128,9 @@ export default function TutorDashboardPage() {
                         </div>
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
-                                <Button variant="outline">Join Now</Button>
+                                <Button variant="outline" disabled={isBusy}>
+                                    {isBusy ? 'In Session' : 'Join Now'}
+                                </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                                 <AlertDialogHeader>
@@ -133,3 +155,5 @@ export default function TutorDashboardPage() {
     </div>
   );
 }
+
+    

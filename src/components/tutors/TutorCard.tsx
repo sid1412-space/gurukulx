@@ -40,7 +40,7 @@ export default function TutorCard({ tutor }: TutorCardProps) {
 
   const handleBookSession = () => {
     const sessionId = Math.random().toString(36).substring(2, 15);
-    router.push(`/session/${sessionId}?tutorId=${tutor.id}`);
+    router.push(`/session/${sessionId}?tutorId=${tutor.id}&role=student`);
   };
 
   return (
@@ -98,3 +98,5 @@ export default function TutorCard({ tutor }: TutorCardProps) {
     </Card>
   );
 }
+
+    

@@ -36,6 +36,7 @@ export default function SessionPage() {
   const searchParams = useSearchParams();
   const params = useParams();
   const tutorId = searchParams.get('tutorId');
+  const userRole = searchParams.get('role'); // 'student' or 'tutor'
   const { toast } = useToast();
 
   const [jitsiApi, setJitsiApi] = useState<JitsiAPI | null>(null);
@@ -67,6 +68,15 @@ export default function SessionPage() {
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
   const controlsRef = useRef<HTMLDivElement>(null);
+
+   // Set tutor as busy when session starts
+  useEffect(() => {
+    if (tutorId) {
+      localStorage.setItem(`tutor-busy-${tutorId}`, 'true');
+      // Notify other tabs that tutor status has changed
+      window.dispatchEvent(new Event('storage'));
+    }
+  }, [tutorId]);
 
   // Timer and wallet deduction logic
   useEffect(() => {
@@ -250,7 +260,7 @@ export default function SessionPage() {
         const supportsRecording = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
         if (supportsRecording) {
             setRecordingSupport('supported');
-             if (searchParams.get('start_recording') === 'true' && !isRecording) {
+             if (searchParams.get('start_recording') === 'true' && !isRecording && userRole !== 'tutor') {
                 startRecording();
             }
         } else {
@@ -261,11 +271,19 @@ export default function SessionPage() {
   }, [isClient, isMobile, searchParams]);
 
   const hangUp = () => {
+    if (tutorId) {
+        localStorage.removeItem(`tutor-busy-${tutorId}`);
+        // Notify other tabs that tutor status has changed
+        window.dispatchEvent(new Event('storage'));
+    }
     if (isRecording) {
       stopRecording();
     }
     jitsiApi?.executeCommand('hangup');
-    router.push('/dashboard');
+    
+    // Redirect based on role
+    const destination = userRole === 'tutor' ? '/tutor/dashboard' : '/dashboard';
+    router.push(destination);
   };
   
     const handleDragStart = (clientX: number, clientY: number, target: EventTarget) => {
@@ -486,7 +504,7 @@ export default function SessionPage() {
                             </TooltipContent>
                         </Tooltip>
 
-                        {!isMobile && (
+                        {!isMobile && userRole === 'tutor' && (
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                     <Button variant="ghost" size="icon" className="rounded-full">
@@ -541,3 +559,5 @@ export default function SessionPage() {
     </div>
   );
 }
+
+    

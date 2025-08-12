@@ -13,6 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useIsClient } from '@/hooks/use-is-client';
+
 
 const exams = {
   JEE: ['Physics', 'Chemistry', 'Mathematics'],
@@ -25,6 +27,7 @@ export default function TutorsPage() {
   const [selectedSubject, setSelectedSubject] = useState('');
   // Force re-render when tutor status changes in another tab
   const [updateTrigger, setUpdateTrigger] = useState(0);
+  const isClient = useIsClient();
 
   useEffect(() => {
     const handleStorageChange = () => {
@@ -42,20 +45,17 @@ export default function TutorsPage() {
   };
 
   const filteredTutors = useMemo(() => {
-    // For the demo, we check a single mocked tutor's status.
-    // In a real app, you would check each tutor's status from a database.
-    const isTutorOnline = localStorage.getItem('tutor-status-tutor@example.com') === 'online';
+    if (!isClient) return [];
 
-    let onlineTutors = tutors.filter(tutor => {
-        // Mock logic: Assume all tutors are online except our specific tutor if they are toggled off.
-        if (tutor.id === '1') { // Dr. Evelyn Reed's ID is '1', and email is 'tutor@example.com'
-            return isTutorOnline;
-        }
-        return true; // All other tutors are assumed online for this demo.
+    let availableTutors = tutors.filter(tutor => {
+      const isOnline = localStorage.getItem(`tutor-status-${tutor.id}`) === 'online';
+      const isBusy = localStorage.getItem(`tutor-busy-${tutor.id}`) === 'true';
+      // For demo, if status is not set, assume online.
+      const hasSetStatus = localStorage.getItem(`tutor-status-${tutor.id}`);
+      return (isOnline || !hasSetStatus) && !isBusy;
     });
 
-
-    let filtered = onlineTutors;
+    let filtered = availableTutors;
 
     if (selectedSubject) {
       filtered = filtered.filter((tutor) =>
@@ -74,7 +74,8 @@ export default function TutorsPage() {
     }
 
     return filtered;
-  }, [searchQuery, selectedSubject, updateTrigger]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, selectedSubject, updateTrigger, isClient]);
 
   const subjectsForSelectedExam = selectedExam ? exams[selectedExam as keyof typeof exams] : [];
 
@@ -152,3 +153,5 @@ export default function TutorsPage() {
     </div>
   );
 }
+
+    
