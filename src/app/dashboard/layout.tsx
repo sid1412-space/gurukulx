@@ -36,23 +36,23 @@ export default function DashboardLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [authStatus, setAuthStatus] = useState<'pending' | 'student' | 'other_role' | 'unauthenticated'>('pending');
+  const [authStatus, setAuthStatus] = useState<'pending' | 'authorized' | 'unauthorized'>('pending');
 
   useEffect(() => {
     const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
     const isTutor = localStorage.getItem('isTutor') === 'true';
     const isAdmin = localStorage.getItem('isAdmin') === 'true';
 
-    if (loggedIn) {
-      if (isTutor || isAdmin) {
-        setAuthStatus('other_role');
-        // Don't redirect from here. Let the other layouts handle it.
-      } else {
-        setAuthStatus('student');
-      }
-    } else {
-      setAuthStatus('unauthenticated');
+    if (!loggedIn) {
+      setAuthStatus('unauthorized');
       router.push('/login');
+    } else if (isTutor || isAdmin) {
+      // If a tutor or admin somehow lands here, they will be redirected by their own layout.
+      // This layout should not render for them.
+      setAuthStatus('unauthorized');
+    } else {
+      // This is a student
+      setAuthStatus('authorized');
     }
   }, [router, pathname]);
 
@@ -60,12 +60,12 @@ export default function DashboardLayout({
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('isAdmin');
     localStorage.removeItem('isTutor');
-    setAuthStatus('unauthenticated');
+    setAuthStatus('unauthorized');
     window.dispatchEvent(new Event("storage"));
     router.push('/');
   }
 
-  if (authStatus !== 'student') {
+  if (authStatus !== 'authorized') {
      return (
         <div className="flex items-center justify-center h-screen bg-background">
             <div className="flex flex-col items-center gap-2">

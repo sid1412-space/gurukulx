@@ -74,8 +74,8 @@ export default function LoginForm() {
             userRole = user.role;
             foundUser = true;
         } else {
-             // If user does not exist, we still log them in as a student.
-             // This is for demonstration purposes.
+             // If user does not exist, we still log them in as a student for demo purposes.
+             // In a real app, this would be an error.
             foundUser = true; 
         }
 
@@ -93,6 +93,7 @@ export default function LoginForm() {
       if (foundUser) {
         // Set flags in localStorage
         localStorage.setItem('isLoggedIn', 'true');
+        
         // Clear previous roles to ensure a clean state
         localStorage.removeItem('isAdmin');
         localStorage.removeItem('isTutor');
