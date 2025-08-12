@@ -14,7 +14,7 @@ export default function Hero() {
               <span className="block text-primary">Online Tutoring</span>
             </h1>
             <p className="mt-6 text-lg text-muted-foreground max-w-lg">
-              TutorConnect provides an immersive, one-on-one learning experience with expert tutors and an interactive whiteboard to help you succeed.
+              GurukulX provides an immersive, one-on-one learning experience with expert tutors and an interactive whiteboard to help you succeed.
             </p>
             <div className="mt-10 flex flex-wrap gap-4">
               <Link href="/tutors">

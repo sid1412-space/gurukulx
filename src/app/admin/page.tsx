@@ -50,7 +50,7 @@ export default function AdminOverviewPage() {
     <div className="space-y-8 animate-fade-in">
       <header>
         <h1 className="text-3xl font-bold tracking-tight font-headline">Admin Overview</h1>
-        <p className="text-muted-foreground">Key metrics and action items for the TutorConnect platform.</p>
+        <p className="text-muted-foreground">Key metrics and action items for the GurukulX platform.</p>
       </header>
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, index) => (

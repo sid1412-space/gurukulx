@@ -11,7 +11,7 @@ interface JitsiMeetComponentProps {
 
 export default function JitsiMeetComponent({ onApiReady, onError }: JitsiMeetComponentProps) {
   const pathname = usePathname();
-  const sessionId = pathname.split('/').pop() || `tutorconnect-session-${Math.random().toString(36).substring(7)}`;
+  const sessionId = pathname.split('/').pop() || `gurukulx-session-${Math.random().toString(36).substring(7)}`;
 
   // Correctly defined toolbar buttons
   const toolbarButtons = [

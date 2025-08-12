@@ -16,7 +16,7 @@ export default function SignUpPage() {
                  <Logo />
               </div>
               <CardTitle className="text-2xl font-bold">Create an Account</CardTitle>
-              <CardDescription>Join TutorConnect and start your learning journey today.</CardDescription>
+              <CardDescription>Join GurukulX and start your learning journey today.</CardDescription>
             </CardHeader>
             <CardContent>
               <SignUpForm />

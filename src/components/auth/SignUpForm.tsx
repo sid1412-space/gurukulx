@@ -116,7 +116,7 @@ export default function SignUpForm() {
             localStorage.setItem('userDatabase', JSON.stringify(users));
             toast({
                 title: 'Account Created!',
-                description: 'Welcome to TutorConnect. Please log in.',
+                description: 'Welcome to GurukulX. Please log in.',
             });
         } else if (values.accountType === 'tutor') {
             const newApplicant = {

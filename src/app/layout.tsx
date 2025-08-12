@@ -22,7 +22,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={cn('!scroll-smooth', inter.variable)}>
       <head>
-        <title>TutorConnect</title>
+        <title>GurukulX</title>
         <meta name="description" content="The future of online tutoring." />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#ffffff" />
