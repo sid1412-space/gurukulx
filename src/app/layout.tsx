@@ -17,11 +17,9 @@ export default function RootLayout({
   const pathname = usePathname();
   const isSessionPage = pathname.startsWith('/session');
   const isAuthPage = pathname === '/login' || pathname === '/signup';
-  const isAdminPage = pathname.startsWith('/admin');
-  const isDashboardPage = pathname.startsWith('/dashboard');
+  const isAdminOrDashboard = pathname.startsWith('/admin') || pathname.startsWith('/dashboard');
 
-  const showHeaderAndFooter = !isSessionPage && !isAuthPage && !isAdminPage && !isDashboardPage;
-
+  const showHeaderAndFooter = !isSessionPage && !isAuthPage && !isAdminOrDashboard;
 
   return (
     <html lang="en" className="!scroll-smooth">
