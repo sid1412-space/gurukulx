@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -24,7 +25,7 @@ type Step = 'amount' | 'payment' | 'confirmation' | 'pending';
 const predefinedAmounts = [50, 100, 200, 500, 1000];
 
 const qrCodeMapping: { [key: number]: string } = {
-  50: 'https://i.ibb.co/GcVBFw1/qr-50.png',
+  50: 'https://i.ibb.co/DPmy6GW/photo-2025-08-13-00-27-57.jpg',
   100: 'https://i.ibb.co/3kM2sW4/qr-100.png',
   200: 'https://i.ibb.co/dG7pD4g/qr-200.png',
   500: 'https://i.ibb.co/X3s5T3r/qr-500.png',
