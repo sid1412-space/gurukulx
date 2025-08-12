@@ -75,7 +75,7 @@ export default function TutorsPage() {
 
     return filtered;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, selectedSubject, updateTrigger, isClient]);
+  }, [searchQuery, selectedSubject, selectedExam, updateTrigger, isClient]);
 
   const subjectsForSelectedExam = selectedExam ? exams[selectedExam as keyof typeof exams] : [];
 
@@ -97,8 +97,8 @@ export default function TutorsPage() {
               <SelectValue placeholder="Select Exam" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="JEE">JEE</SelectItem>
-              <SelectItem value="NEET">NEET</SelectItem>
+              <SelectItem value="JEE">JEE (Engineering)</SelectItem>
+              <SelectItem value="NEET">NEET (Medical)</SelectItem>
             </SelectContent>
           </Select>
 
@@ -153,5 +153,3 @@ export default function TutorsPage() {
     </div>
   );
 }
-
-    
