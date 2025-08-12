@@ -43,18 +43,8 @@ export default function DashboardLayout({
     const isTutor = localStorage.getItem('isTutor') === 'true';
     const isAdmin = localStorage.getItem('isAdmin') === 'true';
     
-    if (loggedIn) {
-        if (isTutor) {
-             setAuthStatus('unauthorized');
-             router.push('/tutor/dashboard');
-             return;
-        }
-        if (isAdmin) {
-            setAuthStatus('unauthorized');
-            router.push('/admin');
-            return;
-        }
-        // It's a student
+    // This layout is ONLY for students.
+    if (loggedIn && !isTutor && !isAdmin) {
         setAuthStatus('authenticated');
     } else {
       setAuthStatus('unauthorized');
@@ -75,7 +65,7 @@ export default function DashboardLayout({
      return (
         <div className="flex items-center justify-center h-screen bg-background">
             <div className="flex flex-col items-center gap-2">
-                 <p className="text-muted-foreground">Redirecting...</p>
+                 <p className="text-muted-foreground">Loading...</p>
             </div>
         </div>
     );

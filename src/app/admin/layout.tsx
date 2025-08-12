@@ -50,25 +50,17 @@ export default function AdminLayout({
   const handleLogout = () => {
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('isAdmin');
+    localStorage.removeItem('isTutor');
     setAuthStatus('unauthenticated');
     // Dispatch a storage event to notify other tabs/windows (like the header)
     window.dispatchEvent(new Event("storage"));
     router.push('/');
   }
 
-  if (authStatus === 'loading') {
+  if (authStatus !== 'authenticated') {
      return (
         <div className="flex items-center justify-center h-screen bg-background">
             <p>Loading...</p>
-        </div>
-    );
-  }
-
-  if (authStatus === 'unauthenticated') {
-    // This can be a brief flash before the router push completes, or a dedicated "access denied" page.
-    return (
-        <div className="flex items-center justify-center h-screen bg-background">
-            <p>Redirecting to login...</p>
         </div>
     );
   }

@@ -70,11 +70,12 @@ export default function LoginForm() {
         const user = users.find((u: any) => u.email.toLowerCase() === values.email.toLowerCase());
 
         if (user) {
+            // In a real app, password would be checked here. We'll assume it's correct.
             userRole = user.role;
             foundUser = true;
         } else {
-             // In a real app, you would reject the login.
-            // Here, we allow it but default to 'student' role.
+             // If user does not exist, we still log them in as a student.
+             // This is for demonstration purposes.
             foundUser = true; 
         }
 
@@ -89,24 +90,24 @@ export default function LoginForm() {
           return;
       }
       
-      // If user is valid (in a real app, password would be checked here)
       if (foundUser) {
+        // Set flags in localStorage
         localStorage.setItem('isLoggedIn', 'true');
-        // Clear previous roles
+        // Clear previous roles to ensure a clean state
         localStorage.removeItem('isAdmin');
         localStorage.removeItem('isTutor');
 
         let destination = '/dashboard';
-        let roleName = 'dashboard';
+        let roleName = 'Student';
 
         if (userRole === 'admin') {
             localStorage.setItem('isAdmin', 'true');
             destination = '/admin';
-            roleName = 'admin panel';
+            roleName = 'Admin';
         } else if (userRole === 'tutor') {
             localStorage.setItem('isTutor', 'true');
             destination = '/tutor/dashboard';
-            roleName = 'tutor dashboard';
+            roleName = 'Tutor';
         }
         
         // Notify other tabs about the login
@@ -114,9 +115,10 @@ export default function LoginForm() {
 
         toast({
           title: 'Logged In!',
-          description: `Redirecting to your ${roleName}...`,
+          description: `Redirecting to ${roleName} dashboard...`,
         });
         
+        // Centralized redirection
         router.push(destination);
       } else {
          toast({
