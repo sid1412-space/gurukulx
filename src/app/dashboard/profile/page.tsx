@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useState, useRef, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useIsClient } from '@/hooks/use-is-client';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const profileSchema = z.object({
   name: z.string().min(2, 'Name is too short'),
