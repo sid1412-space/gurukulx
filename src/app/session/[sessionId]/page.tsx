@@ -24,6 +24,8 @@ const Whiteboard = dynamic(() => import('@/components/session/Whiteboard'), {
   loading: () => <p>Loading Whiteboard...</p>,
 });
 
+type RecordingSupport = 'pending' | 'supported' | 'unsupported';
+
 export default function SessionPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -34,6 +36,7 @@ export default function SessionPage() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [jitsiLoadFailed, setJitsiLoadFailed] = useState(false);
+  const [recordingSupport, setRecordingSupport] = useState<RecordingSupport>('pending');
 
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -126,15 +129,12 @@ export default function SessionPage() {
   };
 
   const startRecording = async () => {
-    if (isRecording || isMobile) return;
+    if (isRecording) return;
     
+    // This check is now redundant due to the useEffect check, but kept for safety.
     if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+        setRecordingSupport('unsupported');
         console.error("getDisplayMedia is not supported in this browser.");
-        toast({
-            variant: "destructive",
-            title: "Recording Not Supported",
-            description: "Your browser does not support screen recording.",
-        });
         return;
     }
 
@@ -188,7 +188,7 @@ export default function SessionPage() {
         console.error("Error starting recording:", error);
         let description = 'Could not start recording. Please try again.';
         if (error instanceof DOMException && error.name === 'NotAllowedError') {
-            description = 'Screen recording permission was denied. Recording is required for this session. Please refresh and allow access to continue.';
+            description = 'Screen recording permission was denied. Please refresh and allow access to continue.';
         }
         toast({
             variant: 'destructive',
@@ -200,8 +200,16 @@ export default function SessionPage() {
   };
 
   useEffect(() => {
-    if (isClient && !isMobile && searchParams.get('start_recording') === 'true') {
-      startRecording();
+    if (isClient) {
+        const supportsRecording = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
+        if (supportsRecording) {
+            setRecordingSupport('supported');
+             if (searchParams.get('start_recording') === 'true' && !isRecording) {
+                startRecording();
+            }
+        } else {
+            setRecordingSupport('unsupported');
+        }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isClient, isMobile, searchParams]);
@@ -276,6 +284,18 @@ export default function SessionPage() {
         <div className="absolute top-0 left-0 w-full h-full z-0 opacity-100">
           <JitsiMeetComponent onApiReady={handleApiReady} onError={handleJitsiError} />
         </div>
+      )}
+      
+       {recordingSupport === 'unsupported' && (
+         <div className="absolute inset-0 flex items-center justify-center z-10 p-4">
+             <Alert variant="destructive" className="max-w-lg">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Screen Recording Not Supported</AlertTitle>
+                <AlertDescription>
+                   This session requires screen recording, but your browser does not support this feature. Please switch to a modern desktop browser like Chrome or Firefox to continue.
+                </AlertDescription>
+            </Alert>
+         </div>
       )}
 
       {jitsiLoadFailed && (
