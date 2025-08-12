@@ -27,33 +27,7 @@ export default function DashboardPage() {
       </header>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Upcoming Session</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">Calculus II with Dr. Reed</div>
-            <p className="text-xs text-muted-foreground">Today at 4:00 PM</p>
-            <Link href="/session/1" className="mt-4">
-                <Button>Join Session</Button>
-            </Link>
-          </CardContent>
-        </Card>
-        
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">New Messages</CardTitle>
-            <MessageSquare className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">3</div>
-            <p className="text-xs text-muted-foreground">From 2 tutors</p>
-            <Button variant="outline" className="mt-4">View Messages</Button>
-          </CardContent>
-        </Card>
-
-        <Card className="flex flex-col items-center justify-center text-center bg-secondary/50 border-dashed hover:border-primary hover:bg-secondary transition-colors">
+        <Card className="flex flex-col items-center justify-center text-center bg-secondary/50 border-dashed hover:border-primary hover:bg-secondary transition-colors lg:col-span-3">
             <CardContent className="p-6">
                 <PlusCircle className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                 <h3 className="font-semibold">Book a new session</h3>
