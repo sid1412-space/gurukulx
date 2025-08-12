@@ -13,7 +13,7 @@ export default function JitsiMeetComponent({ onApiReady, onError }: JitsiMeetCom
   const pathname = usePathname();
   const sessionId = pathname.split('/').pop() || `tutorconnect-session-${Math.random().toString(36).substring(2, 15)}`;
 
-  const toolbarButtons = ['microphone', 'hangup', 'chat'];
+  const toolbarButtons = ['microphone', 'desktop', 'hangup', 'chat'];
 
 
   return (
@@ -48,7 +48,7 @@ export default function JitsiMeetComponent({ onApiReady, onError }: JitsiMeetCom
         getIFrameRef={(iframeRef) => {
           iframeRef.style.height = '100%';
           iframeRef.style.width = '100%';
-          iframeRef.allow = 'microphone; autoplay;'; // Only allow microphone
+          iframeRef.allow = 'microphone; autoplay; display-capture;'; 
         }}
       />
     </div>
