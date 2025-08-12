@@ -46,11 +46,14 @@ export default function DashboardLayout({
     if (!loggedIn) {
       setAuthStatus('unauthorized');
       router.push('/login');
-    } else if (isTutor || isAdmin) {
-      // If a tutor or admin somehow lands here, they will be redirected by their own layout.
-      // This layout should not render for them.
-      setAuthStatus('unauthorized');
-    } else {
+    } else if (isTutor) {
+      router.push('/tutor/dashboard');
+      setAuthStatus('unauthorized'); // Effectively, as they are being redirected
+    } else if (isAdmin) {
+      router.push('/admin');
+      setAuthStatus('unauthorized'); // Effectively, as they are being redirected
+    }
+    else {
       // This is a student
       setAuthStatus('authorized');
     }
