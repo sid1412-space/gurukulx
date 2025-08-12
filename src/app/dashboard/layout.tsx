@@ -18,7 +18,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -28,17 +28,12 @@ const menuItems = [
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ];
 
-// Mock authentication check
 const useAuth = () => {
-    // In a real app, this would be a hook that checks a JWT, a session, etc.
-    const [isAuthenticated, setIsAuthenticated] = useState(true); // Default to true for development
-
-    // This is just to simulate a check that might run on the client
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    
     useEffect(() => {
-        // For example, you might check localStorage or a cookie here.
-        // For this mock, we'll just keep it simple.
-        // To test the redirect, you can manually set this to false.
-        // setIsAuthenticated(false);
+        const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
+        setIsAuthenticated(loggedIn);
     }, []);
     
     return { isAuthenticated }; 
@@ -53,16 +48,26 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const { isAuthenticated } = useAuth();
   const router = useRouter();
+  const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (isAuthenticated === false) {
       router.push('/login');
     }
+    setIsChecking(false);
   }, [isAuthenticated, router]);
 
-  if (!isAuthenticated) {
-    // Render a loading state or null while redirecting
-    return null;
+  const handleLogout = () => {
+    localStorage.removeItem('isLoggedIn');
+    router.push('/login');
+  }
+
+  if (isChecking || !isAuthenticated) {
+     return (
+        <div className="flex items-center justify-center h-screen">
+            <p>Loading...</p>
+        </div>
+    );
   }
 
   return (
@@ -88,7 +93,6 @@ export default function DashboardLayout({
             ))}
           </SidebarMenu>
         </SidebarContent>
-        {/* User profile section can be added to the footer */}
       </Sidebar>
       <SidebarInset>
         <div className="p-4 flex items-center justify-between border-b">
@@ -98,9 +102,7 @@ export default function DashboardLayout({
                     <AvatarImage src="https://placehold.co/100x100.png" alt="User Avatar" data-ai-hint="person avatar" />
                     <AvatarFallback>U</AvatarFallback>
                 </Avatar>
-                <Link href="/">
-                <Button variant="ghost">Logout</Button>
-                </Link>
+                <Button variant="ghost" onClick={handleLogout}>Logout</Button>
             </div>
         </div>
         <div className="p-4 sm:p-6 lg:p-8">{children}</div>

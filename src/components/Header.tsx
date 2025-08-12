@@ -1,22 +1,37 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import Logo from './Logo';
+import { useIsClient } from '@/hooks/use-is-client';
 
 const navLinks = [
   { href: '/tutors', label: 'Find a Tutor' },
   { href: '/#features', label: 'Features' },
-  { href: '/dashboard', label: 'Become a Tutor' },
 ];
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const isAuthenticated = false; // Mock authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const isClient = useIsClient();
+
+  useEffect(() => {
+    if (isClient) {
+      const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
+      setIsAuthenticated(loggedIn);
+    }
+  }, [isClient]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('isLoggedIn');
+    setIsAuthenticated(false);
+    // Optionally redirect to home or login page
+    // window.location.href = '/'; 
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -32,12 +47,21 @@ export default function Header() {
               {link.label}
             </Link>
           ))}
+           <Link
+              href="/dashboard"
+              className="transition-colors hover:text-foreground/80 text-foreground/60"
+            >
+              Become a Tutor
+            </Link>
         </nav>
         <div className="hidden md:flex items-center gap-2">
-          {isAuthenticated ? (
-            <Link href="/dashboard">
-              <Button>Dashboard</Button>
-            </Link>
+          {isClient && isAuthenticated ? (
+            <>
+              <Link href="/dashboard">
+                <Button variant="ghost">Dashboard</Button>
+              </Link>
+              <Button onClick={handleLogout}>Logout</Button>
+            </>
           ) : (
             <>
               <Link href="/login">
@@ -70,11 +94,24 @@ export default function Header() {
                 {link.label}
               </Link>
             ))}
-            <div className="flex flex-col w-full gap-2">
-               {isAuthenticated ? (
-                  <Link href="/dashboard" className="w-full">
-                    <Button className="w-full">Dashboard</Button>
-                  </Link>
+             <Link
+                href="/dashboard"
+                className="w-full text-center py-2 transition-colors hover:text-foreground/80 text-foreground/60"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Become a Tutor
+              </Link>
+            <div className="flex flex-col w-full gap-2 pt-2 border-t">
+               {isClient && isAuthenticated ? (
+                  <>
+                    <Link href="/dashboard" className="w-full">
+                      <Button className="w-full" variant="ghost">Dashboard</Button>
+                    </Link>
+                    <Button className="w-full" onClick={() => {
+                      handleLogout();
+                      setIsMenuOpen(false);
+                    }}>Logout</Button>
+                  </>
                 ) : (
                   <>
                     <Link href="/login" className="w-full">

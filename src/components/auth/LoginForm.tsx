@@ -34,6 +34,10 @@ export default function LoginForm() {
     console.log(values);
     // Mock API call
     setTimeout(() => {
+      // In a real app, upon successful login, you'd set a session/token.
+      // Here, we'll use localStorage to mock the logged-in state.
+      localStorage.setItem('isLoggedIn', 'true');
+      
       toast({
         title: 'Logged In!',
         description: 'Redirecting to your dashboard...',
