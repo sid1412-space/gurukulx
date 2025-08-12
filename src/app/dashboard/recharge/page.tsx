@@ -66,7 +66,7 @@ export default function RechargePage() {
             </p>
             <div className="flex justify-center">
                <Image
-                    src="https://placehold.co/300x300.png"
+                    src="https://i.ibb.co/Mx48YJYX/photo-2025-08-11-20-34-51.jpg"
                     alt="Payment QR Code"
                     width={250}
                     height={250}
