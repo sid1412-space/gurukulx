@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useRouter } from 'next/navigation';
 import type { JitsiAPI } from '@jitsi/react-sdk';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useSearchParams } from 'next/navigation';
 
 const JitsiMeetComponent = dynamic(() => import('@/components/session/JitsiMeetComponent'), {
   ssr: false,
@@ -19,26 +20,28 @@ const Whiteboard = dynamic(() => import('@/components/session/Whiteboard'), {
 
 export default function SessionPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [jitsiApi, setJitsiApi] = useState<JitsiAPI | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const isMobile = useIsMobile();
+  
+  const questionText = searchParams.get('questionText');
+  const questionImage = searchParams.get('questionImage');
+
 
   useEffect(() => {
     if (jitsiApi) {
-      // Event listener for audio mute status
       const onAudioMuteStatusChanged = ({ muted }: { muted: boolean }) => {
         setIsMuted(muted);
       };
       jitsiApi.on('audioMuteStatusChanged', onAudioMuteStatusChanged);
 
-      // Event listener for screen sharing status
       const onScreenSharingStatusChanged = ({ on }: { on: boolean }) => {
         setIsScreenSharing(on);
       };
       jitsiApi.on('screenSharingStatusChanged', onScreenSharingStatusChanged);
 
-      // Clean up event listeners on component unmount
       return () => {
         jitsiApi.removeListener('audioMuteStatusChanged', onAudioMuteStatusChanged);
         jitsiApi.removeListener('screenSharingStatusChanged', onScreenSharingStatusChanged);
@@ -50,8 +53,6 @@ export default function SessionPage() {
 
   const handleApiReady = (api: JitsiAPI) => {
     setJitsiApi(api);
-    // You can execute commands here, for example:
-    // api.executeCommand('toggleVideo');
   };
 
   const toggleMute = () => {
@@ -69,15 +70,12 @@ export default function SessionPage() {
 
   return (
     <div className="h-screen w-screen relative">
-      {/* Jitsi is mounted but hidden to provide audio and screen sharing without a visible interface */}
       <div className="hidden">
         <JitsiMeetComponent onApiReady={handleApiReady} />
       </div>
 
-      {/* The whiteboard takes up the entire screen */}
-      <Whiteboard />
+      <Whiteboard questionText={questionText} questionImage={questionImage} />
 
-       {/* Floating Controls Bar */}
       <TooltipProvider>
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20">
             <div className="flex items-center gap-2 p-2 bg-background border rounded-full shadow-lg">
