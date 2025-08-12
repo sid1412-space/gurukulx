@@ -129,9 +129,9 @@ export default function SessionPage() {
   };
 
   const startRecording = async () => {
-    if (isRecording) return;
+    if (isRecording || isMobile) return;
     
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+    if (!navigator.mediaDevices || typeof navigator.mediaDevices.getDisplayMedia !== 'function') {
         setRecordingSupport('unsupported');
         console.error("getDisplayMedia is not supported in this browser.");
         return;
@@ -200,10 +200,14 @@ export default function SessionPage() {
 
   useEffect(() => {
     if (isClient) {
+        if (isMobile) {
+            setRecordingSupport('unsupported');
+            return;
+        }
         const supportsRecording = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
         if (supportsRecording) {
             setRecordingSupport('supported');
-             if (searchParams.get('start_recording') === 'true' && !isRecording && !isMobile) {
+             if (searchParams.get('start_recording') === 'true' && !isRecording) {
                 startRecording();
             }
         } else {
@@ -279,13 +283,13 @@ export default function SessionPage() {
 
   return (
     <div className="h-screen w-screen relative overflow-hidden bg-background">
-      {recordingSupport === 'supported' && !jitsiLoadFailed && (
+      {!jitsiLoadFailed && (
         <div className="absolute top-0 left-0 w-full h-full z-0 opacity-100">
-          <JitsiMeetComponent onApiReady={handleApiReady} onError={handleJitsiError} />
+          <JitsiMeetComponent onApiReady={handleApiReady} onError={handleJitsiError} isMobile={isMobile} />
         </div>
       )}
       
-       {recordingSupport === 'unsupported' && (
+       {recordingSupport === 'unsupported' && !isMobile && (
          <div className="absolute inset-0 flex items-center justify-center z-10 p-4">
              <Alert variant="destructive" className="max-w-lg">
                 <AlertTriangle className="h-4 w-4" />
