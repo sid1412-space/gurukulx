@@ -28,7 +28,7 @@ const qrCodeMapping: { [key: number]: string } = {
   50: 'https://i.ibb.co/DPmy6GW/photo-2025-08-13-00-27-57.jpg',
   100: 'https://i.ibb.co/G659rg8/100.jpg',
   200: 'https://i.ibb.co/YBFNJ85y/200.jpg',
-  500: 'https://i.ibb.co/X3s5T3r/qr-500.png',
+  500: 'https://i.ibb.co/whQ1gvLr/500.jpg',
   1000: 'https://i.ibb.co/vYv2TfS/qr-1000.png',
   default: 'https://i.ibb.co/Mx48YJYX/photo-2025-08-11-20-34-51.jpg' // Fallback for custom amounts
 };
