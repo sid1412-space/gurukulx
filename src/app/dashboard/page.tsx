@@ -9,15 +9,11 @@ import { useIsClient } from '@/hooks/use-is-client';
 import { useEffect, useState, useMemo } from 'react';
 import TutorCard from '@/components/tutors/TutorCard';
 
-// Mock student data - in a real app, this would come from a user context or API
-const studentData = {
-  subjects: [],
-};
-
 export default function DashboardPage() {
     const isClient = useIsClient();
     const [allTutors, setAllTutors] = useState<any[]>([]);
     const [walletBalance, setWalletBalance] = useState(0);
+    const [studentName, setStudentName] = useState('User');
 
     useEffect(() => {
         if (isClient) {
@@ -43,6 +39,13 @@ export default function DashboardPage() {
                     }
                 });
                 setAllTutors(tutorsWithFullData);
+
+                 // This is a mock for demo. In real app, get current user from session/context.
+                 const studentEmail = 'student@example.com';
+                 const currentUser = users.find((u:any) => u.email === studentEmail);
+                 if (currentUser && currentUser.name) {
+                    setStudentName(currentUser.name);
+                 }
             }
              const storedBalance = localStorage.getItem('student-wallet-student@example.com') || '0';
              setWalletBalance(parseFloat(storedBalance));
@@ -59,7 +62,7 @@ export default function DashboardPage() {
     <div className="space-y-8 animate-fade-in">
       <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h1 className="text-3xl font-bold tracking-tight font-headline">Welcome back, User!</h1>
+            <h1 className="text-3xl font-bold tracking-tight font-headline">Welcome back, {studentName}!</h1>
             <p className="text-muted-foreground">Here's a quick overview of your account.</p>
         </div>
          <div className="flex items-center gap-4">

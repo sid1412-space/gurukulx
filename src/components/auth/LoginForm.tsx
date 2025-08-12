@@ -28,10 +28,10 @@ export default function LoginForm() {
         const usersJSON = localStorage.getItem('userDatabase');
         if (!usersJSON) {
              const initialUsers = [
-                { email: 'quotesparkconnect@yahoo.com', role: 'admin' },
+                { email: 'quotesparkconnect@yahoo.com', role: 'admin', name: 'Admin User' },
                 // Approved tutor - for demonstration
-                { email: 'tutor@example.com', role: 'tutor' }, 
-                { email: 'student@example.com', role: 'student' }
+                { email: 'tutor@example.com', role: 'tutor', name: 'Dr. Evelyn Reed' }, 
+                { email: 'student@example.com', role: 'student', name: 'Jane Doe' }
             ];
             localStorage.setItem('userDatabase', JSON.stringify(initialUsers));
         }
