@@ -1,3 +1,4 @@
+
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
@@ -13,6 +14,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyA1DS-jYNsAXp7JGY4YOBaJryt6aG3obYw",
   authDomain: "tutorconnect-bu422.firebaseapp.com",
   messagingSenderId: "777250472770",
+  measurementId: "G-7T5E62S1L5",
 };
 
 // Initialize Firebase
