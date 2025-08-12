@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -76,7 +75,18 @@ export default function SignUpForm() {
           render={({ field }) => (
             <FormItem>
               <FormLabel>I am a...</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={(value) => {
+                  field.onChange(value);
+                  // Manually reset tutor fields if switching back to student
+                  if (value === 'student') {
+                      form.setValue('qualification', undefined as any);
+                      form.setValue('phoneNumber', undefined as any);
+                      form.setValue('college', undefined);
+                      form.setValue('location', undefined);
+                      form.setValue('experience', undefined as any);
+                      form.setValue('expertise', undefined as any);
+                  }
+              }} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select an account type" />
