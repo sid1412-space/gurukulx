@@ -11,7 +11,7 @@ export default function Hero() {
           <div className="animate-slide-in-from-bottom duration-500">
             <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl font-headline">
               <span className="block">Unlock Your Potential with</span>
-              <span className="block text-primary">Online Tutoring</span>
+              <span className="block text-primary">GurukulX</span>
             </h1>
             <p className="mt-6 text-lg text-muted-foreground max-w-lg">
               GurukulX provides an immersive, one-on-one learning experience with expert tutors and an interactive whiteboard to help you succeed.
@@ -27,14 +27,14 @@ export default function Hero() {
               </Link>
             </div>
           </div>
-          <div className="relative animate-fade-in duration-700">
+          <div className="relative animate-fade-in duration-700 flex items-center justify-center">
              <Image
-              src="https://i.ibb.co/d2x1Q1j/pexels-julia-m-cameron-4144923.jpg"
-              alt="Online tutoring session"
-              width={600}
+              src="https://i.ibb.co/xqvy59YP/Chat-GPT-Image-Aug-12-2025-11-06-21-PM.png"
+              alt="GurukulX Logo"
+              width={400}
               height={400}
               className="rounded-xl shadow-2xl transform hover:scale-105 transition-transform duration-500"
-              data-ai-hint="online learning"
+              data-ai-hint="logo"
               priority
             />
           </div>
