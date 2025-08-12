@@ -3,7 +3,7 @@
 
 import dynamic from 'next/dynamic';
 import { useState, useEffect, useRef, MouseEvent as ReactMouseEvent } from 'react';
-import { Mic, MicOff, ScreenShare, ScreenShareOff, PhoneOff, GripVertical, MessageSquare, Video, VideoOff } from 'lucide-react';
+import { Mic, MicOff, ScreenShare, ScreenShareOff, PhoneOff, GripVertical, MessageSquare, VideoOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useRouter } from 'next/navigation';
@@ -88,12 +88,12 @@ export default function SessionPage() {
         });
         return;
       }
-      const blob = new Blob(recordedChunksRef.current, { type: 'video/mp4' });
+      const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.style.display = 'none';
       a.href = url;
-      a.download = `tutorconnect-session-${new Date().toISOString()}.mp4`;
+      a.download = `tutorconnect-session-${new Date().toISOString()}.webm`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -120,14 +120,12 @@ export default function SessionPage() {
     if (isRecording) return;
     try {
         const displayStream = await navigator.mediaDevices.getDisplayMedia({
-            video: true,
+            video: { mediaSource: 'tab' } as any, // Prioritize current tab
             audio: true // Capture system audio
         });
         
         screenStreamRef.current = displayStream; // Store stream to stop it later
 
-        // For simplicity, we'll record the screen share audio.
-        // A more complex implementation could merge Jitsi's audio track.
         const audioStream = displayStream.getAudioTracks().length > 0 
             ? new MediaStream(displayStream.getAudioTracks())
             : new MediaStream(); // empty stream if no audio
@@ -138,6 +136,8 @@ export default function SessionPage() {
         ]);
 
         mediaRecorderRef.current = new MediaRecorder(combinedStream, { mimeType: 'video/webm' });
+        
+        recordedChunksRef.current = []; // Clear previous recordings
         
         mediaRecorderRef.current.ondataavailable = (event) => {
             if (event.data.size > 0) {
@@ -160,29 +160,33 @@ export default function SessionPage() {
                 stopRecording();
                 toast({
                     title: 'Recording Stopped',
-                    description: 'Screen sharing ended.',
+                    description: 'Sharing has ended.',
                 });
             }
         };
         
     } catch (error) {
         console.error("Error starting recording:", error);
+        let description = 'Could not start recording. Please ensure you have given permission.';
+        if (error instanceof DOMException && error.name === 'NotAllowedError') {
+            description = 'Screen recording permission was denied. Please try again and allow access.';
+        }
         toast({
             variant: 'destructive',
             title: 'Recording Failed',
-            description: 'Could not start screen recording. Please ensure you have given permission.',
+            description,
         });
         setIsRecording(false);
     }
   };
-  
-  const toggleRecording = () => {
-      if (isRecording) {
-          stopRecording();
-      } else {
-          startRecording();
-      }
-  };
+
+  useEffect(() => {
+    // Start recording automatically when the component mounts
+    if (isClient && !isMobile) {
+      startRecording();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isClient, isMobile]);
 
   const hangUp = () => {
     if (isRecording) {
@@ -251,8 +255,8 @@ export default function SessionPage() {
   }, []);
 
   return (
-    <div className="h-screen w-screen relative overflow-hidden">
-      <div className="hidden">
+    <div className="h-screen w-screen relative overflow-hidden bg-background">
+       <div className="absolute top-0 left-0 w-full h-full -z-10 opacity-0">
         <JitsiMeetComponent onApiReady={handleApiReady} />
       </div>
 
@@ -300,15 +304,15 @@ export default function SessionPage() {
                   </Tooltip>
                 )}
 
-                {!isMobile && (
+                 {!isMobile && isRecording && (
                   <Tooltip>
                       <TooltipTrigger asChild>
-                          <Button variant="outline" size="icon" onClick={toggleRecording} className={cn("rounded-full", isRecording ? "bg-red-500 text-white" : "")}>
-                             {isRecording ? <VideoOff /> : <Video />}
+                          <Button variant="outline" size="icon" onClick={stopRecording} className="rounded-full bg-red-500 text-white hover:bg-red-600">
+                             <VideoOff />
                           </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                          <p>{isRecording ? 'Stop Recording' : 'Record Session'}</p>
+                          <p>Stop Recording</p>
                       </TooltipContent>
                   </Tooltip>
                 )}
@@ -340,6 +344,3 @@ export default function SessionPage() {
     </div>
   );
 }
-
-
-    

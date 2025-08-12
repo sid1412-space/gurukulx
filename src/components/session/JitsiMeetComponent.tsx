@@ -32,30 +32,24 @@ export default function JitsiMeetComponent({ onApiReady }: JitsiMeetComponentPro
           DISABLE_VIDEO_BACKGROUND: true,
           SHOW_JITSI_WATERMARK: false,
           SHOW_WATERMARK_FOR_GUESTS: false,
-          // The toolbar must contain the 'desktop' button for screen sharing to be enabled.
-          // We will hide the toolbar with CSS, but the button needs to be in the config.
           TOOLBAR_BUTTONS: [
             'camera',
             'microphone',
             'desktop',
-            'fullscreen',
             'hangup',
             'chat',
-            'settings',
-            'raisehand',
-            'videoquality',
+            'fullscreen',
             'tileview',
           ],
-          TOOLBAR_ALWAYS_VISIBLE: false,
+          SETTINGS_SECTIONS: ['devices'],
+          SHOW_CHROME_EXTENSION_BANNER: false,
+          MOBILE_APP_PROMO: false,
         }}
         onApiReady={onApiReady}
-        getIFrameRef={(iframe) => {
-            if (iframe) {
-                iframe.style.height = '100%';
-                iframe.style.width = '100%';
-                // Grant necessary permissions for screen recording
-                iframe.allow = "camera; microphone; display-capture";
-            }
+        getIFrameRef={(iframeRef) => {
+          iframeRef.style.height = '100%';
+          iframeRef.style.width = '100%';
+          iframeRef.allow = 'camera; microphone; display-capture; autoplay;';
         }}
       />
     </div>
