@@ -83,20 +83,26 @@ export default function SessionPage() {
   }, []);
 
   useEffect(() => {
+    // This effect runs every time the session duration changes (i.e., every second)
     if (sessionDuration > 0 && sessionDuration % 60 === 0) {
-      if (walletBalance >= pricePerMinute) {
-        setWalletBalance(prev => prev - pricePerMinute);
-      } else {
-        toast({
-          variant: 'destructive',
-          title: 'Insufficient Funds',
-          description: 'Your wallet balance is too low. The session will now end.',
-        });
-        hangUp();
-      }
+      // Deduct funds every 60 seconds (1 minute)
+      setWalletBalance(prevBalance => {
+        const newBalance = prevBalance - pricePerMinute;
+        if (newBalance < 0) {
+          // If funds are insufficient, end the call
+          toast({
+            variant: 'destructive',
+            title: 'Insufficient Funds',
+            description: 'Your wallet balance is too low. The session will now end.',
+          });
+          hangUp();
+          return 0;
+        }
+        return newBalance;
+      });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionDuration, pricePerMinute]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionDuration]);
 
 
   useEffect(() => {
@@ -337,10 +343,12 @@ export default function SessionPage() {
                     </div>
                 </Card>
                  <Card className="p-2">
-                    <div className="flex items-center gap-2 text-sm">
-                        <Wallet className="text-green-600"/>
-                        <span className="font-semibold">₹{walletBalance.toFixed(2)}</span>
-                    </div>
+                    <CardContent className="p-0">
+                        <div className="flex items-center gap-2 text-sm">
+                            <Wallet className="text-green-600"/>
+                            <span className="font-semibold">₹{walletBalance.toFixed(2)}</span>
+                        </div>
+                    </CardContent>
                 </Card>
             </div>
 
@@ -416,18 +424,18 @@ export default function SessionPage() {
          </div>
        </header>
        <main className="flex-grow relative">
-          <div className="absolute inset-0 z-0 pointer-events-none">
+          <div className="absolute inset-0 z-0">
             {!jitsiLoadFailed && (
                 <JitsiMeetComponent onApiReady={handleApiReady} onError={handleJitsiError} isMobile={isMobile} />
             )}
           </div>
           
-          <div className="absolute inset-0 z-10">
+          <div className="absolute inset-0 z-10 pointer-events-none">
             <Whiteboard />
           </div>
 
           {recordingSupport === 'unsupported' && !isMobile && (
-            <div className="absolute inset-0 flex items-center justify-center z-20 p-4 bg-background/50">
+            <div className="absolute inset-0 flex items-center justify-center z-20 p-4 bg-background/50 pointer-events-none">
                 <Alert variant="destructive" className="max-w-lg">
                     <AlertTriangle className="h-4 w-4" />
                     <AlertTitle>Screen Recording Not Supported</AlertTitle>
@@ -439,7 +447,7 @@ export default function SessionPage() {
           )}
 
           {jitsiLoadFailed && (
-            <div className="absolute inset-0 flex items-center justify-center z-20 p-4 bg-background/50">
+            <div className="absolute inset-0 flex items-center justify-center z-20 p-4 bg-background/50 pointer-events-none">
                 <Alert variant="destructive" className="max-w-lg">
                     <AlertTriangle className="h-4 w-4" />
                     <AlertTitle>Video Connection Error</AlertTitle>
@@ -450,10 +458,8 @@ export default function SessionPage() {
             </div>
           )}
 
-          <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+           {isClient && <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />}
        </main>
     </div>
   );
 }
-
-    
