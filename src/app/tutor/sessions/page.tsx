@@ -97,7 +97,7 @@ export default function TutorSessionHistoryPage() {
                         </TableCell>
                     </TableRow>
                     ))}
-                </Body>
+                </TableBody>
             </Table>
           </CardContent>
       </Card>
