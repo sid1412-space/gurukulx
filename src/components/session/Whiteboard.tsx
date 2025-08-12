@@ -58,28 +58,11 @@ Use the image tool in the toolbar (7th icon from the top).
 	return null;
 }
 
-type WhiteboardProps = {
-    children: ReactNode;
-}
-
-export default function Whiteboard({ children }: WhiteboardProps) {
+export default function Whiteboard() {
 	return (
 		<div style={{ position: 'fixed', inset: 0 }}>
 			<Tldraw persistenceKey="tutorconnect-whiteboard">
                 <EditorEvents />
-                <div 
-                    style={{ 
-                        position: 'absolute', 
-                        top: '50%', 
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        width: '320px', 
-                        height: '240px',
-                        pointerEvents: 'none'
-                    }}
-                >
-                     {children}
-                </div>
 			</Tldraw>
 		</div>
 	)

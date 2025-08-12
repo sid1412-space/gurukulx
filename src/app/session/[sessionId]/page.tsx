@@ -2,13 +2,12 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, ScreenShare, ScreenShareOff, PhoneOff, MessageSquare, AlertTriangle, Timer, Wallet, Wand2, Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef }from 'react';
+import { Mic, MicOff, PhoneOff, MessageSquare, AlertTriangle, Timer, Wallet, Wand2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useRouter, useSearchParams, useParams } from 'next/navigation';
 import type { JitsiAPI } from '@jitsi/react-sdk';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { useIsClient } from '@/hooks/use-is-client';
 import ChatPanel from '@/components/session/ChatPanel';
 import { useToast } from '@/hooks/use-toast';
@@ -23,11 +22,8 @@ const Whiteboard = dynamic(() => import('@/components/session/Whiteboard'), { ss
 
 const JitsiMeetComponent = dynamic(() => import('@/components/session/JitsiMeetComponent'), {
     ssr: false,
-    loading: () => <div className="h-full w-full flex items-center justify-center bg-muted"><p>Loading Video...</p></div>,
 });
 
-
-type RecordingSupport = 'pending' | 'supported' | 'unsupported';
 
 export default function SessionPage() {
   const router = useRouter();
@@ -39,7 +35,6 @@ export default function SessionPage() {
 
   const [jitsiApi, setJitsiApi] = useState<JitsiAPI | null>(null);
   const [isMuted, setIsMuted] = useState(false);
-  const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [jitsiLoadFailed, setJitsiLoadFailed] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -51,7 +46,6 @@ export default function SessionPage() {
   const tutor = tutors.find(t => t.id === tutorId);
   const pricePerMinute = tutor ? tutor.price : 1; 
 
-  const isMobile = useIsMobile();
   const isClient = useIsClient();
 
    // Set tutor as busy when session starts
@@ -76,7 +70,7 @@ export default function SessionPage() {
     if (!tutor) return;
 
     // Deduct funds every 60 seconds (1 minute)
-    if (sessionDuration > 0 && sessionDuration % 60 === 0) {
+    if (userRole === 'student' && sessionDuration > 0 && sessionDuration % 60 === 0) {
         setWalletBalance(currentBalance => {
             const newBalance = currentBalance - pricePerMinute;
             
@@ -98,7 +92,7 @@ export default function SessionPage() {
         });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionDuration, pricePerMinute, tutor]);
+  }, [sessionDuration, pricePerMinute, tutor, userRole]);
 
 
   useEffect(() => {
@@ -108,18 +102,11 @@ export default function SessionPage() {
       };
       jitsiApi.on('audioMuteStatusChanged', onAudioMuteStatusChanged);
 
-      jitsiApi.on('screenSharingStatusChanged', ({ on }: { on: boolean }) => {
-        if (!isMobile) {
-            setIsScreenSharing(on);
-        }
-      });
-
       return () => {
         jitsiApi.removeListener('audioMuteStatusChanged', onAudioMuteStatusChanged);
-        jitsiApi.removeListener('screenSharingStatusChanged', onAudioMuteStatusChanged);
       };
     }
-  }, [jitsiApi, isMobile]);
+  }, [jitsiApi]);
 
 
   const handleApiReady = (api: JitsiAPI) => {
@@ -134,11 +121,6 @@ export default function SessionPage() {
 
   const toggleMute = () => {
     jitsiApi?.executeCommand('toggleAudio');
-  };
-
-  const toggleScreenShare = () => {
-     if (isMobile) return;
-    jitsiApi?.executeCommand('toggleShareScreen');
   };
 
   const hangUp = () => {
@@ -229,19 +211,6 @@ export default function SessionPage() {
                             <p>{isMuted ? 'Unmute' : 'Mute'}</p>
                         </TooltipContent>
                     </Tooltip>
-
-                    {!isMobile && (
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" className="rounded-full" onClick={toggleScreenShare}>
-                                    {isScreenSharing ? <ScreenShareOff /> : <ScreenShare />}
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>{isScreenSharing ? 'Stop Sharing' : 'Share Screen'}</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    )}
                     
                     <Tooltip>
                         <TooltipTrigger asChild>
@@ -254,7 +223,7 @@ export default function SessionPage() {
                         </TooltipContent>
                     </Tooltip>
 
-                    {!isMobile && userRole === 'tutor' && (
+                    {userRole === 'tutor' && (
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
                                 <Button variant="ghost" size="icon" className="rounded-full">
@@ -293,22 +262,23 @@ export default function SessionPage() {
                 <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50">
                     <Alert variant="destructive" className="max-w-lg">
                         <AlertTriangle className="h-4 w-4" />
-                        <AlertTitle>Video Connection Error</AlertTitle>
+                        <AlertTitle>Audio Connection Error</AlertTitle>
                         <AlertDescription>
-                            The video service failed to load. Please check your network and try again, or use a different browser.
+                            The audio service failed to load. Please check your network and try again.
                         </AlertDescription>
                     </Alert>
                 </div>
             )}
             
             <div className="absolute inset-0 z-10">
-              <Whiteboard>
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] h-[240px] z-0">
-                    {!jitsiLoadFailed && (
-                        <JitsiMeetComponent onApiReady={handleApiReady} onError={handleJitsiError} />
-                    )}
-                </div>
-              </Whiteboard>
+              <Whiteboard />
+            </div>
+
+            {/* Jitsi component is hidden but provides the audio stream */}
+            <div className="absolute w-0 h-0 -left-[9999px]">
+                {!jitsiLoadFailed && isClient && (
+                    <JitsiMeetComponent onApiReady={handleApiReady} onError={handleJitsiError} />
+                )}
             </div>
 
             {isClient && <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />}
@@ -316,7 +286,3 @@ export default function SessionPage() {
     </div>
   );
 }
-
-    
-
-    
