@@ -14,49 +14,26 @@ import { Loader2 } from 'lucide-react';
 import { Textarea } from '../ui/textarea';
 import { useRouter } from 'next/navigation';
 
-const formSchema = z.object({
+const baseSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Invalid email address.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
-  accountType: z.enum(['student', 'tutor'], { required_error: 'Please select an account type.'}),
-  qualification: z.string().optional(),
-  phoneNumber: z.string().optional(),
   college: z.string().optional(),
   location: z.string().optional(),
-  experience: z.string().optional(),
-  expertise: z.string().optional(),
-}).superRefine((data, ctx) => {
-    if (data.accountType === 'tutor') {
-        if (!data.qualification || data.qualification.length < 2) {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                path: ['qualification'],
-                message: 'Qualification is required for tutors.',
-            });
-        }
-        if (!data.phoneNumber) {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                path: ['phoneNumber'],
-                message: 'Phone number is required for tutors.',
-            });
-        }
-         if (!data.experience) {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                path: ['experience'],
-                message: 'Experience is required for tutors.',
-            });
-        }
-        if (!data.expertise || data.expertise.length < 10) {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                path: ['expertise'],
-                message: 'Expertise must be at least 10 characters for tutors.',
-            });
-        }
-    }
 });
+
+const formSchema = z.discriminatedUnion("accountType", [
+    z.object({
+        accountType: z.literal("student"),
+    }).merge(baseSchema),
+    z.object({
+        accountType: z.literal("tutor"),
+        qualification: z.string().min(2, 'Qualification is required for tutors.'),
+        phoneNumber: z.string().min(10, 'A valid phone number is required for tutors.'),
+        experience: z.enum(['fresher', '1-2', '3-4', '5+'], { required_error: 'Experience is required for tutors.'}),
+        expertise: z.string().min(10, 'Expertise must be at least 10 characters for tutors.'),
+    }).merge(baseSchema)
+]);
 
 
 export default function SignUpForm() {
@@ -71,12 +48,6 @@ export default function SignUpForm() {
       email: '',
       password: '',
       accountType: undefined,
-      qualification: '',
-      phoneNumber: '',
-      college: '',
-      location: '',
-      experience: undefined,
-      expertise: '',
     },
   });
 
