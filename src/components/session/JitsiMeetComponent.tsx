@@ -21,31 +21,20 @@ export default function JitsiMeetComponent({ onApiReady }: JitsiMeetComponentPro
           disableAP: true,
           disableSelfView: true,
           disableSelfViewSettings: true,
-          toolbarButtons: [
-              'camera', 'microphone', 'desktop', 'fullscreen', 'chat', 'raisehand', 'tileview'
-          ],
-          videoQuality: {
-            preferredCodec: 'H.264',
-            maxBitratesVideo: {
-              low: 200000,
-              standard: 500000,
-              high: 1500000,
-            },
-          },
-          // Disable video features
-          startVideoMuted: 0,
           prejoinPageEnabled: false,
           p2p: {
             enabled: true,
           },
+          // Enable screen sharing
+          desktopSharingSources: ['screen', 'window', 'tab'],
         }}
         interfaceConfigOverwrite={{
           DISABLE_VIDEO_BACKGROUND: true,
           SHOW_JITSI_WATERMARK: false,
           SHOW_WATERMARK_FOR_GUESTS: false,
-          TOOLBAR_BUTTONS: [
-             'microphone', 'desktop', 'fullscreen', 'chat', 'raisehand', 'tileview', 'hangup'
-          ],
+          // We hide the toolbar as we have a custom one
+          TOOLBAR_BUTTONS: [],
+          TOOLBAR_ALWAYS_VISIBLE: false,
         }}
         onApiReady={onApiReady}
         getIFrameRef={(iframe) => {
