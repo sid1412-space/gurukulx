@@ -31,13 +31,9 @@ export default function JitsiMeet({ roomName }: JitsiMeetProps) {
         startWithVideoMuted: false,
         prejoinPageEnabled: false,
         enableWelcomePage: false,
-        toolbarButtons: [
-            'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
-            'fodeviceselection', 'hangup', 'profile', 'chat', 'recording',
-            'livestreaming', 'etherpad', 'sharedvideo', 'settings', 'raisehand',
-            'videoquality', 'filmstrip', 'invite', 'feedback', 'stats', 'shortcuts',
-            'tileview', 'videobackgroundblur', 'download', 'help', 'mute-everyone', 'e2ee'
-        ],
+        filmStrip: {
+          disableResizable: true,
+        }
       },
       interfaceConfigOverwrite: {
         SHOW_JITSI_WATERMARK: false,
@@ -45,8 +41,12 @@ export default function JitsiMeet({ roomName }: JitsiMeetProps) {
         SHOW_BRAND_WATERMARK: false,
         BRAND_WATERMARK_LINK: '',
         TOOLBAR_BUTTONS: [
-            'microphone', 'camera', 'desktop', 'hangup', 'chat', 'raisehand', 'settings', 'tileview'
+            'microphone', 'camera', 'desktop', 'hangup', 'tileview'
         ],
+        SETTINGS_SECTIONS: [
+            'devices', 'moderator'
+        ],
+        VERTICAL_FILMSTRIP: true,
       },
       userInfo: {
         displayName: 'TutorConnect User'
@@ -74,5 +74,5 @@ export default function JitsiMeet({ roomName }: JitsiMeetProps) {
     };
   }, [roomName]);
 
-  return <div ref={jitsiContainerRef} className="w-full h-full" />;
+  return <div ref={jitsiContainerRef} className="w-full h-full rounded-lg overflow-hidden" />;
 }

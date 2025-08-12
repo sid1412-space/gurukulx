@@ -2,11 +2,10 @@
 
 import dynamic from 'next/dynamic';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Video, Edit3, MessageSquare } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Whiteboard = dynamic(() => import('@/components/session/Whiteboard'), {
   ssr: false,
@@ -21,28 +20,23 @@ const JitsiMeet = dynamic(() => import('@/components/session/JitsiMeet'), {
 export default function SessionPage({ params }: { params: { sessionId: string } }) {
   const { sessionId } = params;
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col lg:flex-row gap-4 p-4 bg-secondary/30">
-      <div className="flex-grow h-full lg:h-auto lg:w-3/4">
-         <Tabs defaultValue="video" className="h-full w-full flex flex-col">
-            <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="video" className="gap-2">
-                    <Video className="h-4 w-4" /> Video Chat
-                </TabsTrigger>
-                <TabsTrigger value="whiteboard" className="gap-2">
-                    <Edit3 className="h-4 w-4" /> Whiteboard
-                </TabsTrigger>
-            </TabsList>
-            <div className="flex-grow relative mt-2">
-                <TabsContent value="video" className="w-full h-full absolute top-0 left-0 m-0">
-                    <JitsiMeet roomName={sessionId} />
-                </TabsContent>
-                <TabsContent value="whiteboard" className="w-full h-full absolute top-0 left-0 m-0">
-                    <Whiteboard />
-                </TabsContent>
-            </div>
-        </Tabs>
+    <div className="h-[calc(100vh-4rem)] flex flex-row bg-secondary/30">
+      {/* Video Panel */}
+      <div className="w-[350px] flex-shrink-0 border-r p-4">
+        <Card className="h-full">
+            <JitsiMeet roomName={sessionId} />
+        </Card>
       </div>
-      <div className="w-full lg:w-1/4 h-full lg:h-auto">
+      
+      {/* Whiteboard Panel */}
+      <div className="flex-grow h-full p-4">
+        <Card className="h-full">
+            <Whiteboard />
+        </Card>
+      </div>
+
+      {/* Chat Panel */}
+      <div className="w-[350px] flex-shrink-0 border-l p-4">
         <Card className="h-full flex flex-col">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
