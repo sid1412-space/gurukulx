@@ -56,11 +56,12 @@ export default function TutorManagementPage() {
                     console.error("Failed to parse tutor applicants from localStorage", error);
                     setApplicants([]);
                 }
+            } else {
+                setApplicants([]);
             }
         }
         fetchApplicants();
 
-        // Listen for changes from other tabs (e.g., a new signup)
         window.addEventListener('storage', fetchApplicants);
 
         return () => {
@@ -233,15 +234,14 @@ export default function TutorManagementPage() {
                           >
                             Approve
                           </DropdownMenuItem>
-                          {applicant.status === 'Pending' && (
+                          {applicant.status === 'Pending' ? (
                              <DropdownMenuItem
                                 className="text-red-600 focus:text-red-600"
                                 onClick={() => handleReject(applicant.id)}
                               >
                                 Reject
                               </DropdownMenuItem>
-                          )}
-                          {applicant.status === 'Rejected' && (
+                          ) : (
                              <DropdownMenuItem
                                 onClick={() => handleReconsider(applicant.id)}
                               >
@@ -272,7 +272,7 @@ export default function TutorManagementPage() {
                 <AlertDialogDescription>
                     Set the per-minute rate for <span className="font-bold">{approvingApplicant.name}</span>. This will be used for billing students.
                 </AlertDialogDescription>
-                </Header>
+                </AlertDialogHeader>
                 <div className="grid gap-2">
                     <Label htmlFor="tutor-rate">Rate per minute (₹)</Label>
                     <Input
