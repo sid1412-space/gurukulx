@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import dynamic from 'next/dynamic';
@@ -84,17 +83,19 @@ export default function SessionPage() {
   }, []);
 
   useEffect(() => {
-    // This effect runs every time the session duration changes (i.e., every second)
+    // Deduct funds every 60 seconds (1 minute)
     if (sessionDuration > 0 && sessionDuration % 60 === 0) {
-      // Deduct funds every 60 seconds (1 minute)
       setWalletBalance(prevBalance => {
         const newBalance = prevBalance - pricePerMinute;
-        if (newBalance < 0) {
-          // If funds are insufficient, end the call
+        toast({
+          title: 'Charge Applied',
+          description: `₹${pricePerMinute.toFixed(2)} deducted for the last minute. New balance: ₹${newBalance.toFixed(2)}`,
+        });
+        if (newBalance <= 0) {
           toast({
             variant: 'destructive',
             title: 'Insufficient Funds',
-            description: 'Your wallet balance is too low. The session will now end.',
+            description: 'Your wallet balance is empty. The session will now end.',
           });
           hangUp();
           return 0;
@@ -103,7 +104,7 @@ export default function SessionPage() {
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionDuration]);
+  }, [sessionDuration, pricePerMinute]);
 
 
   useEffect(() => {
@@ -425,15 +426,11 @@ export default function SessionPage() {
          </div>
        </header>
        <main className="flex-grow relative bg-muted/20">
-            <div className="absolute inset-0 z-0">
-                {!jitsiLoadFailed && (
+            <Whiteboard>
+                 {!jitsiLoadFailed && (
                     <JitsiMeetComponent onApiReady={handleApiReady} onError={handleJitsiError} isMobile={isMobile} />
                 )}
-            </div>
-
-            <div className="absolute inset-0 z-10">
-                <Whiteboard />
-            </div>
+            </Whiteboard>
 
             {recordingSupport === 'unsupported' && !isMobile && (
                 <div className="absolute inset-0 flex items-center justify-center z-20 p-4 bg-background/50 pointer-events-none">
