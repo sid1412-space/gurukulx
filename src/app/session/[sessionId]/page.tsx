@@ -14,11 +14,12 @@ import ChatPanel from '@/components/session/ChatPanel';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { tutors } from '@/lib/mock-data';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { getExerciseSuggestions } from '@/lib/actions';
 import { Separator } from '@/components/ui/separator';
-import Whiteboard from '@/components/session/Whiteboard';
+
+const Whiteboard = dynamic(() => import('@/components/session/Whiteboard'), { ssr: false });
 
 const JitsiMeetComponent = dynamic(() => import('@/components/session/JitsiMeetComponent'), {
     ssr: false,
@@ -76,8 +77,7 @@ export default function SessionPage() {
 
     // Deduct funds every 60 seconds (1 minute)
     if (sessionDuration > 0 && sessionDuration % 60 === 0) {
-      const costForMinute = pricePerMinute;
-      const newBalance = walletBalance - costForMinute;
+      const newBalance = walletBalance - pricePerMinute;
 
       if (newBalance < 0) {
         toast({
@@ -90,7 +90,7 @@ export default function SessionPage() {
         setWalletBalance(newBalance);
         toast({
           title: 'Charge Applied',
-          description: `₹${costForMinute.toFixed(2)} deducted for the last minute. New balance: ₹${newBalance.toFixed(2)}`,
+          description: `₹${pricePerMinute.toFixed(2)} deducted for the last minute. New balance: ₹${newBalance.toFixed(2)}`,
         });
       }
     }
@@ -298,14 +298,20 @@ export default function SessionPage() {
                 </div>
             )}
             
-            <Whiteboard>
-                {!jitsiLoadFailed && (
-                     <JitsiMeetComponent onApiReady={handleApiReady} onError={handleJitsiError} />
-                )}
-            </Whiteboard>
+            <div className="absolute inset-0 z-10">
+              <Whiteboard>
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] h-[240px]">
+                    {!jitsiLoadFailed && (
+                        <JitsiMeetComponent onApiReady={handleApiReady} onError={handleJitsiError} />
+                    )}
+                </div>
+              </Whiteboard>
+            </div>
 
             {isClient && <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />}
        </main>
     </div>
   );
 }
+
+    
