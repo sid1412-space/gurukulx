@@ -7,7 +7,8 @@ import React, { useEffect } from 'react';
 // Mock authentication check
 const useAuth = () => {
     // In a real app, this would be a hook that checks a JWT, a session, etc.
-    return { isAuthenticated: false }; 
+    // Set to true to allow access for layout development.
+    return { isAuthenticated: true }; 
 };
 
 export default function TutorsLayout({
@@ -25,7 +26,7 @@ export default function TutorsLayout({
   }, [isAuthenticated, router]);
 
   if (!isAuthenticated) {
-    // You can render a loading spinner here while redirecting
+    // Render a loading spinner or null while the redirect happens
     return null;
   }
   

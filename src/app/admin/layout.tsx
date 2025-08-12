@@ -32,7 +32,8 @@ const adminMenuItems = [
 // Mock authentication check
 const useAuth = () => {
     // In a real app, this would be a hook that checks a JWT, a session, etc.
-    return { isAuthenticated: false }; 
+    // Set to true to simulate a logged-in admin user for layout purposes
+    return { isAuthenticated: true }; 
 };
 
 
@@ -46,14 +47,14 @@ export default function AdminLayout({
   const router = useRouter();
 
   useEffect(() => {
-    // Here you would check if the user is an admin as well
+    // In a real app, you would also check for admin role here.
     if (!isAuthenticated) {
       router.push('/login');
     }
   }, [isAuthenticated, router]);
 
   if (!isAuthenticated) {
-    // You can render a loading spinner here while redirecting
+    // Render a loading state or null while redirecting
     return null;
   }
 

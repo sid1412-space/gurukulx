@@ -11,7 +11,6 @@ import {
   SidebarMenuButton,
   SidebarInset,
   SidebarTrigger,
-  useSidebar,
 } from '@/components/ui/sidebar';
 import { User, LayoutDashboard, Settings, BookOpen, ClipboardPen } from 'lucide-react';
 import Logo from '@/components/Logo';
@@ -52,7 +51,7 @@ export default function DashboardLayout({
   }, [isAuthenticated, router]);
 
   if (!isAuthenticated) {
-    // You can render a loading spinner here while redirecting
+    // Render a loading state or null while redirecting
     return null;
   }
 

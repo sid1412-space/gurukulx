@@ -14,25 +14,33 @@ import { Loader2 } from 'lucide-react';
 import { Textarea } from '../ui/textarea';
 import { useRouter } from 'next/navigation';
 
-const formSchema = z.discriminatedUnion("accountType", [
-    z.object({
-        accountType: z.literal("student"),
-        name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
-        email: z.string().email({ message: 'Invalid email address.' }),
-        password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
-    }),
-    z.object({
-        accountType: z.literal("tutor"),
-        name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
-        email: z.string().email({ message: 'Invalid email address.' }),
-        password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
-        qualification: z.string().min(2, 'Qualification is required.'),
-        phoneNumber: z.string().min(10, 'A valid phone number is required.'),
-        college: z.string().optional(),
-        location: z.string().optional(),
-        experience: z.enum(['fresher', '1-2', '3-4', '5+'], { required_error: 'Experience is required.'}),
-        expertise: z.string().min(10, 'Expertise must be at least 10 characters.'),
-    })
+// Base schema for common fields
+const baseSchema = z.object({
+  name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
+  email: z.string().email({ message: 'Invalid email address.' }),
+  password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
+});
+
+// Schema for the student
+const studentSchema = baseSchema.extend({
+  accountType: z.literal('student'),
+});
+
+// Schema for the tutor with additional required fields
+const tutorSchema = baseSchema.extend({
+  accountType: z.literal('tutor'),
+  qualification: z.string().min(2, 'Qualification is required.'),
+  phoneNumber: z.string().min(10, 'A valid phone number is required.'),
+  college: z.string().optional(),
+  location: z.string().optional(),
+  experience: z.enum(['fresher', '1-2', '3-4', '5+'], { required_error: 'Experience is required.' }),
+  expertise: z.string().min(10, 'Expertise must be at least 10 characters.'),
+});
+
+// The final discriminated union schema
+const formSchema = z.discriminatedUnion('accountType', [
+  studentSchema,
+  tutorSchema,
 ]);
 
 
@@ -44,10 +52,10 @@ export default function SignUpForm() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      accountType: "student",
-      name: "",
-      email: "",
-      password: "",
+      accountType: 'student',
+      name: '',
+      email: '',
+      password: '',
     },
   });
 
@@ -76,16 +84,35 @@ export default function SignUpForm() {
           render={({ field }) => (
             <FormItem>
               <FormLabel>I am a...</FormLabel>
-              <Select onValueChange={(value) => {
+              <Select
+                onValueChange={(value) => {
                   field.onChange(value);
-                  // Reset form state when changing account type
-                  form.reset({
-                    accountType: value as "student" | "tutor",
-                    name: form.getValues('name'),
-                    email: form.getValues('email'),
-                    password: form.getValues('password')
-                  });
-              }} defaultValue={field.value}>
+                  const currentValues = form.getValues();
+                  // When switching, reset to a clean state for that type
+                  if (value === 'student') {
+                    form.reset({
+                      accountType: 'student',
+                      name: currentValues.name,
+                      email: currentValues.email,
+                      password: currentValues.password,
+                    });
+                  } else {
+                    form.reset({
+                      accountType: 'tutor',
+                      name: currentValues.name,
+                      email: currentValues.email,
+                      password: currentValues.password,
+                      qualification: '',
+                      phoneNumber: '',
+                      experience: undefined,
+                      expertise: '',
+                      college: '',
+                      location: '',
+                    });
+                  }
+                }}
+                defaultValue={field.value}
+              >
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select an account type" />
@@ -139,101 +166,101 @@ export default function SignUpForm() {
             </FormItem>
           )}
         />
-       
+
         {accountType === 'tutor' && (
-           <>
-              <FormField
-                control={form.control}
-                name="qualification"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Highest Qualification</FormLabel>
+          <>
+            <FormField
+              control={form.control}
+              name="qualification"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Highest Qualification</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., B.Tech in Computer Science" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="phoneNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Phone Number</FormLabel>
+                  <FormControl>
+                    <Input type="tel" placeholder="+1 234 567 890" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="college"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>College (Optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., University of Example" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="location"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Location (Optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., New York, USA" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="experience"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Teaching Experience</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
-                      <Input placeholder="e.g., B.Tech in Computer Science" {...field} />
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your experience level" />
+                      </SelectTrigger>
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="phoneNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phone Number</FormLabel>
-                    <FormControl>
-                      <Input type="tel" placeholder="+1 234 567 890" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-               <FormField
-                control={form.control}
-                name="college"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>College (Optional)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., University of Example" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-               <FormField
-                control={form.control}
-                name="location"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Location (Optional)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., New York, USA" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-               <FormField
-                  control={form.control}
-                  name="experience"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Teaching Experience</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select your experience level" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="fresher">Fresher</SelectItem>
-                          <SelectItem value="1-2">1-2 years</SelectItem>
-                          <SelectItem value="3-4">3-4 years</SelectItem>
-                          <SelectItem value="5+">5+ years</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                    control={form.control}
-                    name="expertise"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Expertise in Subjects</FormLabel>
-                        <FormControl>
-                        <Textarea
-                            placeholder="e.g., I specialize in advanced calculus and quantum mechanics for JEE preparation."
-                            {...field}
-                        />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-           </>
+                    <SelectContent>
+                      <SelectItem value="fresher">Fresher</SelectItem>
+                      <SelectItem value="1-2">1-2 years</SelectItem>
+                      <SelectItem value="3-4">3-4 years</SelectItem>
+                      <SelectItem value="5+">5+ years</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="expertise"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Expertise in Subjects</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="e.g., I specialize in advanced calculus and quantum mechanics for JEE preparation."
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
         )}
 
         <Button type="submit" className="w-full" disabled={isLoading}>

@@ -1,7 +1,6 @@
 
 'use client';
 
-import type { Metadata } from 'next';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
@@ -23,8 +22,8 @@ export default function RootLayout({
 }>) {
   const pathname = usePathname();
   const isSessionPage = pathname.startsWith('/session');
-  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup');
-   const isAdminPage = pathname.startsWith('/admin');
+  const isAuthPage = pathname === '/login' || pathname === '/signup';
+  const isAdminPage = pathname.startsWith('/admin');
   const isDashboardPage = pathname.startsWith('/dashboard');
 
   const showHeaderAndFooter = !isSessionPage && !isAuthPage && !isAdminPage && !isDashboardPage;
