@@ -44,7 +44,6 @@ Use the image tool in the toolbar (7th icon from the top).
             editor.zoomToFit();
             editor.centerOnPoint(200, 200);
 
-            editor.updateInstanceState({ isFocusMode: true });
 		};
 		
 		editor.on('mount', handleMount);
