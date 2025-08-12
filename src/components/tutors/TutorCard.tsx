@@ -157,7 +157,7 @@ export default function TutorCard({ tutor }: TutorCardProps) {
           <Link href={`/tutors/${tutor.id}`}>
             <Avatar className="h-16 w-16">
               <AvatarImage src={tutor.avatar} alt={tutor.name} data-ai-hint="person portrait" />
-              <AvatarFallback>{tutor.name.charAt(0)}</AvatarFallback>
+              <AvatarFallback>{tutor.name ? tutor.name.charAt(0) : 'T'}</AvatarFallback>
             </Avatar>
           </Link>
           <div className="flex-1">

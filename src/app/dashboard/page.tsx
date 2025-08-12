@@ -35,6 +35,7 @@ export default function DashboardPage() {
                     return {
                         ...t,
                         id: t.email,
+                        name: applicantData.name || t.name, // Ensure name is included
                         avatar: 'https://placehold.co/100x100.png',
                         bio: applicantData.qualification || 'A passionate and experienced tutor.',
                         rating: 4.8 + Math.random() * 0.2,

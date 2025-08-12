@@ -55,6 +55,7 @@ export default function TutorProfilePage() {
                      setTutor({
                          ...currentTutor,
                          id: currentTutor.email,
+                         name: applicantData.name || currentTutor.name,
                          avatar: 'https://placehold.co/128x128.png',
                          bio: applicantData.qualification || 'A passionate and experienced tutor.',
                          rating: 4.8 + Math.random() * 0.2, // Randomize rating slightly
@@ -183,7 +184,7 @@ export default function TutorProfilePage() {
             <CardContent className="p-4 sm:p-6 text-center -mt-16">
             <Avatar className="h-32 w-32 mx-auto border-4 border-background shadow-lg">
                 <AvatarImage src={tutor.avatar} alt={tutor.name} data-ai-hint="person portrait"/>
-                <AvatarFallback className="text-4xl">{tutor.name.charAt(0)}</AvatarFallback>
+                <AvatarFallback className="text-4xl">{tutor.name ? tutor.name.charAt(0) : 'T'}</AvatarFallback>
             </Avatar>
             <h1 className="text-3xl font-bold mt-4 font-headline">{tutor.name}</h1>
             
