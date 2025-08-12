@@ -5,7 +5,6 @@ import { useState, useMemo, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import TutorCard from '@/components/tutors/TutorCard';
-import { tutors } from '@/lib/mock-data';
 import {
   Select,
   SelectContent,
@@ -25,9 +24,35 @@ export default function TutorsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedExam, setSelectedExam] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
-  // Force re-render when tutor status changes in another tab
+  const [allTutors, setAllTutors] = useState<any[]>([]);
   const [updateTrigger, setUpdateTrigger] = useState(0);
   const isClient = useIsClient();
+
+   useEffect(() => {
+        if (isClient) {
+            const usersJSON = localStorage.getItem('userDatabase');
+            if (usersJSON) {
+                const users = JSON.parse(usersJSON);
+                const tutors = users.filter((u: any) => u.role === 'tutor');
+                
+                const applicantsJSON = localStorage.getItem('tutorApplicants') || '[]';
+                const applicants = JSON.parse(applicantsJSON);
+
+                const tutorsWithFullData = tutors.map((t: any) => {
+                    const applicantData = applicants.find((a:any) => a.email === t.email) || {};
+                    return {
+                        ...t,
+                        id: t.email,
+                        avatar: 'https://placehold.co/100x100.png',
+                        bio: applicantData.qualification || 'A passionate and experienced tutor.',
+                        rating: 4.8 + Math.random() * 0.2,
+                        subjects: applicantData.expertise ? [applicantData.expertise] : ['Subject'],
+                    }
+                });
+                setAllTutors(tutorsWithFullData);
+            }
+        }
+    }, [isClient]);
 
   useEffect(() => {
     const handleStorageChange = () => {
@@ -41,18 +66,16 @@ export default function TutorsPage() {
 
   const handleExamChange = (value: string) => {
     setSelectedExam(value);
-    setSelectedSubject(''); // Reset subject when exam changes
+    setSelectedSubject('');
   };
 
   const filteredTutors = useMemo(() => {
     if (!isClient) return [];
 
-    let availableTutors = tutors.filter(tutor => {
-      const isOnline = localStorage.getItem(`tutor-status-${tutor.id}`) === 'online';
+    let availableTutors = allTutors.filter(tutor => {
+      const isOnline = localStorage.getItem(`tutor-status-${tutor.id}`) !== 'offline';
       const isBusy = localStorage.getItem(`tutor-busy-${tutor.id}`) === 'true';
-      // For demo, if status is not set, assume online.
-      const hasSetStatus = localStorage.getItem(`tutor-status-${tutor.id}`);
-      return (isOnline || !hasSetStatus) && !isBusy;
+      return isOnline && !isBusy;
     });
 
     let filtered = availableTutors;
@@ -67,15 +90,14 @@ export default function TutorsPage() {
       filtered = filtered.filter(
         (tutor) =>
           tutor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          tutor.subjects.some((s) =>
+          tutor.subjects.some((s:string) =>
             s.toLowerCase().includes(searchQuery.toLowerCase())
           )
       );
     }
 
     return filtered;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, selectedSubject, selectedExam, updateTrigger, isClient]);
+  }, [searchQuery, selectedSubject, selectedExam, updateTrigger, isClient, allTutors]);
 
   const subjectsForSelectedExam = selectedExam ? exams[selectedExam as keyof typeof exams] : [];
 
@@ -144,9 +166,9 @@ export default function TutorsPage() {
           </div>
         ))}
       </div>
-       {filteredTutors.length === 0 && (
+       {isClient && filteredTutors.length === 0 && (
           <div className="text-center col-span-full py-12 text-muted-foreground">
-            <p>No tutors found for your selection.</p>
+            <p>No tutors available for your selection.</p>
             <p>Try adjusting your filters or check back later.</p>
           </div>
         )}

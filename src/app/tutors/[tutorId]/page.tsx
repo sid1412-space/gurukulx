@@ -2,7 +2,6 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { tutors } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -33,13 +32,39 @@ export default function TutorProfilePage() {
   const { toast } = useToast();
   const { tutorId } = params;
   const isClient = useIsClient();
-  const tutor = tutors.find((t) => t.id === tutorId);
+  const [tutor, setTutor] = useState<any>(null);
 
   const [isOnline, setIsOnline] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const [isWaiting, setIsWaiting] = useState(false);
   const [sessionRequestId, setSessionRequestId] = useState<string | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+     if (isClient && tutorId) {
+            const usersJSON = localStorage.getItem('userDatabase');
+            if (usersJSON) {
+                const users = JSON.parse(usersJSON);
+                const currentTutor = users.find((u: any) => u.email === tutorId);
+
+                if (currentTutor) {
+                     const applicantsJSON = localStorage.getItem('tutorApplicants') || '[]';
+                     const applicants = JSON.parse(applicantsJSON);
+                     const applicantData = applicants.find((a:any) => a.email === currentTutor.email) || {};
+
+                     setTutor({
+                         ...currentTutor,
+                         id: currentTutor.email,
+                         avatar: 'https://placehold.co/128x128.png',
+                         bio: applicantData.qualification || 'A passionate and experienced tutor.',
+                         rating: 4.8 + Math.random() * 0.2, // Randomize rating slightly
+                         subjects: applicantData.expertise ? [applicantData.expertise] : ['Subject'],
+                         qualification: applicantData.qualification,
+                     });
+                }
+            }
+        }
+  }, [isClient, tutorId])
 
   useEffect(() => {
     if (isClient && tutorId) {
@@ -68,9 +93,8 @@ export default function TutorProfilePage() {
         return;
     };
 
-    // Set a timeout for 2 minutes (120000 ms)
     timeoutRef.current = setTimeout(() => {
-        handleCancelRequest(true); // Automatically cancel with timeout message
+        handleCancelRequest(true);
     }, 120000);
 
     const interval = setInterval(() => {
@@ -94,13 +118,12 @@ export default function TutorProfilePage() {
                 });
             }
         }
-    }, 2000); // Check every 2 seconds
+    }, 2000);
 
     return () => {
         clearInterval(interval)
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isWaiting, sessionRequestId, router, tutorId, tutor?.name, toast]);
 
 
@@ -110,7 +133,7 @@ export default function TutorProfilePage() {
       const sessionRequest = {
         requestId,
         tutorId,
-        studentName: 'A Student', // In a real app, get this from context/auth
+        studentName: 'A Student', 
         status: 'pending',
       };
       localStorage.setItem(`session-request-${requestId}`, JSON.stringify(sessionRequest));
@@ -121,7 +144,6 @@ export default function TutorProfilePage() {
   
   const handleCancelRequest = (isTimeout = false) => {
     if(sessionRequestId) {
-        // Mark as rejected so tutor doesn't see a stale request
         const requestJSON = localStorage.getItem(`session-request-${sessionRequestId}`);
          if(requestJSON) {
             const request = JSON.parse(requestJSON);
@@ -142,14 +164,10 @@ export default function TutorProfilePage() {
   }
 
 
-  if (!tutor) {
+  if (!isClient || !tutor) {
     return (
-      <div className="container mx-auto max-w-5xl px-4 py-8 text-center">
-        <h1 className="text-2xl font-bold">Tutor not found</h1>
-        <p className="text-muted-foreground">The tutor you are looking for does not exist.</p>
-        <Link href="/tutors">
-            <Button variant="link" className="mt-4">Back to tutors</Button>
-        </Link>
+      <div className="container mx-auto max-w-5xl px-4 py-8 text-center flex items-center justify-center min-h-[50vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -183,7 +201,7 @@ export default function TutorProfilePage() {
             </div>
             
             <div className="mt-6 flex flex-wrap justify-center gap-2">
-                {tutor.subjects.map((subject) => (
+                {tutor.subjects.map((subject: string) => (
                     <Badge key={subject} variant="secondary" className="text-base px-4 py-1">{subject}</Badge>
                 ))}
             </div>
@@ -203,7 +221,7 @@ export default function TutorProfilePage() {
                         <div className="grid grid-cols-2 gap-4 text-sm">
                             <div className="flex items-center gap-2">
                                 <GraduationCap className="h-5 w-5 text-primary" />
-                                <span className="text-muted-foreground"><span className="font-semibold text-foreground">Qualification:</span> PhD in Physics</span>
+                                <span className="text-muted-foreground"><span className="font-semibold text-foreground">Qualification:</span> {tutor.qualification || 'N/A'}</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <Briefcase className="h-5 w-5 text-primary" />

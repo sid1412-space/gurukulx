@@ -56,10 +56,14 @@ export default function FinancialManagementPage() {
 
 
   function onAddFunds(values: z.infer<typeof addFundsSchema>) {
-    console.log(values);
+    const studentWalletKey = `student-wallet-${values.studentEmail}`;
+    const currentBalance = parseFloat(localStorage.getItem(studentWalletKey) || '0');
+    const newBalance = currentBalance + values.amount;
+    localStorage.setItem(studentWalletKey, newBalance.toString());
+
     toast({
       title: 'Funds Added',
-      description: `₹${values.amount} has been added to ${values.studentEmail}'s wallet.`,
+      description: `₹${values.amount} has been added to ${values.studentEmail}'s wallet. New balance is ₹${newBalance.toFixed(2)}.`,
     });
     addFundsForm.reset();
   }
@@ -90,12 +94,16 @@ export default function FinancialManagementPage() {
     const request = rechargeRequests.find(r => r.id === requestId);
     if (!request) return;
 
-    // In a real app, you'd add this to the student's actual balance.
+    const studentWalletKey = `student-wallet-${request.studentEmail}`;
+    const currentBalance = parseFloat(localStorage.getItem(studentWalletKey) || '0');
+    const newBalance = currentBalance + request.amount;
+    localStorage.setItem(studentWalletKey, newBalance.toString());
+
     const updatedRequests = rechargeRequests.filter(r => r.id !== requestId);
     updateRechargeRequests(updatedRequests);
     toast({
         title: 'Recharge Approved',
-        description: `₹${request.amount} has been added to ${request.studentEmail}'s wallet.`
+        description: `₹${request.amount} has been added to ${request.studentEmail}'s wallet. New balance: ₹${newBalance.toFixed(2)}`
     });
   };
   
@@ -249,12 +257,12 @@ export default function FinancialManagementPage() {
           <CardContent className="space-y-4">
              <div>
                 <h4 className="font-semibold">Pending Payouts</h4>
-                <p className="text-2xl font-bold">₹12,540.00</p>
+                <p className="text-2xl font-bold">₹0.00</p>
              </div>
              <Separator />
              <div>
                 <h4 className="font-semibold">Payouts This Month</h4>
-                <p className="text-2xl font-bold text-green-600">₹45,210.00</p>
+                <p className="text-2xl font-bold text-green-600">₹0.00</p>
              </div>
              <Button className="w-full" onClick={handleProcessPayouts}>Process Pending Payouts</Button>
           </CardContent>

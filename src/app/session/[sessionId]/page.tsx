@@ -12,7 +12,6 @@ import { useIsClient } from '@/hooks/use-is-client';
 import ChatPanel from '@/components/session/ChatPanel';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { tutors } from '@/lib/mock-data';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { getExerciseSuggestions } from '@/lib/actions';
@@ -41,9 +40,8 @@ export default function SessionPage() {
 
   // Session timer and wallet states
   const [sessionDuration, setSessionDuration] = useState(0); // in seconds
-  const [walletBalance, setWalletBalance] = useState(12550); // mock initial balance
-  const tutor = tutors.find(t => t.id === tutorId);
-  const pricePerMinute = tutor ? tutor.price : 1; 
+  const [walletBalance, setWalletBalance] = useState(0); 
+  const [pricePerMinute, setPricePerMinute] = useState(1);
 
   const isClient = useIsClient();
 
@@ -51,10 +49,33 @@ export default function SessionPage() {
   useEffect(() => {
     if (hasAgreedToTerms && tutorId) {
       localStorage.setItem(`tutor-busy-${tutorId}`, 'true');
-      // Notify other tabs that tutor status has changed
       window.dispatchEvent(new Event('storage'));
     }
   }, [hasAgreedToTerms, tutorId]);
+
+  // Fetch tutor price and student balance from localStorage
+   useEffect(() => {
+        if (isClient) {
+            const usersJSON = localStorage.getItem('userDatabase');
+            if (usersJSON && tutorId) {
+                const users = JSON.parse(usersJSON);
+                const tutor = users.find((u: any) => u.email === tutorId);
+                if(tutor && tutor.price) {
+                    setPricePerMinute(tutor.price);
+                }
+            }
+
+            if (userRole === 'student') {
+                 // In a real app, you'd get the current logged-in user's email
+                const studentEmail = 'student@example.com';
+                const storedBalance = localStorage.getItem(`student-wallet-${studentEmail}`) || '0';
+                setWalletBalance(parseFloat(storedBalance));
+            } else {
+                // Tutors don't need to see student balance
+                setWalletBalance(Infinity);
+            }
+        }
+    }, [isClient, tutorId, userRole]);
 
   // Timer and wallet deduction logic
   useEffect(() => {
@@ -68,32 +89,31 @@ export default function SessionPage() {
   }, [hasAgreedToTerms]);
 
   useEffect(() => {
-    if (!hasAgreedToTerms || !tutor || userRole !== 'student' || sessionDuration === 0) return;
+    if (!hasAgreedToTerms || !pricePerMinute || userRole !== 'student' || sessionDuration === 0) return;
 
     // Deduct funds every 60 seconds (1 minute)
     if (sessionDuration > 0 && sessionDuration % 60 === 0) {
-      setWalletBalance(currentBalance => {
-        const newBalance = currentBalance - pricePerMinute;
-        
-        if (newBalance <= 0) {
-            toast({
-              variant: 'destructive',
-              title: 'Insufficient Funds',
-              description: 'Your wallet balance is empty. The session will now end.',
-            });
-            hangUp();
-            return 0;
-        }
-        
+      const newBalance = walletBalance - pricePerMinute;
+      
+      if (newBalance < 0) {
+          toast({
+            variant: 'destructive',
+            title: 'Insufficient Funds',
+            description: 'Your wallet balance is empty. The session will now end.',
+          });
+          hangUp();
+          setWalletBalance(0);
+      } else {
+        setWalletBalance(newBalance);
+        const studentEmail = 'student@example.com';
+        localStorage.setItem(`student-wallet-${studentEmail}`, newBalance.toString());
         toast({
             title: 'Charge Applied',
-            description: `₹${pricePerMinute.toFixed(2)} deducted for the last minute. New balance: ₹${newBalance.toFixed(2)}`,
+            description: `₹${pricePerMinute.toFixed(2)} deducted. New balance: ₹${newBalance.toFixed(2)}`,
         });
-        return newBalance;
-      });
+      }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionDuration]);
+  }, [sessionDuration, hasAgreedToTerms, pricePerMinute, userRole, walletBalance, toast]);
 
 
   useEffect(() => {
@@ -127,12 +147,10 @@ export default function SessionPage() {
   const hangUp = () => {
     if (tutorId) {
         localStorage.removeItem(`tutor-busy-${tutorId}`);
-        // Notify other tabs that tutor status has changed
         window.dispatchEvent(new Event('storage'));
     }
     jitsiApi?.executeCommand('hangup');
     
-    // Redirect based on role to the session history page
     const destination = userRole === 'tutor' ? '/tutor/sessions' : '/dashboard/sessions';
     router.push(destination);
   };
@@ -166,7 +184,6 @@ export default function SessionPage() {
             }
         }));
 
-        // Dispatch a custom event to create shapes on the whiteboard
         window.dispatchEvent(new CustomEvent('create-shapes', { detail: { shapes } }));
 
         toast({ title: 'Exercises Added', description: 'Practice problems have been added to the whiteboard.' });
@@ -200,12 +217,14 @@ export default function SessionPage() {
                         <span>{formatDuration(sessionDuration)}</span>
                     </div>
                 </div>
+                {userRole === 'student' && (
                  <div className="p-2 border rounded-lg">
                     <div className="flex items-center gap-2 text-sm">
                         <Wallet className="text-green-600"/>
                         <span className="font-semibold">₹{walletBalance.toFixed(2)}</span>
                     </div>
                 </div>
+                )}
             </div>
 
             <div className="flex items-center gap-1">

@@ -11,15 +11,17 @@ import TutorCard from '@/components/tutors/TutorCard';
 
 // Mock student data - in a real app, this would come from a user context or API
 const studentData = {
-  subjects: ['Physics', 'Calculus'],
+  subjects: [],
 };
 
 export default function DashboardPage() {
     const isClient = useIsClient();
     const [allTutors, setAllTutors] = useState<any[]>([]);
+    const [walletBalance, setWalletBalance] = useState(0);
 
     useEffect(() => {
         if (isClient) {
+            // In a real app, this data would come from an API
             const usersJSON = localStorage.getItem('userDatabase');
             if (usersJSON) {
                 const users = JSON.parse(usersJSON);
@@ -28,30 +30,27 @@ export default function DashboardPage() {
                 const applicantsJSON = localStorage.getItem('tutorApplicants') || '[]';
                 const applicants = JSON.parse(applicantsJSON);
 
-                // The 'price' was stored on approval, but let's add mock data for others for display
                 const tutorsWithFullData = tutors.map((t: any) => {
                     const applicantData = applicants.find((a:any) => a.email === t.email) || {};
                     return {
-                        ...t, // Contains name, email, role, price from approval
-                        id: t.email, // Use email as a unique ID
+                        ...t,
+                        id: t.email,
                         avatar: 'https://placehold.co/100x100.png',
                         bio: applicantData.qualification || 'A passionate and experienced tutor.',
-                        rating: 4.8 + Math.random() * 0.2, // Randomize rating slightly
-                        subjects: applicantData.expertise ? [applicantData.expertise] : ['Subject'], // Use saved subject
+                        rating: 4.8 + Math.random() * 0.2,
+                        subjects: applicantData.expertise ? [applicantData.expertise] : ['Subject'],
                     }
                 });
                 setAllTutors(tutorsWithFullData);
             }
+             const storedBalance = localStorage.getItem('student-wallet-student@example.com') || '0';
+             setWalletBalance(parseFloat(storedBalance));
         }
     }, [isClient]);
 
     const recommendedTutors = useMemo(() => {
         if (!allTutors.length) return [];
-        return allTutors.filter(tutor => 
-            studentData.subjects.some(studentSubject => 
-                tutor.subjects.includes(studentSubject)
-            )
-        ).slice(0, 3); // Show top 3 recommendations
+        return allTutors.slice(0, 3); // Show top 3 tutors
     }, [allTutors]);
 
 
@@ -65,7 +64,7 @@ export default function DashboardPage() {
          <div className="flex items-center gap-4">
             <div className="text-right">
                 <p className="text-sm text-muted-foreground">Wallet Balance</p>
-                <p className="text-2xl font-bold">₹12550</p>
+                <p className="text-2xl font-bold">₹{walletBalance.toFixed(2)}</p>
             </div>
             <Link href="/dashboard/recharge">
                  <Button size="lg" className="flex items-center gap-2">
@@ -93,7 +92,7 @@ export default function DashboardPage() {
         <section className="space-y-4">
             <h2 className="text-2xl font-bold font-headline flex items-center gap-2">
                 <Users className="h-6 w-6 text-primary" />
-                Recommended Tutors For You
+                Available Tutors
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {recommendedTutors.map((tutor, index) => (
@@ -118,11 +117,9 @@ export default function DashboardPage() {
             <CardTitle className="flex items-center gap-2"><Activity className="h-5 w-5"/> Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>Completed session: Physics with Dr. Reed - Yesterday</li>
-              <li>Payment of ₹5000 confirmed - Yesterday</li>
-              <li>Profile information updated - 2 days ago</li>
-            </ul>
+            <div className="text-center text-muted-foreground py-8">
+                <p>You have no recent activity.</p>
+            </div>
           </CardContent>
         </Card>
     </div>

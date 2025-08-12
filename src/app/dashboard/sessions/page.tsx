@@ -34,7 +34,6 @@ export default function SessionHistoryPage() {
   };
 
   const handleRateSession = (sessionId: string, rating: number, feedback: string) => {
-    // In a real app, this would be an API call. Here we simulate it.
     console.log(`Rating session ${sessionId} with ${rating} stars and feedback: ${feedback}`);
     setSessions(prevSessions => 
       prevSessions.map(s => s.id === sessionId ? { ...s, rating: rating } : s)
@@ -71,51 +70,59 @@ export default function SessionHistoryPage() {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {sessions.map((session) => (
-                    <TableRow key={session.id}>
-                        <TableCell>
-                            <div className="flex items-center gap-3">
-                                <Avatar className="h-10 w-10">
-                                    <AvatarImage src={session.tutorAvatar} alt={session.tutorName} data-ai-hint="person avatar"/>
-                                    <AvatarFallback>{session.tutorName.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                                <span className="font-medium">{session.tutorName}</span>
-                            </div>
-                        </TableCell>
-                        <TableCell>{session.subject}</TableCell>
-                        <TableCell>
-                            <div className="flex flex-col">
-                                <span>{format(new Date(session.date), 'PPP')}</span>
-                                <span className="text-xs text-muted-foreground">
-                                    {formatDistanceToNow(new Date(session.date), { addSuffix: true })}
-                                </span>
-                            </div>
-                        </TableCell>
-                        <TableCell>{session.duration} min</TableCell>
-                        <TableCell>₹{session.cost.toFixed(2)}</TableCell>
-                        <TableCell>
-                            <Badge variant={session.status === 'Completed' ? 'default' : 'outline'}>
-                                {session.status}
-                            </Badge>
-                        </TableCell>
-                        <TableCell className="text-right space-x-1">
-                           <Button variant="ghost" size="sm">
-                                <Download className="mr-2 h-4 w-4" />
-                                Transcript
-                           </Button>
-                           {session.rating ? (
-                                <div className="inline-flex items-center gap-1 text-sm text-yellow-500">
-                                   <Star className="h-4 w-4 fill-current"/> {session.rating}
+                    {sessions.length === 0 ? (
+                        <TableRow>
+                            <TableCell colSpan={7} className="text-center text-muted-foreground py-12">
+                                You have no completed sessions.
+                            </TableCell>
+                        </TableRow>
+                    ) : (
+                        sessions.map((session) => (
+                        <TableRow key={session.id}>
+                            <TableCell>
+                                <div className="flex items-center gap-3">
+                                    <Avatar className="h-10 w-10">
+                                        <AvatarImage src={session.tutorAvatar} alt={session.tutorName} data-ai-hint="person avatar"/>
+                                        <AvatarFallback>{session.tutorName.charAt(0)}</AvatarFallback>
+                                    </Avatar>
+                                    <span className="font-medium">{session.tutorName}</span>
                                 </div>
-                            ) : (
-                                <Button variant="outline" size="sm" onClick={() => handleOpenRating(session)}>
-                                    <Star className="mr-2 h-4 w-4" />
-                                    Rate
-                                </Button>
-                           )}
-                        </TableCell>
-                    </TableRow>
-                    ))}
+                            </TableCell>
+                            <TableCell>{session.subject}</TableCell>
+                            <TableCell>
+                                <div className="flex flex-col">
+                                    <span>{format(new Date(session.date), 'PPP')}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                        {formatDistanceToNow(new Date(session.date), { addSuffix: true })}
+                                    </span>
+                                </div>
+                            </TableCell>
+                            <TableCell>{session.duration} min</TableCell>
+                            <TableCell>₹{session.cost.toFixed(2)}</TableCell>
+                            <TableCell>
+                                <Badge variant={session.status === 'Completed' ? 'default' : 'outline'}>
+                                    {session.status}
+                                </Badge>
+                            </TableCell>
+                            <TableCell className="text-right space-x-1">
+                               <Button variant="ghost" size="sm">
+                                    <Download className="mr-2 h-4 w-4" />
+                                    Transcript
+                               </Button>
+                               {session.rating ? (
+                                    <div className="inline-flex items-center gap-1 text-sm text-yellow-500">
+                                       <Star className="h-4 w-4 fill-current"/> {session.rating}
+                                    </div>
+                                ) : (
+                                    <Button variant="outline" size="sm" onClick={() => handleOpenRating(session)}>
+                                        <Star className="mr-2 h-4 w-4" />
+                                        Rate
+                                    </Button>
+                               )}
+                            </TableCell>
+                        </TableRow>
+                        ))
+                    )}
                 </TableBody>
             </Table>
           </CardContent>

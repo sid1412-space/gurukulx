@@ -1,118 +1,118 @@
 
-export const tutors = [
-  {
-    id: '1',
-    name: 'Dr. Evelyn Reed',
-    avatar: 'https://placehold.co/100x100.png',
-    subjects: ['Physics', 'Calculus', 'Mathematics'],
-    bio: 'PhD in Physics with 10+ years of teaching experience at the university level. I make complex topics easy to understand.',
-    rating: 4.9,
-    price: 80, // Price per minute
-  },
-  {
-    id: '2',
-    name: 'Samuel Chen',
-    avatar: 'https://placehold.co/100x100.png',
-    subjects: ['Computer Science', 'Python', 'Mathematics'],
-    bio: 'Software Engineer at a top tech company. Passionate about teaching programming to beginners and advanced students.',
-    rating: 5.0,
-    price: 70, // Price per minute
-  },
-  {
-    id: '3',
-    name: 'Maria Garcia',
-    avatar: 'https://placehold.co/100x100.png',
-    subjects: ['Spanish', 'French'],
-    bio: 'Native Spanish speaker and certified language instructor. Let\'s make learning a new language fun and interactive!',
-    rating: 4.8,
-    price: 50, // Price per minute
-  },
-    {
-    id: '4',
-    name: 'Ben Carter',
-    avatar: 'https://placehold.co/100x100.png',
-    subjects: ['History', 'Literature'],
-    bio: 'History buff with a Master\'s degree. I help students develop critical thinking and essay writing skills.',
-    rating: 4.9,
-    price: 60, // Price per minute
-  },
-  {
-    id: '5',
-    name: 'Aisha Khan',
-    avatar: 'https://placehold.co/100x100.png',
-    subjects: ['Biology', 'Chemistry'],
-    bio: 'Medical student with a passion for the sciences. I specialize in test prep and breaking down difficult concepts.',
-    rating: 4.9,
-    price: 75, // Price per minute
-  },
-  {
-    id: '6',
-    name: 'Kenji Tanaka',
-    avatar: 'https://placehold.co/100x100.png',
-    subjects: ['Art', 'Design', 'Physics'],
-    bio: 'Professional graphic designer helping students build their creative portfolios and master design software.',
-    rating: 5.0,
-    price: 80, // Price per minute
-  },
-  {
-    id: '7',
-    name: 'Dr. Raj Patel',
-    avatar: 'https://placehold.co/100x100.png',
-    subjects: ['Chemistry', 'Biology'],
-    bio: 'Former professor with a knack for making organic chemistry understandable. NEET specialist.',
-    rating: 4.9,
-    price: 100, // Price per minute
-  },
-   {
-    id: '8',
-    name: 'Mei Lin',
-    avatar: 'https://placehold.co/100x100.png',
-    subjects: ['Mathematics', 'Physics'],
-    bio: 'IIT graduate with a passion for helping students excel in JEE Mains and Advanced.',
-    rating: 5.0,
-    price: 120, // Price per minute
-  },
+export const tutors: any[] = [
+  // {
+  //   id: '1',
+  //   name: 'Dr. Evelyn Reed',
+  //   avatar: 'https://placehold.co/100x100.png',
+  //   subjects: ['Physics', 'Calculus', 'Mathematics'],
+  //   bio: 'PhD in Physics with 10+ years of teaching experience at the university level. I make complex topics easy to understand.',
+  //   rating: 4.9,
+  //   price: 80, // Price per minute
+  // },
+  // {
+  //   id: '2',
+  //   name: 'Samuel Chen',
+  //   avatar: 'https://placehold.co/100x100.png',
+  //   subjects: ['Computer Science', 'Python', 'Mathematics'],
+  //   bio: 'Software Engineer at a top tech company. Passionate about teaching programming to beginners and advanced students.',
+  //   rating: 5.0,
+  //   price: 70, // Price per minute
+  // },
+  // {
+  //   id: '3',
+  //   name: 'Maria Garcia',
+  //   avatar: 'https://placehold.co/100x100.png',
+  //   subjects: ['Spanish', 'French'],
+  //   bio: 'Native Spanish speaker and certified language instructor. Let\'s make learning a new language fun and interactive!',
+  //   rating: 4.8,
+  //   price: 50, // Price per minute
+  // },
+  //   {
+  //   id: '4',
+  //   name: 'Ben Carter',
+  //   avatar: 'https://placehold.co/100x100.png',
+  //   subjects: ['History', 'Literature'],
+  //   bio: 'History buff with a Master\'s degree. I help students develop critical thinking and essay writing skills.',
+  //   rating: 4.9,
+  //   price: 60, // Price per minute
+  // },
+  // {
+  //   id: '5',
+  //   name: 'Aisha Khan',
+  //   avatar: 'https://placehold.co/100x100.png',
+  //   subjects: ['Biology', 'Chemistry'],
+  //   bio: 'Medical student with a passion for the sciences. I specialize in test prep and breaking down difficult concepts.',
+  //   rating: 4.9,
+  //   price: 75, // Price per minute
+  // },
+  // {
+  //   id: '6',
+  //   name: 'Kenji Tanaka',
+  //   avatar: 'https://placehold.co/100x100.png',
+  //   subjects: ['Art', 'Design', 'Physics'],
+  //   bio: 'Professional graphic designer helping students build their creative portfolios and master design software.',
+  //   rating: 5.0,
+  //   price: 80, // Price per minute
+  // },
+  // {
+  //   id: '7',
+  //   name: 'Dr. Raj Patel',
+  //   avatar: 'https://placehold.co/100x100.png',
+  //   subjects: ['Chemistry', 'Biology'],
+  //   bio: 'Former professor with a knack for making organic chemistry understandable. NEET specialist.',
+  //   rating: 4.9,
+  //   price: 100, // Price per minute
+  // },
+  //  {
+  //   id: '8',
+  //   name: 'Mei Lin',
+  //   avatar: 'https://placehold.co/100x100.png',
+  //   subjects: ['Mathematics', 'Physics'],
+  //   bio: 'IIT graduate with a passion for helping students excel in JEE Mains and Advanced.',
+  //   rating: 5.0,
+  //   price: 120, // Price per minute
+  // },
 ];
 
-export const sessionHistory = [
-  {
-    id: 'ses-001',
-    tutorName: 'Dr. Evelyn Reed',
-    tutorAvatar: 'https://placehold.co/100x100.png',
-    subject: 'Physics',
-    date: '2024-07-20T16:00:00Z',
-    duration: 60, // in minutes
-    status: 'Completed',
-    cost: 4800, // 60 min * 80/min
-  },
-  {
-    id: 'ses-002',
-    tutorName: 'Samuel Chen',
-    tutorAvatar: 'https://placehold.co/100x100.png',
-    subject: 'Python',
-    date: '2024-07-18T10:00:00Z',
-    duration: 90, // in minutes
-    status: 'Completed',
-    cost: 6300, // 90 min * 70/min
-  },
-  {
-    id: 'ses-003',
-    tutorName: 'Maria Garcia',
-    tutorAvatar: 'https://placehold.co/100x100.png',
-    subject: 'Spanish',
-    date: '2024-07-15T14:30:00Z',
-    duration: 45, // in minutes
-    status: 'Completed',
-    cost: 2250, // 45 min * 50/min
-  },
-    {
-    id: 'ses-004',
-    tutorName: 'Aisha Khan',
-    tutorAvatar: 'https://placehold.co/100x100.png',
-    subject: 'Biology',
-    date: '2024-07-12T11:00:00Z',
-    duration: 60, // in minutes
-    status: 'Completed',
-    cost: 4500, // 60 min * 75/min
-  },
+export const sessionHistory: any[] = [
+  // {
+  //   id: 'ses-001',
+  //   tutorName: 'Dr. Evelyn Reed',
+  //   tutorAvatar: 'https://placehold.co/100x100.png',
+  //   subject: 'Physics',
+  //   date: '2024-07-20T16:00:00Z',
+  //   duration: 60, // in minutes
+  //   status: 'Completed',
+  //   cost: 4800, // 60 min * 80/min
+  // },
+  // {
+  //   id: 'ses-002',
+  //   tutorName: 'Samuel Chen',
+  //   tutorAvatar: 'https://placehold.co/100x100.png',
+  //   subject: 'Python',
+  //   date: '2024-07-18T10:00:00Z',
+  //   duration: 90, // in minutes
+  //   status: 'Completed',
+  //   cost: 6300, // 90 min * 70/min
+  // },
+  // {
+  //   id: 'ses-003',
+  //   tutorName: 'Maria Garcia',
+  //   tutorAvatar: 'https://placehold.co/100x100.png',
+  //   subject: 'Spanish',
+  //   date: '2024-07-15T14:30:00Z',
+  //   duration: 45, // in minutes
+  //   status: 'Completed',
+  //   cost: 2250, // 45 min * 50/min
+  // },
+  //   {
+  //   id: 'ses-004',
+  //   tutorName: 'Aisha Khan',
+  //   tutorAvatar: 'https://placehold.co/100x100.png',
+  //   subject: 'Biology',
+  //   date: '2024-07-12T11:00:00Z',
+  //   duration: 60, // in minutes
+  //   status: 'Completed',
+  //   cost: 4500, // 60 min * 75/min
+  // },
 ];
