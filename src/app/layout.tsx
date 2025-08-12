@@ -25,7 +25,7 @@ export default function RootLayout({
           rel="stylesheet"
         ></link>
       </head>
-      <body className={cn('font-body antialiased bg-background')}>
+       <body className={cn('font-body antialiased bg-background')}>
         <div className="flex flex-col min-h-screen">
           <Header />
           <main className="flex-grow">{children}</main>
