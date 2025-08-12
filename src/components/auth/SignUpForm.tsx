@@ -10,8 +10,23 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Phone } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Separator } from '../ui/separator';
+import { auth, db } from '@/lib/firebase';
+import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 
 // Base schema for common fields
 const baseSchema = z.object({
@@ -49,6 +64,15 @@ const formSchema = z.discriminatedUnion('accountType', [
   tutorSchema,
 ]);
 
+const GoogleIcon = () => (
+    <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M22.56 12.25C22.56 11.42 22.49 10.62 22.36 9.84H12.27V14.4H18.16C17.88 15.72 17.15 16.85 16.08 17.59V20.31H19.79C21.66 18.59 22.56 15.71 22.56 12.25Z" fill="#4285F4"/>
+        <path d="M12.27 23C15.22 23 17.7 22.03 19.31 20.61L16.08 17.59C15.04 18.33 13.78 18.75 12.27 18.75C9.55 18.75 7.23 16.94 6.39 14.4H2.58V17.22C4.34 20.72 8.01 23 12.27 23Z" fill="#34A853"/>
+        <path d="M6.39 14.4C6.15 13.68 6.02 12.91 6.02 12.12C6.02 11.33 6.15 10.56 6.39 9.84V7.02H2.58C1.69 8.88 1.13 10.97 1.13 13.25C1.13 15.53 1.69 17.62 2.58 19.48L6.39 14.4Z" fill="#FBBC05"/>
+        <path d="M12.27 5.25C13.84 5.25 15.1 5.81 16.01 6.67L19.38 3.3C17.7 1.74 15.22 1 12.27 1C8.01 1 4.34 3.28 2.58 6.78L6.39 9.84C7.23 7.06 9.55 5.25 12.27 5.25Z" fill="#EA4335"/>
+    </svg>
+);
+
 
 export default function SignUpForm() {
   const { toast } = useToast();
@@ -56,6 +80,11 @@ export default function SignUpForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const roleFromUrl = searchParams.get('role') === 'tutor' ? 'tutor' : 'student';
+
+  const [showPhoneDialog, setShowPhoneDialog] = useState(false);
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -98,73 +127,135 @@ export default function SignUpForm() {
   const accountType = form.watch('accountType');
   const selectedExam = form.watch('exam' as 'exam'); // Watch the exam field for tutors
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  const handleSuccessfulSignup = (message: string) => {
+    toast({ title: 'Account Created!', description: message });
+    setTimeout(() => {
+      setIsLoading(false);
+      router.push('/login');
+    }, 1500);
+  };
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     
     try {
-        const usersJSON = localStorage.getItem('userDatabase') || '[]';
-        const users = JSON.parse(usersJSON);
-
-        const applicantsJSON = localStorage.getItem('tutorApplicants') || '[]';
-        const applicants = JSON.parse(applicantsJSON);
-
-        const existingUser = users.find((u: any) => u.email === values.email);
-        const existingApplicant = applicants.find((a: any) => a.email === values.email);
-
-        if (existingUser || existingApplicant) {
-            toast({
-                variant: 'destructive',
-                title: 'Sign Up Failed',
-                description: 'An account with this email already exists or is pending approval.',
-            });
-            setIsLoading(false);
-            return;
-        }
+        const { user } = await createUserWithEmailAndPassword(auth, values.email, values.password);
 
         if (values.accountType === 'student') {
-            users.push({ email: values.email, role: 'student', name: values.name });
-            localStorage.setItem('userDatabase', JSON.stringify(users));
-            toast({
-                title: 'Account Created!',
-                description: 'Welcome to GurukulX. Please log in.',
-            });
-        } else if (values.accountType === 'tutor') {
-            const newApplicant = {
-                id: `app-${Date.now()}`,
+            await setDoc(doc(db, "users", user.uid), {
                 name: values.name,
                 email: values.email,
-                subject: values.expertise,
+                role: 'student'
+            });
+            handleSuccessfulSignup('Welcome to GurukulX. Please log in.');
+        } else if (values.accountType === 'tutor') {
+            const applicantData = {
+                uid: user.uid,
                 status: 'Pending',
-                // Store all tutor data for later
                 ...values
             };
-            applicants.push(newApplicant);
-            localStorage.setItem('tutorApplicants', JSON.stringify(applicants));
-             // Also add them to the user database as a student for now
-            users.push({ email: values.email, role: 'student', name: values.name });
-            localStorage.setItem('userDatabase', JSON.stringify(users));
-            toast({
-                title: 'Application Submitted!',
-                description: 'Your application to become a tutor is pending approval. You can log in as a student for now.',
+            await setDoc(doc(db, "tutorApplicants", user.uid), applicantData);
+            
+            // Also create a user doc with student role for now
+            await setDoc(doc(db, "users", user.uid), {
+                name: values.name,
+                email: values.email,
+                role: 'student' // Tutors start as students until approved
             });
+            handleSuccessfulSignup('Your application is submitted! Please log in to continue.');
         }
-        
-        setTimeout(() => {
-          setIsLoading(false);
-          router.push('/login');
-        }, 1500);
 
-    } catch (error) {
+    } catch (error: any) {
          toast({
             variant: 'destructive',
             title: 'Sign Up Error',
-            description: 'Could not save user data. Please try again.',
+            description: error.message,
         });
         setIsLoading(false);
     }
   }
+  
+  const handleGoogleSignUp = async () => {
+    setIsLoading(true);
+    const provider = new GoogleAuthProvider();
+    try {
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+        const userDocRef = doc(db, "users", user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (!userDoc.exists()) {
+             await setDoc(userDocRef, {
+                email: user.email,
+                name: user.displayName,
+                role: 'student' // All social signups are students by default
+            });
+        }
+        handleSuccessfulSignup('Welcome to GurukulX. Please log in.');
+    } catch (error: any) {
+         toast({
+            variant: 'destructive',
+            title: 'Google Sign-Up Failed',
+            description: error.message,
+        });
+        setIsLoading(false);
+    }
+  }
+  
+  const setupRecaptcha = () => {
+    if (window.recaptchaVerifier) {
+      window.recaptchaVerifier.clear();
+    }
+    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container-signup', {
+      'size': 'invisible',
+      'callback': (response: any) => {},
+    });
+  }
+
+  const onPhoneSignUp = async () => {
+    setIsLoading(true);
+    setupRecaptcha();
+    const appVerifier = window.recaptchaVerifier;
+    try {
+        const result = await signInWithPhoneNumber(auth, phone, appVerifier);
+        setConfirmationResult(result);
+        toast({ title: 'OTP Sent!', description: 'Please check your phone for the code.' });
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: 'Phone Sign-Up Failed', description: error.message });
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
+  const onOTPSubmit = async () => {
+    setIsLoading(true);
+    if (!confirmationResult) return setIsLoading(false);
+    
+    try {
+        const result = await confirmationResult.confirm(otp);
+        const user = result.user;
+        const userDocRef = doc(db, "users", user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (!userDoc.exists()) {
+            await setDoc(userDocRef, {
+                phoneNumber: user.phoneNumber,
+                name: 'New User',
+                role: 'student'
+            });
+        }
+        setShowPhoneDialog(false);
+        handleSuccessfulSignup('Welcome to GurukulX. Please log in.');
+    } catch(error: any) {
+         toast({ variant: 'destructive', title: 'Login Failed', description: error.message });
+         setIsLoading(false);
+    }
+  };
+
 
   return (
+    <>
+    <div id="recaptcha-container-signup"></div>
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
@@ -177,7 +268,6 @@ export default function SignUpForm() {
                 onValueChange={(value) => {
                   field.onChange(value);
                   const currentValues = form.getValues();
-                  // When switching, reset to a clean state for that type
                   if (value === 'student') {
                     form.reset({
                       accountType: 'student',
@@ -388,6 +478,88 @@ export default function SignUpForm() {
           Create Account
         </Button>
       </form>
+      
+       <div className="relative my-4">
+          <div className="absolute inset-0 flex items-center">
+              <Separator />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">
+              Or sign up with
+              </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+            <Button variant="outline" onClick={handleGoogleSignUp}>
+                <GoogleIcon />
+                Google
+            </Button>
+            <Button variant="outline" onClick={() => setShowPhoneDialog(true)}>
+                <Phone className="mr-2" />
+                Phone
+            </Button>
+        </div>
+
     </Form>
+    
+    <AlertDialog open={showPhoneDialog} onOpenChange={setShowPhoneDialog}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Sign Up with Phone</AlertDialogTitle>
+          <AlertDialogDescription>
+            {confirmationResult
+              ? "Enter the 6-digit OTP sent to your phone."
+              : "Please enter your phone number to receive a verification code."
+            }
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        {confirmationResult ? (
+              <div className="space-y-4">
+                <Input
+                    type="text"
+                    placeholder="123456"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                />
+                <Button onClick={onOTPSubmit} disabled={isLoading} className="w-full">
+                      {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Verify OTP
+                </Button>
+              </div>
+        ) : (
+            <div className="space-y-4">
+                <Input
+                    type="tel"
+                    placeholder="+91 12345 67890"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                />
+                <Button onClick={onPhoneSignUp} disabled={isLoading} className="w-full">
+                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Send OTP
+                </Button>
+            </div>
+        )}
+        
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => {
+              setConfirmationResult(null);
+              setIsLoading(false);
+          }}>Cancel</AlertDialogCancel>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
+
+// Add this to the global window interface
+declare global {
+    interface Window {
+        recaptchaVerifier: RecaptchaVerifier;
+    }
+}
+
+    
