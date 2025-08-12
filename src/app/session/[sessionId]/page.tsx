@@ -424,14 +424,18 @@ export default function SessionPage() {
          </div>
        </header>
        <main className="flex-grow relative bg-muted/20">
-            <Whiteboard>
+            <div className="absolute inset-0 z-10">
+                <Whiteboard />
+            </div>
+
+            <div className="absolute inset-0 z-0">
                  {!jitsiLoadFailed && (
                     <JitsiMeetComponent onApiReady={handleApiReady} onError={handleJitsiError} isMobile={isMobile} />
                 )}
-            </Whiteboard>
+            </div>
 
             {recordingSupport === 'unsupported' && !isMobile && (
-                 <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 p-4 pointer-events-none">
+                 <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50">
                     <Alert variant="destructive" className="max-w-lg">
                         <AlertTriangle className="h-4 w-4" />
                         <AlertTitle>Screen Recording Not Supported</AlertTitle>
@@ -443,7 +447,7 @@ export default function SessionPage() {
             )}
 
             {jitsiLoadFailed && (
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 p-4 pointer-events-none">
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50">
                     <Alert variant="destructive" className="max-w-lg">
                         <AlertTriangle className="h-4 w-4" />
                         <AlertTitle>Video Connection Error</AlertTitle>
