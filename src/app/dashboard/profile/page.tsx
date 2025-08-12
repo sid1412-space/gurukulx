@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 
 const profileSchema = z.object({
@@ -24,15 +24,19 @@ const profileSchema = z.object({
 export default function ProfilePage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Mock data for the form
-  const currentUser = {
+  const [currentUser, setCurrentUser] = useState({
     name: 'Jane Doe',
     email: 'jane.doe@example.com',
     bio: 'Passionate learner exploring the world of calculus and physics. Looking for a tutor to help me prepare for my final exams.',
     subjects: 'Calculus, Physics, Linear Algebra',
     avatar: 'https://placehold.co/128x128.png'
-  };
+  });
+  
+  const [avatarPreview, setAvatarPreview] = useState(currentUser.avatar);
+
 
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
@@ -43,11 +47,26 @@ export default function ProfilePage() {
       subjects: currentUser.subjects,
     },
   });
+  
+  const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      const file = event.target.files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
 
   function onSubmit(values: z.infer<typeof profileSchema>) {
     setIsLoading(true);
-    console.log(values);
+    console.log({...values, avatar: avatarPreview});
     setTimeout(() => {
+      // In a real app, you would upload the avatarPreview (if it's a new file) 
+      // and save the other form data.
+      setCurrentUser(prev => ({...prev, ...values, avatar: avatarPreview}));
       toast({
         title: 'Profile Updated',
         description: 'Your information has been saved successfully.',
@@ -73,10 +92,11 @@ export default function ProfilePage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               <div className="flex items-center gap-4">
                 <Avatar className="h-20 w-20">
-                  <AvatarImage src={currentUser.avatar} alt={currentUser.name} data-ai-hint="person avatar"/>
+                  <AvatarImage src={avatarPreview} alt={currentUser.name} data-ai-hint="person avatar"/>
                   <AvatarFallback>{currentUser.name.charAt(0)}</AvatarFallback>
                 </Avatar>
-                <Button type="button" variant="outline">Change Photo</Button>
+                <Input type="file" ref={fileInputRef} onChange={handlePhotoChange} className="hidden" accept="image/*" />
+                <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>Change Photo</Button>
               </div>
               <FormField
                 control={form.control}

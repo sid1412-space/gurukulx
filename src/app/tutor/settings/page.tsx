@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription as CardDesc, CardHeader, CardTitle } from '@/components/ui/card';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Loader2, KeyRound, Landmark, User } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -37,18 +37,26 @@ const payoutSchema = z.object({
 export default function TutorSettingsPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const currentUser = {
+  const [currentUser, setCurrentUser] = useState({
     name: 'Dr. Evelyn Reed',
     email: 'tutor@example.com',
     bio: 'PhD in Physics with 10+ years of teaching experience at the university level. I make complex topics easy to understand.',
     subjects: 'Physics, Calculus',
     avatar: 'https://placehold.co/128x128.png'
-  };
+  });
+  
+  const [avatarPreview, setAvatarPreview] = useState(currentUser.avatar);
 
   const profileForm = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
-    defaultValues: currentUser,
+    defaultValues: {
+      name: currentUser.name,
+      email: currentUser.email,
+      bio: currentUser.bio,
+      subjects: currentUser.subjects
+    },
   });
 
   const passwordForm = useForm<z.infer<typeof passwordSchema>>({
@@ -65,12 +73,24 @@ export default function TutorSettingsPage() {
         upiId: 'evelyn.reed@upi'
     }
   });
+  
+  const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      const file = event.target.files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
 
   function onProfileSubmit(values: z.infer<typeof profileSchema>) {
     setIsLoading(true);
-    console.log(values);
+    console.log({...values, avatar: avatarPreview});
     setTimeout(() => {
+      setCurrentUser(prev => ({...prev, ...values, avatar: avatarPreview}));
       toast({
         title: 'Profile Updated',
         description: 'Your information has been saved successfully.',
@@ -123,10 +143,11 @@ export default function TutorSettingsPage() {
                     <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-8">
                     <div className="flex items-center gap-4">
                         <Avatar className="h-20 w-20">
-                        <AvatarImage src={currentUser.avatar} alt={currentUser.name} data-ai-hint="person portrait"/>
-                        <AvatarFallback>{currentUser.name.charAt(0)}</AvatarFallback>
+                           <AvatarImage src={avatarPreview} alt={currentUser.name} data-ai-hint="person portrait"/>
+                           <AvatarFallback>{currentUser.name.charAt(0)}</AvatarFallback>
                         </Avatar>
-                        <Button type="button" variant="outline">Change Photo</Button>
+                        <Input type="file" ref={fileInputRef} onChange={handlePhotoChange} className="hidden" accept="image/*" />
+                        <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>Change Photo</Button>
                     </div>
                     <FormField
                       control={profileForm.control}
