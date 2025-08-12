@@ -25,7 +25,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useToast } from '@/hooks/use-toast';
 import { useIsClient } from '@/hooks/use-is-client';
@@ -48,15 +47,27 @@ export default function TutorManagementPage() {
 
   useEffect(() => {
     if (isClient) {
-        const storedApplicants = localStorage.getItem('tutorApplicants');
-        if (storedApplicants) {
-            setApplicants(JSON.parse(storedApplicants));
+        const fetchApplicants = () => {
+            const storedApplicants = localStorage.getItem('tutorApplicants');
+            if (storedApplicants) {
+                setApplicants(JSON.parse(storedApplicants));
+            }
         }
+        fetchApplicants();
+
+        // Listen for changes from other tabs (e.g., a new signup)
+        window.addEventListener('storage', fetchApplicants);
+
+        return () => {
+            window.removeEventListener('storage', fetchApplicants);
+        };
     }
   }, [isClient]);
 
   const updateLocalStorage = (updatedApplicants: Applicant[]) => {
-    localStorage.setItem('tutorApplicants', JSON.stringify(updatedApplicants));
+    if(isClient) {
+        localStorage.setItem('tutorApplicants', JSON.stringify(updatedApplicants));
+    }
   };
 
 
@@ -216,6 +227,11 @@ export default function TutorManagementPage() {
               ))}
             </TableBody>
           </Table>
+           {isClient && applicants.length === 0 && (
+            <div className="text-center text-muted-foreground py-8">
+                <p>No new tutor applications at this time.</p>
+            </div>
+           )}
         </CardContent>
       </Card>
       
