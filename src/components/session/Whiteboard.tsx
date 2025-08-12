@@ -1,7 +1,7 @@
 
 'use client'
 
-import { Tldraw, useEditor } from '@tldraw/tldraw'
+import { Tldraw, useEditor, getAssetUrls } from '@tldraw/tldraw'
 import '@tldraw/tldraw/tldraw.css'
 import { useEffect, useRef } from 'react'
 
@@ -60,9 +60,13 @@ Use the image tool in the toolbar (7th icon from the top).
 }
 
 export default function Whiteboard() {
+    const assetUrls = getAssetUrls();
 	return (
 		<div style={{ position: 'fixed', inset: 0 }}>
-			<Tldraw persistenceKey="gurukulx-whiteboard-stable">
+			<Tldraw 
+                persistenceKey="gurukulx-whiteboard-stable"
+                assetUrls={assetUrls}
+            >
                 <EditorEvents />
 			</Tldraw>
 		</div>
