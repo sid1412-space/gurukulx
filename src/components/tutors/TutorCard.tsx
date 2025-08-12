@@ -39,7 +39,7 @@ export default function TutorCard({ tutor }: TutorCardProps) {
   const router = useRouter();
 
   const handleContinue = () => {
-    router.push(`/session/new-session-${tutor.id}`);
+    router.push(`/session/${tutor.id}`);
   };
 
   return (

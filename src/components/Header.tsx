@@ -42,8 +42,9 @@ export default function Header() {
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('isAdmin'); // Also clear admin status
     setIsAuthenticated(false);
-    // Use router to push to login page for a clean navigation
-    router.push('/login'); 
+    // Dispatch a storage event to notify other tabs/windows
+    window.dispatchEvent(new Event("storage"));
+    router.push('/'); 
   }
 
   return (
@@ -61,7 +62,7 @@ export default function Header() {
             </Link>
           ))}
            <Link
-              href="/dashboard"
+              href="/signup"
               className="transition-colors hover:text-foreground/80 text-foreground/60"
             >
               Become a Tutor
@@ -108,7 +109,7 @@ export default function Header() {
               </Link>
             ))}
              <Link
-                href="/dashboard"
+                href="/signup"
                 className="w-full text-center py-2 transition-colors hover:text-foreground/80 text-foreground/60"
                 onClick={() => setIsMenuOpen(false)}
               >

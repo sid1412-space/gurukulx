@@ -32,7 +32,7 @@ export default function TutorProfilePage() {
 
   const handleContinue = () => {
     if (tutor) {
-      router.push(`/session/new-session-${tutor.id}`);
+      router.push(`/session/${tutor.id}`);
     }
   };
 

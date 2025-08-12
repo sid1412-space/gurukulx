@@ -55,7 +55,9 @@ export default function AdminLayout({
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('isAdmin');
     setIsAuthenticated(false);
-    router.push('/login');
+    // Dispatch a storage event to notify other tabs/windows (like the header)
+    window.dispatchEvent(new Event("storage"));
+    router.push('/');
   }
 
   if (!isClient || !isAuthenticated) {
