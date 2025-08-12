@@ -3,7 +3,7 @@
 
 import { Tldraw, useEditor } from '@tldraw/tldraw'
 import '@tldraw/tldraw/tldraw.css'
-import { useEffect, useRef, ReactNode } from 'react'
+import { useEffect, useRef } from 'react'
 
 const EditorEvents = () => {
 	const editor = useEditor();
@@ -16,6 +16,7 @@ const EditorEvents = () => {
 		const handleCreateShapesEvent = (event: CustomEvent<{ shapes: any[] }>) => {
 			if (event.detail.shapes) {
 				editor.createShapes(event.detail.shapes);
+                editor.zoomToFit();
 			}
 		};
 		
@@ -61,7 +62,7 @@ Use the image tool in the toolbar (7th icon from the top).
 export default function Whiteboard() {
 	return (
 		<div style={{ position: 'fixed', inset: 0 }}>
-			<Tldraw persistenceKey="tutorconnect-whiteboard">
+			<Tldraw persistenceKey="tutorconnect-whiteboard-stable">
                 <EditorEvents />
 			</Tldraw>
 		</div>

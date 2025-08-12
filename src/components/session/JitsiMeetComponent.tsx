@@ -11,10 +11,15 @@ interface JitsiMeetComponentProps {
 
 export default function JitsiMeetComponent({ onApiReady, onError }: JitsiMeetComponentProps) {
   const pathname = usePathname();
-  const sessionId = pathname.split('/').pop() || `tutorconnect-session-${Math.random().toString(36).substring(2, 15)}`;
+  const sessionId = pathname.split('/').pop() || `tutorconnect-session-${Math.random().toString(36).substring(7)}`;
 
-  const toolbarButtons = ['microphone', 'desktop', 'hangup', 'chat'];
-
+  // Correctly defined toolbar buttons
+  const toolbarButtons = [
+      'microphone',
+      'desktop', // Screen sharing
+      'chat',
+      'hangup',
+  ];
 
   return (
     <div className="h-full w-full">
@@ -22,7 +27,7 @@ export default function JitsiMeetComponent({ onApiReady, onError }: JitsiMeetCom
         roomName={sessionId}
         configOverwrite={{
           startWithAudioMuted: false,
-          startWithVideoMuted: true, // Ensure video is off
+          startWithVideoMuted: true, // Video is off by default
           disableAP: true,
           disableSelfView: true,
           disableSelfViewSettings: true,
@@ -36,7 +41,7 @@ export default function JitsiMeetComponent({ onApiReady, onError }: JitsiMeetCom
           SHOW_JITSI_WATERMARK: false,
           SHOW_WATERMARK_FOR_GUESTS: false,
           TOOLBAR_BUTTONS: toolbarButtons,
-          SETTINGS_SECTIONS: ['devices'],
+          SETTINGS_SECTIONS: ['devices'], // Only show device settings
           SHOW_CHROME_EXTENSION_BANNER: false,
           MOBILE_APP_PROMO: false,
         }}

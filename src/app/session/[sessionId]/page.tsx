@@ -19,10 +19,7 @@ import { getExerciseSuggestions } from '@/lib/actions';
 import { Separator } from '@/components/ui/separator';
 
 const Whiteboard = dynamic(() => import('@/components/session/Whiteboard'), { ssr: false });
-
-const JitsiMeetComponent = dynamic(() => import('@/components/session/JitsiMeetComponent'), {
-    ssr: false,
-});
+const JitsiMeetComponent = dynamic(() => import('@/components/session/JitsiMeetComponent'), { ssr: false });
 
 
 export default function SessionPage() {
@@ -275,8 +272,8 @@ export default function SessionPage() {
             </div>
 
             {/* Jitsi component is hidden but provides the audio stream */}
-            <div className="absolute w-0 h-0 -left-[9999px]">
-                {!jitsiLoadFailed && isClient && (
+            <div className="absolute w-0 h-0 opacity-0 pointer-events-none">
+                {isClient && !jitsiLoadFailed && (
                     <JitsiMeetComponent onApiReady={handleApiReady} onError={handleJitsiError} />
                 )}
             </div>
