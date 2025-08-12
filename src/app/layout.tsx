@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { Metadata } from 'next';
@@ -22,6 +23,8 @@ export default function RootLayout({
 }>) {
   const pathname = usePathname();
   const isSessionPage = pathname.startsWith('/session');
+  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup');
+  const showHeaderAndFooter = !isSessionPage && !isAuthPage;
 
   return (
     <html lang="en" className="!scroll-smooth">
@@ -36,19 +39,12 @@ export default function RootLayout({
         ></link>
       </head>
        <body className={cn('font-body antialiased bg-background')}>
-        {isSessionPage ? (
-          <>
-            {children}
-            <Toaster />
-          </>
-        ) : (
           <div className="flex flex-col min-h-screen">
-            <Header />
+            {showHeaderAndFooter && <Header />}
             <main className="flex-grow">{children}</main>
-            <Footer />
+            {showHeaderAndFooter && <Footer />}
           </div>
-        )}
-        {!isSessionPage && <Toaster />}
+        <Toaster />
       </body>
     </html>
   );
