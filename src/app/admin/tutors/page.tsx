@@ -50,7 +50,12 @@ export default function TutorManagementPage() {
         const fetchApplicants = () => {
             const storedApplicants = localStorage.getItem('tutorApplicants');
             if (storedApplicants) {
-                setApplicants(JSON.parse(storedApplicants));
+                try {
+                    setApplicants(JSON.parse(storedApplicants));
+                } catch (error) {
+                    console.error("Failed to parse tutor applicants from localStorage", error);
+                    setApplicants([]);
+                }
             }
         }
         fetchApplicants();
@@ -103,6 +108,10 @@ export default function TutorManagementPage() {
           price: +tutorRate // Save the per-minute rate
         });
         localStorage.setItem('userDatabase', JSON.stringify(users));
+      } else {
+        // If user exists, update their role and price
+        const updatedUsers = users.map((u:any) => u.email === approvingApplicant.email ? {...u, role: 'tutor', price: +tutorRate} : u);
+        localStorage.setItem('userDatabase', JSON.stringify(updatedUsers));
       }
     } catch (error) {
       console.error('Failed to update user database:', error);
@@ -139,6 +148,22 @@ export default function TutorManagementPage() {
       description: `${applicantToUpdate.name} has been rejected.`,
     });
   }
+
+  const handleReconsider = (id: string) => {
+    const applicantToUpdate = applicants.find(applicant => applicant.id === id);
+    if (!applicantToUpdate) return;
+    
+    const updatedApplicants = applicants.map(applicant => 
+      applicant.id === id ? { ...applicant, status: 'Pending' } : applicant
+    );
+    setApplicants(updatedApplicants);
+    updateLocalStorage(updatedApplicants);
+    
+     toast({
+      title: `Applicant Status Reset`,
+      description: `${applicantToUpdate.name}'s application is now pending.`,
+    });
+  };
 
 
   const handleViewApplication = (applicantName: string) => {
@@ -185,7 +210,7 @@ export default function TutorManagementPage() {
             </TableHeader>
             <TableBody>
               {applicants.map((applicant) => (
-                <TableRow key={applicant.id} className={applicant.status !== 'Pending' ? 'opacity-50' : ''}>
+                <TableRow key={applicant.id} className={applicant.status === 'Approved' ? 'opacity-50' : ''}>
                   <TableCell className="font-medium">{applicant.name}</TableCell>
                   <TableCell>{applicant.email}</TableCell>
                   <TableCell>{applicant.subject}</TableCell>
@@ -195,7 +220,7 @@ export default function TutorManagementPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                     {applicant.status === 'Pending' ? (
+                     {applicant.status !== 'Approved' ? (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" className="h-8 w-8 p-0">
@@ -212,12 +237,20 @@ export default function TutorManagementPage() {
                           >
                             Approve
                           </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            className="text-red-600 focus:text-red-600"
-                             onClick={() => handleReject(applicant.id)}
-                          >
-                            Reject
-                          </DropdownMenuItem>
+                          {applicant.status === 'Pending' ? (
+                             <DropdownMenuItem 
+                                className="text-red-600 focus:text-red-600"
+                                onClick={() => handleReject(applicant.id)}
+                              >
+                                Reject
+                              </DropdownMenuItem>
+                          ) : (
+                             <DropdownMenuItem 
+                                onClick={() => handleReconsider(applicant.id)}
+                              >
+                                Reconsider
+                              </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     ) : (
@@ -244,7 +277,7 @@ export default function TutorManagementPage() {
                 <AlertDialogDescription>
                     Set the per-minute rate for <span className="font-bold">{approvingApplicant.name}</span>. This will be used for billing students.
                 </AlertDialogDescription>
-                </AlertDialogHeader>
+                </Header>
                 <div className="grid gap-2">
                     <Label htmlFor="tutor-rate">Rate per minute (₹)</Label>
                     <Input 
