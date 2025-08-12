@@ -4,7 +4,7 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Star } from 'lucide-react';
+import { Star, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import {
@@ -22,7 +22,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useIsClient } from '@/hooks/use-is-client';
 import { cn } from '@/lib/utils';
-
+import { useToast } from '@/hooks/use-toast';
 
 type Tutor = {
   id: string;
@@ -41,8 +41,12 @@ type TutorCardProps = {
 export default function TutorCard({ tutor }: TutorCardProps) {
   const router = useRouter();
   const isClient = useIsClient();
+  const { toast } = useToast();
   const [isOnline, setIsOnline] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
+  const [isWaiting, setIsWaiting] = useState(false);
+  const [sessionRequestId, setSessionRequestId] = useState<string | null>(null);
+
 
   useEffect(() => {
     if (isClient) {
@@ -63,10 +67,53 @@ export default function TutorCard({ tutor }: TutorCardProps) {
     }
   }, [isClient, tutor.id]);
 
-  const handleBookSession = () => {
-    const sessionId = Math.random().toString(36).substring(2, 15);
-    router.push(`/session/${sessionId}?tutorId=${tutor.id}&role=student`);
+  useEffect(() => {
+    if (!isWaiting || !sessionRequestId) return;
+
+    const interval = setInterval(() => {
+        const requestJSON = localStorage.getItem(`session-request-${sessionRequestId}`);
+        if(requestJSON) {
+            const request = JSON.parse(requestJSON);
+            if(request.status === 'accepted') {
+                clearInterval(interval);
+                setIsWaiting(false);
+                router.push(`/session/${request.sessionId}?tutorId=${tutor.id}&role=student`);
+            } else if (request.status === 'rejected') {
+                clearInterval(interval);
+                setIsWaiting(false);
+                setSessionRequestId(null);
+                toast({
+                    variant: 'destructive',
+                    title: 'Session Rejected',
+                    description: `${tutor.name} is unable to take your session right now.`,
+                });
+            }
+        }
+    }, 2000); // Check every 2 seconds
+
+    return () => clearInterval(interval);
+  }, [isWaiting, sessionRequestId, router, tutor.id, tutor.name, toast]);
+
+  const handleRequestSession = () => {
+    const requestId = `req_${Math.random().toString(36).substring(2, 11)}`;
+    const sessionRequest = {
+        requestId,
+        tutorId: tutor.id,
+        studentName: 'A Student', // In a real app, get this from context/auth
+        status: 'pending',
+    };
+    localStorage.setItem(`session-request-${requestId}`, JSON.stringify(sessionRequest));
+    setSessionRequestId(requestId);
+    setIsWaiting(true);
   };
+  
+  const handleCancelRequest = () => {
+    if(sessionRequestId) {
+        localStorage.removeItem(`session-request-${sessionRequestId}`);
+    }
+    setIsWaiting(false);
+    setSessionRequestId(null);
+  }
 
   const statusText = isBusy ? 'In Session' : (isOnline ? 'Online' : 'Offline');
   const statusColor = isBusy ? 'bg-yellow-500' : (isOnline ? 'bg-green-500' : 'bg-gray-400');
@@ -111,26 +158,43 @@ export default function TutorCard({ tutor }: TutorCardProps) {
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button disabled={!isOnline || isBusy}>
-                {isBusy ? 'In Session' : (isOnline ? 'Book Session' : 'Offline')}
+                {isBusy ? 'In Session' : (isOnline ? 'Request Session' : 'Offline')}
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Start a new session?</AlertDialogTitle>
+              <AlertDialogTitle>Request a new session?</AlertDialogTitle>
               <AlertDialogDescription>
-                You are about to start a new tutoring session.
-                 Session recording will start automatically.
+                A request will be sent to the tutor. You will be connected if they accept.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleBookSession}>
-                Continue
+              <AlertDialogAction onClick={handleRequestSession}>
+                Send Request
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
       </CardFooter>
+
+      {/* Waiting Dialog */}
+       <AlertDialog open={isWaiting}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Waiting for {tutor.name}...</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Your request has been sent. Please wait for them to accept.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="flex items-center justify-center p-8">
+                    <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                </div>
+                <AlertDialogFooter>
+                    <AlertDialogAction variant="destructive" onClick={handleCancelRequest}>Cancel Request</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </Card>
   );
 }

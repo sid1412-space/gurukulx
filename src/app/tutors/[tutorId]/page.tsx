@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Star, BookOpen, Clock, Briefcase, GraduationCap } from 'lucide-react';
+import { Star, BookOpen, Clock, Briefcase, GraduationCap, Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import {
   AlertDialog,
@@ -25,17 +25,20 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useIsClient } from '@/hooks/use-is-client';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 export default function TutorProfilePage() {
   const params = useParams();
   const router = useRouter();
+  const { toast } = useToast();
   const { tutorId } = params;
   const isClient = useIsClient();
-
   const tutor = tutors.find((t) => t.id === tutorId);
 
   const [isOnline, setIsOnline] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
+  const [isWaiting, setIsWaiting] = useState(false);
+  const [sessionRequestId, setSessionRequestId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isClient && tutorId) {
@@ -55,12 +58,58 @@ export default function TutorProfilePage() {
     }
   }, [isClient, tutorId]);
 
-  const handleBookSession = () => {
+  useEffect(() => {
+    if (!isWaiting || !sessionRequestId) return;
+
+    const interval = setInterval(() => {
+        const requestJSON = localStorage.getItem(`session-request-${sessionRequestId}`);
+        if(requestJSON) {
+            const request = JSON.parse(requestJSON);
+            if(request.status === 'accepted') {
+                clearInterval(interval);
+                setIsWaiting(false);
+                router.push(`/session/${request.sessionId}?tutorId=${tutorId}&role=student`);
+            } else if (request.status === 'rejected') {
+                clearInterval(interval);
+                setIsWaiting(false);
+                setSessionRequestId(null);
+                toast({
+                    variant: 'destructive',
+                    title: 'Session Rejected',
+                    description: `${tutor?.name} is unable to take your session right now.`,
+                });
+            }
+        }
+    }, 2000); // Check every 2 seconds
+
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isWaiting, sessionRequestId, router, tutorId, tutor?.name]);
+
+
+  const handleRequestSession = () => {
     if (tutor) {
-      const sessionId = Math.random().toString(36).substring(2, 15);
-      router.push(`/session/${sessionId}?tutorId=${tutor.id}&start_recording=true&role=student`);
+      const requestId = `req_${Math.random().toString(36).substring(2, 11)}`;
+      const sessionRequest = {
+        requestId,
+        tutorId,
+        studentName: 'A Student', // In a real app, get this from context/auth
+        status: 'pending',
+      };
+      localStorage.setItem(`session-request-${requestId}`, JSON.stringify(sessionRequest));
+      setSessionRequestId(requestId);
+      setIsWaiting(true);
     }
   };
+  
+  const handleCancelRequest = () => {
+    if(sessionRequestId) {
+        localStorage.removeItem(`session-request-${sessionRequestId}`);
+    }
+    setIsWaiting(false);
+    setSessionRequestId(null);
+  }
+
 
   if (!tutor) {
     return (
@@ -150,21 +199,20 @@ export default function TutorProfilePage() {
                              <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                      <Button size="lg" className="w-full" disabled={!isOnline || isBusy}>
-                                        {isBusy ? 'In Session' : (isOnline ? 'Book a Session' : 'Currently Offline')}
+                                        {isBusy ? 'In Session' : (isOnline ? 'Request Session' : 'Currently Offline')}
                                     </Button>
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                     <AlertDialogHeader>
-                                    <AlertDialogTitle>Start a new session?</AlertDialogTitle>
+                                    <AlertDialogTitle>Request a new session?</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                        You are about to start a new tutoring session with {tutor.name}.
-                                        Session recording will start automatically for students.
+                                        A request will be sent to {tutor.name}. You will be connected if they accept.
                                     </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={handleBookSession}>
-                                        Continue
+                                    <AlertDialogAction onClick={handleRequestSession}>
+                                        Send Request
                                     </AlertDialogAction>
                                     </AlertDialogFooter>
                                 </AlertDialogContent>
@@ -174,9 +222,24 @@ export default function TutorProfilePage() {
                     </Card>
                 </div>
             </div>
-
         </Card>
         </div>
+         <AlertDialog open={isWaiting}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Waiting for Tutor</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Your request has been sent to {tutor.name}. Please wait for them to accept.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="flex items-center justify-center p-8">
+                    <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                </div>
+                <AlertDialogFooter>
+                    <AlertDialogAction variant="destructive" onClick={handleCancelRequest}>Cancel Request</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 }

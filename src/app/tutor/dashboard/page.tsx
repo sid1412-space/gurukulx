@@ -21,6 +21,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useIsClient } from '@/hooks/use-is-client';
+import TutorNotification from '@/components/tutors/TutorNotification';
 
 const TUTOR_ID = '1'; // Corresponds to Dr. Evelyn Reed in mock data
 
@@ -86,6 +87,7 @@ export default function TutorDashboardPage() {
 
   return (
     <div className="space-y-8 animate-fade-in">
+       {isClient && <TutorNotification tutorId={TUTOR_ID} />}
       <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <h1 className="text-3xl font-bold tracking-tight font-headline">Tutor Dashboard</h1>
@@ -155,5 +157,3 @@ export default function TutorDashboardPage() {
     </div>
   );
 }
-
-    
