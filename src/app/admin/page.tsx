@@ -42,7 +42,7 @@ export default function AdminOverviewPage() {
       }));
 
       // Action Items
-      const storedPayouts = localStorage.getItem('pendingPayoutRequests');
+      const storedPayouts = localStorage.getItem('pendingPayoutRequests') || '0';
       const storedRecharges = localStorage.getItem('rechargeRequests') || '[]';
       const storedApplicants = localStorage.getItem('tutorApplicants') || '[]';
       

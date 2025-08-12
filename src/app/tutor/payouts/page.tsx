@@ -16,24 +16,27 @@ import { Banknote, Wallet, Calendar, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 
-const payoutHistory = [
-  { id: 'pay-01', date: '2024-07-15T10:00:00Z', amount: 25000, status: 'Paid' },
-  { id: 'pay-02', date: '2024-06-15T10:00:00Z', amount: 22500, status: 'Paid' },
-  { id: 'pay-03', date: '2024-05-15T10:00:00Z', amount: 28000, status: 'Paid' },
-];
+// This is now empty as we are removing fake data
+const payoutHistory: any[] = [];
 
 export default function PayoutsPage() {
     const { toast } = useToast();
 
     const handleRequestPayout = () => {
+        // In a real app, this would trigger a backend process.
+        // Here, we simulate it by notifying the admin via localStorage.
         const currentRequests = parseInt(localStorage.getItem('pendingPayoutRequests') || '0');
         localStorage.setItem('pendingPayoutRequests', (currentRequests + 1).toString());
+        
+        // This event ensures the admin dashboard updates in real-time if open in another tab.
+        window.dispatchEvent(new Event('storage'));
 
         toast({
             title: 'Payout Requested',
             description: 'Your request has been submitted. The admin has been notified.'
-        })
+        });
     }
+
   return (
     <div className="space-y-8 animate-fade-in">
       <header>
@@ -51,7 +54,7 @@ export default function PayoutsPage() {
                 <Wallet className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-                <p className="text-2xl font-bold">₹1,55,250.00</p>
+                <p className="text-2xl font-bold">₹0.00</p>
                 <p className="text-xs text-muted-foreground">All time earnings</p>
             </CardContent>
         </Card>
@@ -61,7 +64,7 @@ export default function PayoutsPage() {
                 <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-                <p className="text-2xl font-bold">₹12,500.00</p>
+                <p className="text-2xl font-bold">₹0.00</p>
                 <p className="text-xs text-muted-foreground">Earnings this cycle</p>
             </CardContent>
         </Card>
@@ -91,24 +94,32 @@ export default function PayoutsPage() {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {payoutHistory.map((payout) => (
-                    <TableRow key={payout.id}>
-                        <TableCell className="font-mono text-xs">{payout.id}</TableCell>
-                        <TableCell>{format(new Date(payout.date), 'PPP')}</TableCell>
-                        <TableCell className="font-medium">₹{payout.amount.toFixed(2)}</TableCell>
-                        <TableCell>
-                            <Badge variant={payout.status === 'Paid' ? 'default' : 'outline'}>
-                                {payout.status}
-                            </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                           <Button variant="ghost" size="sm">
-                                <Download className="mr-2 h-4 w-4" />
-                                Download
-                           </Button>
-                        </TableCell>
-                    </TableRow>
-                    ))}
+                    {payoutHistory.length === 0 ? (
+                        <TableRow>
+                            <TableCell colSpan={5} className="text-center text-muted-foreground py-12">
+                                You have no payout history.
+                            </TableCell>
+                        </TableRow>
+                    ) : (
+                        payoutHistory.map((payout) => (
+                        <TableRow key={payout.id}>
+                            <TableCell className="font-mono text-xs">{payout.id}</TableCell>
+                            <TableCell>{format(new Date(payout.date), 'PPP')}</TableCell>
+                            <TableCell className="font-medium">₹{payout.amount.toFixed(2)}</TableCell>
+                            <TableCell>
+                                <Badge variant={payout.status === 'Paid' ? 'default' : 'outline'}>
+                                    {payout.status}
+                                </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                            <Button variant="ghost" size="sm">
+                                    <Download className="mr-2 h-4 w-4" />
+                                    Download
+                            </Button>
+                            </TableCell>
+                        </TableRow>
+                        ))
+                    )}
                 </TableBody>
             </Table>
           </CardContent>
