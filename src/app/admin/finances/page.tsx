@@ -28,7 +28,7 @@ export default function FinancialManagementPage() {
     console.log(values);
     toast({
       title: 'Funds Added',
-      description: `$${values.amount} has been added to ${values.studentEmail}'s wallet.`,
+      description: `₹${values.amount} has been added to ${values.studentEmail}'s wallet.`,
     });
     form.reset();
   }
@@ -74,9 +74,9 @@ export default function FinancialManagementPage() {
                   name="amount"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Amount ($)</FormLabel>
+                      <FormLabel>Amount (₹)</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="50.00" {...field} />
+                        <Input type="number" placeholder="5000" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -96,12 +96,12 @@ export default function FinancialManagementPage() {
           <CardContent className="space-y-4">
              <div>
                 <h4 className="font-semibold">Pending Payouts</h4>
-                <p className="text-2xl font-bold">$12,540.00</p>
+                <p className="text-2xl font-bold">₹12,540.00</p>
              </div>
              <Separator />
              <div>
                 <h4 className="font-semibold">Payouts This Month</h4>
-                <p className="text-2xl font-bold text-green-600">$45,210.00</p>
+                <p className="text-2xl font-bold text-green-600">₹45,210.00</p>
              </div>
              <Button className="w-full" onClick={handleProcessPayouts}>Process Pending Payouts</Button>
           </CardContent>

@@ -15,7 +15,7 @@ import Link from 'next/link';
 import { Separator } from '@/components/ui/separator';
 
 const amountSchema = z.object({
-  amount: z.coerce.number().min(50, 'Minimum recharge amount is $50.'),
+  amount: z.coerce.number().min(50, 'Minimum recharge amount is ₹50.'),
 });
 
 type Step = 'amount' | 'payment' | 'confirmation' | 'pending';
@@ -45,9 +45,9 @@ export default function RechargePage() {
                 name="amount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-lg">Recharge Amount ($)</FormLabel>
+                    <FormLabel className="text-lg">Recharge Amount (₹)</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="Enter amount, e.g., 50" {...field} className="h-12 text-lg" />
+                      <Input type="number" placeholder="Enter amount, e.g., 5000" {...field} className="h-12 text-lg" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -62,7 +62,7 @@ export default function RechargePage() {
           <div className="space-y-6 text-center">
             <h2 className="text-xl font-semibold">Step 2: Complete Your Payment</h2>
             <p className="text-muted-foreground">
-              Please pay <span className="font-bold text-primary">${rechargeAmount.toFixed(2)}</span> using the QR Code or UPI ID below.
+              Please pay <span className="font-bold text-primary">₹{rechargeAmount.toFixed(2)}</span> using the QR Code or UPI ID below.
             </p>
             <div className="flex justify-center">
                <Image
@@ -119,7 +119,7 @@ export default function RechargePage() {
       case 'amount':
         return 'Recharge Your Wallet';
       case 'payment':
-        return `Pay $${rechargeAmount.toFixed(2)}`;
+        return `Pay ₹${rechargeAmount.toFixed(2)}`;
       case 'confirmation':
         return 'Upload Proof of Payment';
       case 'pending':

@@ -9,7 +9,7 @@ export default function AdminOverviewPage() {
     { title: 'Total Tutors', value: '1,250', icon: Users },
     { title: 'Active Students', value: '15,830', icon: Users },
     { title: 'Sessions This Month', value: '5,120', icon: BookOpen },
-    { title: 'Monthly Revenue', value: '$85,450', icon: DollarSign },
+    { title: 'Monthly Revenue', value: '₹85,450', icon: DollarSign },
   ];
 
   const actionItems = [

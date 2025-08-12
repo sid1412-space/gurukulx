@@ -72,7 +72,7 @@ export default function TutorCard({ tutor }: TutorCardProps) {
         <CardDescription>{tutor.bio}</CardDescription>
       </CardContent>
       <CardFooter className="flex justify-between items-center">
-        <p className="text-xl font-bold text-primary">${tutor.price}<span className="text-sm font-normal text-muted-foreground">/hr</span></p>
+        <p className="text-xl font-bold text-primary">₹{tutor.price}<span className="text-sm font-normal text-muted-foreground">/hr</span></p>
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button>Book Session</Button>

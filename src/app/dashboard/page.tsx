@@ -15,7 +15,7 @@ export default function DashboardPage() {
          <div className="flex items-center gap-4">
             <div className="text-right">
                 <p className="text-sm text-muted-foreground">Wallet Balance</p>
-                <p className="text-2xl font-bold">$125.50</p>
+                <p className="text-2xl font-bold">₹12550</p>
             </div>
             <Link href="/dashboard/recharge">
                  <Button size="lg" className="flex items-center gap-2">
@@ -72,7 +72,7 @@ export default function DashboardPage() {
           <CardContent>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>Completed session: Physics with Dr. Reed - Yesterday</li>
-              <li>Payment of $75.00 confirmed - Yesterday</li>
+              <li>Payment of ₹5000 confirmed - Yesterday</li>
               <li>Profile information updated - 2 days ago</li>
             </ul>
           </CardContent>

@@ -68,7 +68,7 @@ export default function SessionHistoryPage() {
                             </div>
                         </TableCell>
                         <TableCell>{session.duration} min</TableCell>
-                        <TableCell>${session.cost.toFixed(2)}</TableCell>
+                        <TableCell>₹{session.cost.toFixed(2)}</TableCell>
                         <TableCell>
                             <Badge variant={session.status === 'Completed' ? 'default' : 'outline'}>
                                 {session.status}
@@ -89,4 +89,3 @@ export default function SessionHistoryPage() {
     </div>
   );
 }
-
