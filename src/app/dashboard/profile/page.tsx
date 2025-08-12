@@ -47,6 +47,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (isClient) {
+      // In a real app, get email from session/context. Using a default for demo purposes.
       const studentEmail = 'student@example.com';
       const usersJSON = localStorage.getItem('userDatabase');
       if (usersJSON) {
@@ -113,13 +114,13 @@ export default function ProfilePage() {
     return (
       <div className="space-y-8 animate-fade-in">
         <header>
-          <div className="h-9 w-1/2 bg-muted rounded animate-pulse"></div>
-          <div className="h-5 w-3/4 bg-muted rounded animate-pulse mt-2"></div>
+          <Skeleton className="h-9 w-1/2" />
+          <Skeleton className="h-5 w-3/4 mt-2" />
         </header>
         <Card>
           <CardHeader>
-            <div className="h-7 w-1/4 bg-muted rounded animate-pulse"></div>
-            <div className="h-5 w-1/2 bg-muted rounded animate-pulse mt-2"></div>
+            <Skeleton className="h-7 w-1/4" />
+            <Skeleton className="h-5 w-1/2 mt-2" />
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-8">
