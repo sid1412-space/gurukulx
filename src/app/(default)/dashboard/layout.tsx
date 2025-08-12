@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { User, LayoutDashboard, Settings, BookOpen } from 'lucide-react';
+import { User, LayoutDashboard, Settings, BookOpen, ClipboardPen } from 'lucide-react';
 import Logo from '@/components/Logo';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -24,13 +24,14 @@ const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/dashboard/profile', label: 'Profile', icon: User },
   { href: '/dashboard/sessions', label: 'My Sessions', icon: BookOpen },
+  { href: '/dashboard/practice', label: 'Practice', icon: ClipboardPen },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ];
 
 // Mock authentication check
 const useAuth = () => {
     // In a real app, this would be a hook that checks a JWT, a session, etc.
-    return { isAuthenticated: false }; 
+    return { isAuthenticated: true }; 
 };
 
 
