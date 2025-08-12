@@ -5,12 +5,7 @@ import { Tldraw, useEditor } from '@tldraw/tldraw'
 import '@tldraw/tldraw/tldraw.css'
 import { useEffect, useRef } from 'react'
 
-interface WhiteboardProps {
-  questionText?: string | null;
-  questionImage?: string | null;
-}
-
-const EditorEvents = ({ questionText, questionImage }: WhiteboardProps) => {
+const EditorEvents = () => {
 	const editor = useEditor();
     const isSetupComplete = useRef(false);
 
@@ -19,64 +14,27 @@ const EditorEvents = ({ questionText, questionImage }: WhiteboardProps) => {
 
 		const handleMount = async () => {
 			if (isSetupComplete.current) return;
+            isSetupComplete.current = true;
 
-			// Only run setup if there is a question to display
-			if (questionImage) {
-				try {
-					const response = await fetch(questionImage);
-					const blob = await response.blob();
-					const assetResult = await editor.createAssets([
-						{
-							type: 'image',
-							props: {
-								name: 'question.png',
-								isAnimated: false,
-								mimeType: blob.type,
-							},
-							file: new File([blob], 'question.png', { type: blob.type }),
-						},
-					]);
-					
-					if(assetResult.length > 0) {
-						const assetId = assetResult[0].id;
-						const { w, h } = await editor.getAssetSize(assetId);
+            const promptText = `
+Welcome to your session!
 
-						editor.createShape({
-							type: 'image',
-							x: 200,
-							y: 200,
-							props: {
-								assetId,
-								w,
-								h,
-							},
-						});
-					}
-				} catch (error) {
-					console.error("Error loading image from data URL:", error);
-					 editor.createShape({
-						type: 'text',
-						x: 200,
-						y: 200,
-						props: { text: 'Could not load the provided image.', size: 'xl' },
-					});
-				}
-			} else if (questionText) {
-				editor.createShape({
-					type: 'text',
-					x: 200,
-					y: 200,
-					props: { text: questionText, size: 'xl', w: 400 },
-				});
-			}
+To get started, upload an image of your question.
 
-            if (questionImage || questionText) {
-                editor.zoomToFit();
-                editor.centerOnPoint(200, 200);
-            }
+Use the image tool in the toolbar (7th icon from the top).
+            `;
+
+            editor.createShape({
+                type: 'text',
+                x: 200,
+                y: 200,
+                props: { text: promptText, size: 'xl', w: 500, align: 'middle' },
+            });
+            
+            editor.zoomToFit();
+            editor.centerOnPoint(200, 200);
 
             editor.updateInstanceState({ isFocusMode: true });
-			isSetupComplete.current = true;
 		};
 		
 		editor.on('mount', handleMount);
@@ -85,17 +43,17 @@ const EditorEvents = ({ questionText, questionImage }: WhiteboardProps) => {
 			editor.off('mount', handleMount);
 		};
 
-	}, [editor, questionText, questionImage]);
+	}, [editor]);
 
 	return null;
 }
 
 
-export default function Whiteboard({ questionText, questionImage }: WhiteboardProps) {
+export default function Whiteboard() {
 	return (
 		<div style={{ position: 'fixed', inset: 0 }}>
 			<Tldraw>
-                <EditorEvents questionText={questionText} questionImage={questionImage} />
+                <EditorEvents />
             </Tldraw>
 		</div>
 	)

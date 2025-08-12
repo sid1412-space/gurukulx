@@ -9,7 +9,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useRouter } from 'next/navigation';
 import type { JitsiAPI } from '@jitsi/react-sdk';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useSearchParams } from 'next/navigation';
 import { useIsClient } from '@/hooks/use-is-client';
 
 const JitsiMeetComponent = dynamic(() => import('@/components/session/JitsiMeetComponent'), {
@@ -22,31 +21,11 @@ const Whiteboard = dynamic(() => import('@/components/session/Whiteboard'), {
 
 export default function SessionPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [jitsiApi, setJitsiApi] = useState<JitsiAPI | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const isMobile = useIsMobile();
   const isClient = useIsClient();
-  
-  const [questionText, setQuestionText] = useState<string | null>(null);
-  const [questionImage, setQuestionImage] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (isClient) {
-      const text = searchParams.get('questionText');
-      const image = sessionStorage.getItem('questionImage');
-      
-      if (text) {
-        setQuestionText(text);
-      }
-      if (image) {
-        setQuestionImage(image);
-        sessionStorage.removeItem('questionImage');
-      }
-    }
-  }, [isClient, searchParams]);
-
 
   useEffect(() => {
     if (jitsiApi) {
@@ -92,7 +71,7 @@ export default function SessionPage() {
         <JitsiMeetComponent onApiReady={handleApiReady} />
       </div>
 
-      {isClient && <Whiteboard questionText={questionText} questionImage={questionImage} />}
+      {isClient && <Whiteboard />}
 
       <TooltipProvider>
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20">

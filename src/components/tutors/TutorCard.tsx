@@ -45,7 +45,7 @@ export default function TutorCard({ tutor }: TutorCardProps) {
       </CardContent>
       <CardFooter className="flex justify-between items-center">
         <p className="text-xl font-bold text-primary">${tutor.price}<span className="text-sm font-normal text-muted-foreground">/hr</span></p>
-        <Link href={`/session/start/new-session-${tutor.id}`}>
+        <Link href={`/session/new-session-${tutor.id}`}>
             <Button>Book Session</Button>
         </Link>
       </CardFooter>
