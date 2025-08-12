@@ -17,9 +17,7 @@ import { BookCopy, Download, Users, Star } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useState, useEffect } from 'react';
 import RatingDialog from '@/components/session/RatingDialog';
-import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth, db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { useIsClient } from '@/hooks/use-is-client';
 
 
 type Session = { 
@@ -34,27 +32,40 @@ type Session = {
   status: 'Completed' | 'Upcoming';
 };
 
+const MOCK_SESSIONS: Session[] = [
+    {
+        id: 'ses_1',
+        studentName: 'Rohan S.',
+        studentAvatar: 'https://i.ibb.co/6PDeR78/3d-illustration-person-23-2149436182.jpg',
+        subject: 'Physics',
+        date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        duration: 30,
+        cost: 400,
+        status: 'Completed',
+        rating: 5,
+    },
+    {
+        id: 'ses_3',
+        studentName: 'Priya K.',
+        studentAvatar: 'https://i.ibb.co/yqgC1D4/3d-illustration-person-with-glasses-23-2149436185.jpg',
+        subject: 'Physics',
+        date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+        duration: 60,
+        cost: 800,
+        status: 'Completed'
+    },
+];
+
 export default function TutorSessionHistoryPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [ratingSession, setRatingSession] = useState<Session | null>(null);
-  const [user] = useAuthState(auth);
+  const isClient = useIsClient();
 
   useEffect(() => {
-    if(!user) return;
-
-    const q = query(collection(db, "sessions"), where("tutorUid", "==", user.uid));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-        const sessionList = snapshot.docs.map(doc => ({
-            id: doc.id,
-            studentName: 'Student', // Placeholder
-            studentAvatar: 'https://placehold.co/100x100.png',
-            ...doc.data() 
-        } as Session));
-        setSessions(sessionList);
-    });
-
-    return () => unsubscribe();
-  }, [user]);
+    if(isClient) {
+        setSessions(MOCK_SESSIONS);
+    }
+  }, [isClient]);
 
   const handleOpenRating = (session: Session) => {
     setRatingSession(session);
@@ -165,5 +176,3 @@ export default function TutorSessionHistoryPage() {
     </div>
   );
 }
-
-    

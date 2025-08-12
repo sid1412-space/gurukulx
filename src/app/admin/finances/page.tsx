@@ -13,8 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useState, useEffect } from 'react';
 import { useIsClient } from '@/hooks/use-is-client';
-import { db } from '@/lib/firebase';
-import { collection, doc, getDocs, query, where, updateDoc, increment, getDoc, deleteDoc, onSnapshot, Unsubscribe } from 'firebase/firestore';
+import { initializeMockData } from '@/lib/mock-data';
 
 
 const addFundsSchema = z.object({
@@ -30,7 +29,6 @@ const updateEarningsSchema = z.object({
 type RechargeRequest = {
   id: string;
   studentEmail: string;
-  studentUid: string;
   amount: number;
   status: 'pending';
 };
@@ -42,15 +40,11 @@ export default function FinancialManagementPage() {
   const [rechargeRequests, setRechargeRequests] = useState<RechargeRequest[]>([]);
 
   useEffect(() => {
-    if (!isClient) return;
-
-    const q = query(collection(db, "rechargeRequests"), where("status", "==", "pending"));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const requests = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as RechargeRequest));
-        setRechargeRequests(requests);
-    });
-
-    return () => unsubscribe();
+    if (isClient) {
+      initializeMockData();
+      const allRequests = JSON.parse(localStorage.getItem('rechargeRequests') || '[]');
+      setRechargeRequests(allRequests.filter((r: any) => r.status === 'pending'));
+    }
   }, [isClient]);
 
   const addFundsForm = useForm<z.infer<typeof addFundsSchema>>({
@@ -64,27 +58,21 @@ export default function FinancialManagementPage() {
   });
 
 
-  async function onAddFunds(values: z.infer<typeof addFundsSchema>) {
-    const q = query(collection(db, "users"), where("email", "==", values.studentEmail));
-    const querySnapshot = await getDocs(q);
+  function onAddFunds(values: z.infer<typeof addFundsSchema>) {
+    const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
+    const studentIndex = users.findIndex((u: any) => u.email === values.studentEmail);
 
-    if (querySnapshot.empty) {
+    if (studentIndex === -1) {
         toast({ variant: 'destructive', title: 'Error', description: 'Student not found.' });
         return;
     }
 
-    const studentDoc = querySnapshot.docs[0];
-    const studentRef = doc(db, "users", studentDoc.id);
-
-    await updateDoc(studentRef, {
-        walletBalance: increment(values.amount)
-    });
-    
-    const newBalance = (studentDoc.data().walletBalance || 0) + values.amount;
+    users[studentIndex].walletBalance = (users[studentIndex].walletBalance || 0) + values.amount;
+    localStorage.setItem('userDatabase', JSON.stringify(users));
 
     toast({
       title: 'Funds Added',
-      description: `₹${values.amount} has been added to ${values.studentEmail}'s wallet. New balance is ₹${newBalance.toFixed(2)}.`,
+      description: `₹${values.amount} has been added to ${values.studentEmail}'s wallet. New balance is ₹${users[studentIndex].walletBalance.toFixed(2)}.`,
     });
     addFundsForm.reset();
   }
@@ -105,38 +93,37 @@ export default function FinancialManagementPage() {
     });
   };
   
-  const handleApproveRecharge = async (requestId: string) => {
+  const handleApproveRecharge = (requestId: string) => {
     const request = rechargeRequests.find(r => r.id === requestId);
     if (!request) return;
 
-    try {
-        const studentRef = doc(db, "users", request.studentUid);
-        await updateDoc(studentRef, {
-            walletBalance: increment(request.amount)
-        });
+    const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
+    const studentIndex = users.findIndex((u: any) => u.email === request.studentEmail);
 
-        const requestRef = doc(db, "rechargeRequests", requestId);
-        await deleteDoc(requestRef); // Or update status to 'approved'
-        
-        const studentDoc = await getDoc(studentRef);
-        const newBalance = studentDoc.data()?.walletBalance || request.amount;
-
-        toast({
-            title: 'Recharge Approved',
-            description: `₹${request.amount} has been added to ${request.studentEmail}'s wallet. New balance: ₹${newBalance.toFixed(2)}`
-        });
-    } catch (error) {
-        console.error("Error approving recharge: ", error);
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not approve recharge.' });
+    if(studentIndex !== -1) {
+        users[studentIndex].walletBalance = (users[studentIndex].walletBalance || 0) + request.amount;
+        localStorage.setItem('userDatabase', JSON.stringify(users));
     }
+    
+    let allRequests = JSON.parse(localStorage.getItem('rechargeRequests') || '[]');
+    allRequests = allRequests.filter((r:any) => r.id !== requestId);
+    localStorage.setItem('rechargeRequests', JSON.stringify(allRequests));
+    setRechargeRequests(allRequests.filter((r: any) => r.status === 'pending'));
+
+    toast({
+        title: 'Recharge Approved',
+        description: `₹${request.amount} has been added to ${request.studentEmail}'s wallet.`
+    });
   };
   
-  const handleRejectRecharge = async (requestId: string) => {
+  const handleRejectRecharge = (requestId: string) => {
       const request = rechargeRequests.find(r => r.id === requestId);
       if (!request) return;
 
-      const requestRef = doc(db, "rechargeRequests", requestId);
-      await deleteDoc(requestRef); // Or update status to 'rejected'
+      let allRequests = JSON.parse(localStorage.getItem('rechargeRequests') || '[]');
+      allRequests = allRequests.filter((r:any) => r.id !== requestId);
+      localStorage.setItem('rechargeRequests', JSON.stringify(allRequests));
+      setRechargeRequests(allRequests.filter((r: any) => r.status === 'pending'));
 
       toast({
           variant: 'destructive',

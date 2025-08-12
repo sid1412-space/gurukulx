@@ -27,12 +27,11 @@ import { useToast } from '@/hooks/use-toast';
 import { useIsClient } from '@/hooks/use-is-client';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { initializeMockData } from '@/lib/mock-data';
 
 
 type Student = {
-  uid: string;
+  id: string;
   email: string;
   name: string;
   walletBalance: number;
@@ -45,21 +44,11 @@ export default function StudentManagementPage() {
   const [managingStudent, setManagingStudent] = useState<Student | null>(null);
   const [walletAmount, setWalletAmount] = useState<number | string>('');
 
-  const fetchAllData = async () => {
+  const fetchAllData = () => {
     if (isClient) {
-      try {
-        const q = query(collection(db, "users"), where("role", "==", "student"));
-        const querySnapshot = await getDocs(q);
-        const studentList = querySnapshot.docs.map(doc => ({
-            uid: doc.id,
-            walletBalance: 0, // Default value
-            ...doc.data()
-        })) as Student[];
-        setStudents(studentList);
-      } catch (error) {
-        console.error("Failed to fetch students from Firestore", error);
-        setStudents([]);
-      }
+      initializeMockData();
+      const allUsers = JSON.parse(localStorage.getItem('userDatabase') || '[]');
+      setStudents(allUsers.filter((u: any) => u.role === 'student'));
     }
   };
 
@@ -67,7 +56,7 @@ export default function StudentManagementPage() {
     fetchAllData();
   }, [isClient]);
 
-  const handleUpdateBalance = async () => {
+  const handleUpdateBalance = () => {
     if (!managingStudent || walletAmount === '') {
       toast({
         variant: 'destructive',
@@ -78,31 +67,28 @@ export default function StudentManagementPage() {
     }
 
     const newBalance = parseFloat(walletAmount as string);
-    
-    try {
-        const studentDocRef = doc(db, "users", managingStudent.uid);
-        await updateDoc(studentDocRef, {
-            walletBalance: newBalance
-        });
+    const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
+    const studentIndex = users.findIndex((u: any) => u.id === managingStudent.id);
 
-        toast({
+    if (studentIndex !== -1) {
+      users[studentIndex].walletBalance = newBalance;
+      localStorage.setItem('userDatabase', JSON.stringify(users));
+      
+      toast({
         title: 'Wallet Updated',
         description: `${managingStudent.name}'s wallet balance has been updated to ₹${newBalance.toFixed(2)}.`,
-        });
+      });
 
-        setManagingStudent(null);
-        setWalletAmount('');
-        fetchAllData();
-
-    } catch (error) {
-        console.error("Error updating wallet: ", error);
+      setManagingStudent(null);
+      setWalletAmount('');
+      fetchAllData();
+    } else {
         toast({
             variant: 'destructive',
             title: 'Update Failed',
-            description: 'Could not update the wallet balance.',
+            description: 'Could not find the student to update.',
         });
     }
-
   };
   
   const handleOpenWalletManager = (student: Student) => {
@@ -192,5 +178,3 @@ export default function StudentManagementPage() {
     </div>
   );
 }
-
-    

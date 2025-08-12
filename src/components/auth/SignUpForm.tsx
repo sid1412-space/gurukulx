@@ -13,9 +13,9 @@ import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Separator } from '../ui/separator';
-import { auth, db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { initializeMockData } from '@/lib/mock-data';
 
 
 // Base schema for common fields
@@ -122,26 +122,34 @@ export default function SignUpForm() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
+    initializeMockData(); // Ensure mock data is in localStorage
     
     try {
-        const { user } = await createUserWithEmailAndPassword(auth, values.email, values.password);
-        const userDocRef = doc(db, "users", user.uid);
+        await createUserWithEmailAndPassword(auth, values.email, values.password);
+        
+        const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
+        const applicants = JSON.parse(localStorage.getItem('tutorApplicants') || '[]');
+        const userId = `user_${Math.random().toString(36).substring(2, 9)}`;
 
         if (values.accountType === 'student') {
-            await setDoc(userDocRef, {
-                uid: user.uid,
+            const newStudent = {
+                id: userId,
                 name: values.name,
                 email: values.email,
-                role: 'student'
-            });
+                password: values.password,
+                role: 'student',
+                walletBalance: 1000,
+            };
+            users.push(newStudent);
+            localStorage.setItem('userDatabase', JSON.stringify(users));
             handleSuccessfulSignup('Welcome to GurukulX. Please log in.');
-
         } else if (values.accountType === 'tutor') {
-            const applicantData = {
-                uid: user.uid,
+            const newApplicant = {
+                id: userId,
                 name: values.name,
                 email: values.email,
-                role: 'student', // Tutors start as students until approved
+                password: values.password, // Storing this temporarily
+                role: 'student', // All signups start as students
                 applicationStatus: 'Pending',
                 applicationDetails: {
                   qualification: values.qualification,
@@ -153,10 +161,13 @@ export default function SignUpForm() {
                   location: values.location,
                 }
             };
-            await setDoc(userDocRef, applicantData);
+            applicants.push(newApplicant);
+            localStorage.setItem('tutorApplicants', JSON.stringify(applicants));
+            // Also add them to the main user database so they can log in
+            users.push(newApplicant);
+            localStorage.setItem('userDatabase', JSON.stringify(users));
             handleSuccessfulSignup('Your application is submitted! Please log in to continue.');
         }
-
     } catch (error: any) {
          toast({
             variant: 'destructive',
@@ -170,19 +181,23 @@ export default function SignUpForm() {
   const handleGoogleSignUp = async () => {
     setIsLoading(true);
     const provider = new GoogleAuthProvider();
+    initializeMockData();
     try {
         const result = await signInWithPopup(auth, provider);
         const user = result.user;
-        const userDocRef = doc(db, "users", user.uid);
-        const userDoc = await getDoc(userDocRef);
+        const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
+        const existingUser = users.find((u: any) => u.email === user.email);
 
-        if (!userDoc.exists()) {
-             await setDoc(userDocRef, {
-                uid: user.uid,
+        if (!existingUser) {
+            const newUser = {
+                id: `user_${Math.random().toString(36).substring(2, 9)}`,
                 email: user.email,
                 name: user.displayName,
-                role: 'student' // All social signups are students by default
-            });
+                role: 'student',
+                walletBalance: 1000,
+            };
+            users.push(newUser);
+            localStorage.setItem('userDatabase', JSON.stringify(users));
         }
         handleSuccessfulSignup('Welcome to GurukulX. Please log in.');
     } catch (error: any) {

@@ -14,9 +14,6 @@ import { Loader2, KeyRound, Landmark, User } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useIsClient } from '@/hooks/use-is-client';
-import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
 
 const profileSchema = z.object({
@@ -43,7 +40,6 @@ export default function TutorSettingsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isClient = useIsClient();
-  const [user, loading] = useAuthState(auth);
 
   const [currentUser, setCurrentUser] = useState({
     name: '',
@@ -76,32 +72,32 @@ export default function TutorSettingsPage() {
   });
 
 
-   useEffect(() => {
-    if (isClient && user) {
-      const userDocRef = doc(db, "users", user.uid);
-      getDoc(userDocRef).then(docSnap => {
-          if (docSnap.exists()) {
-              const userData = docSnap.data();
-              // Profile Info
-              const tutorProfile = {
-                name: userData.name || '',
-                email: userData.email,
-                bio: userData.applicationDetails?.qualification || 'PhD in Physics with 10+ years of teaching experience...',
-                subjects: userData.applicationDetails?.expertise || 'Physics, Calculus',
-                avatar: userData.avatar || 'https://placehold.co/128x128.png',
-              };
-              setCurrentUser(tutorProfile);
-              setAvatarPreview(tutorProfile.avatar);
-              profileForm.reset(tutorProfile);
+  useEffect(() => {
+    if (isClient) {
+      const loggedInUserEmail = localStorage.getItem('loggedInUser');
+      if (loggedInUserEmail) {
+        const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
+        const userProfile = users.find((u: any) => u.email === loggedInUserEmail);
+        
+        if (userProfile) {
+          const profileData = {
+            name: userProfile.name || '',
+            email: userProfile.email,
+            bio: userProfile.applicationDetails?.qualification || 'PhD in Physics with 10+ years of teaching experience...',
+            subjects: userProfile.applicationDetails?.expertise || 'Physics, Calculus',
+            avatar: userProfile.avatar || 'https://placehold.co/128x128.png',
+          };
+          setCurrentUser(profileData);
+          setAvatarPreview(profileData.avatar);
+          profileForm.reset(profileData);
 
-              // Payout Info
-              if (userData.payoutDetails) {
-                payoutForm.reset(userData.payoutDetails);
-              }
+          if (userProfile.payoutDetails) {
+            payoutForm.reset(userProfile.payoutDetails);
           }
-      });
+        }
+      }
     }
-  }, [isClient, user, profileForm, payoutForm]);
+  }, [isClient, profileForm, payoutForm]);
 
   
   const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -116,33 +112,30 @@ export default function TutorSettingsPage() {
   };
 
 
-  async function onProfileSubmit(values: z.infer<typeof profileSchema>) {
-    if(!user) return;
+  function onProfileSubmit(values: z.infer<typeof profileSchema>) {
     setIsLoading(true);
     
-    // We need to merge this with the nested applicationDetails in Firestore
-    const { subjects, bio, ...restOfValues } = values;
-    const updateData = {
-        ...restOfValues,
-        avatar: avatarPreview,
-        'applicationDetails.expertise': subjects,
-        'applicationDetails.qualification': bio,
-    };
+    const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
+    const userIndex = users.findIndex((u: any) => u.email === values.email);
 
-    try {
-        const userDocRef = doc(db, "users", user.uid);
-        await updateDoc(userDocRef, updateData);
-        setCurrentUser(prev => ({...prev, ...values, avatar: avatarPreview}));
+    if (userIndex !== -1) {
+        users[userIndex].name = values.name;
+        users[userIndex].avatar = avatarPreview;
+        users[userIndex].applicationDetails.expertise = values.subjects;
+        users[userIndex].applicationDetails.qualification = values.bio;
+
+        localStorage.setItem('userDatabase', JSON.stringify(users));
+        
         toast({
             title: 'Profile Updated',
             description: 'Your information has been saved successfully.',
         });
-    } catch(e) {
-        console.error(e);
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not update profile.' });
-    } finally {
-        setIsLoading(false);
+        setCurrentUser(prev => ({...prev, ...values, avatar: avatarPreview}));
+    } else {
+         toast({ variant: 'destructive', title: 'Error', description: 'Could not update profile.' });
     }
+    
+    setIsLoading(false);
   }
 
   function onPasswordSubmit(values: z.infer<typeof passwordSchema>) {
@@ -158,26 +151,29 @@ export default function TutorSettingsPage() {
     }, 1000);
   }
   
-  async function onPayoutSubmit(values: z.infer<typeof payoutSchema>) {
-    if (!user) return;
+  function onPayoutSubmit(values: z.infer<typeof payoutSchema>) {
     setIsLoading(true);
+    
+    const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
+    const userIndex = users.findIndex((u: any) => u.email === currentUser.email);
 
-    try {
-        const userDocRef = doc(db, "users", user.uid);
-        await updateDoc(userDocRef, { payoutDetails: values });
+    if (userIndex !== -1) {
+        users[userIndex].payoutDetails = values;
+        localStorage.setItem('userDatabase', JSON.stringify(users));
+
         toast({
             title: 'Payout Details Updated',
             description: 'Your bank information has been saved.',
         });
-    } catch (e) {
+    } else {
         toast({
             variant: 'destructive',
             title: 'Error Saving Details',
             description: 'Could not save your payout information.',
         });
-    } finally {
-        setIsLoading(false);
     }
+
+    setIsLoading(false);
   }
 
   return (
@@ -386,5 +382,3 @@ export default function TutorSettingsPage() {
     </div>
   );
 }
-
-    

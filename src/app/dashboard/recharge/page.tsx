@@ -15,9 +15,7 @@ import Link from 'next/link';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth, db } from '@/lib/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { useIsClient } from '@/hooks/use-is-client';
 
 
 const amountSchema = z.object({
@@ -41,7 +39,7 @@ export default function RechargePage() {
   const [step, setStep] = useState<Step>('amount');
   const [rechargeAmount, setRechargeAmount] = useState(0);
   const { toast } = useToast();
-  const [user, loading] = useAuthState(auth);
+  const isClient = useIsClient();
 
   const form = useForm<z.infer<typeof amountSchema>>({
     resolver: zodResolver(amountSchema),
@@ -63,33 +61,28 @@ export default function RechargePage() {
   }
 
   const handleFormSubmitted = async () => {
-    if (!user) {
+    const loggedInUserEmail = localStorage.getItem('loggedInUser');
+    if (!loggedInUserEmail) {
         toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to make a request.' });
         return;
     }
 
-    try {
-        await addDoc(collection(db, "rechargeRequests"), {
-            studentUid: user.uid,
-            studentEmail: user.email,
-            amount: rechargeAmount,
-            status: 'pending',
-            createdAt: new Date(),
-        });
-
-        toast({
-            title: 'Request Submitted',
-            description: 'Your recharge request has been sent for admin approval.'
-        });
-        setStep('pending');
-    } catch (e) {
-        console.error("Failed to create recharge request", e);
-        toast({
-            variant: 'destructive',
-            title: 'Error',
-            description: 'Could not submit your request. Please try again.'
-        })
-    }
+    const rechargeRequests = JSON.parse(localStorage.getItem('rechargeRequests') || '[]');
+    const newRequest = {
+        id: `recharge_${Math.random().toString(36).substring(2, 9)}`,
+        studentEmail: loggedInUserEmail,
+        amount: rechargeAmount,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+    };
+    rechargeRequests.push(newRequest);
+    localStorage.setItem('rechargeRequests', JSON.stringify(rechargeRequests));
+    
+    toast({
+        title: 'Request Submitted',
+        description: 'Your recharge request has been sent for admin approval.'
+    });
+    setStep('pending');
   }
 
   const renderStep = () => {
@@ -237,5 +230,3 @@ export default function RechargePage() {
     </div>
   );
 }
-
-    

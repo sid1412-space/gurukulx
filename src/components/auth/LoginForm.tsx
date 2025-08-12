@@ -12,9 +12,9 @@ import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Separator } from '../ui/separator';
-import { auth, db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 import { signInWithEmailAndPassword, sendPasswordResetEmail, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { mockUsers, initializeMockData } from '@/lib/mock-data';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -44,31 +44,41 @@ export default function LoginForm() {
     },
   });
 
-  const handleRedirect = async (user: any) => {
-    const userDocRef = doc(db, "users", user.uid);
-    const userDoc = await getDoc(userDocRef);
-    let userData = userDoc.exists() ? userDoc.data() : null;
+  const handleRedirect = (user: any) => {
+    initializeMockData();
+    const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
+    const loggedInUser = users.find((u: any) => u.email === user.email);
 
-    if (!userData) {
-      // Create a user document if it doesn't exist (for social logins)
-      userData = {
-        email: user.email,
-        name: user.displayName || 'New User',
-        role: 'student', // Default role for new sign-ups
-      };
-      await setDoc(userDocRef, userData);
-    }
+    let destination = '/dashboard'; // Default for students
     
-    // Set localStorage items needed for role-based access
-    localStorage.setItem('isLoggedIn', 'true');
-    localStorage.setItem('loggedInUser', user.email);
-    localStorage.setItem('isTutor', (userData.role === 'tutor').toString());
-    localStorage.setItem('isAdmin', (userData.role === 'admin').toString());
-    window.dispatchEvent(new Event('storage'));
+    if (loggedInUser) {
+        localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('loggedInUser', loggedInUser.email);
+        localStorage.setItem('isTutor', (loggedInUser.role === 'tutor').toString());
+        localStorage.setItem('isAdmin', (loggedInUser.role === 'admin').toString());
 
-    let destination = '/dashboard';
-    if (userData.role === 'admin') destination = '/admin';
-    if (userData.role === 'tutor') destination = '/tutor/dashboard';
+        if(loggedInUser.role === 'admin') destination = '/admin';
+        if(loggedInUser.role === 'tutor') destination = '/tutor/dashboard';
+    } else {
+         // This case handles new Google sign-ins that aren't in our mock DB
+        const newUser = {
+            id: `user_${Math.random().toString(36).substring(2, 9)}`,
+            email: user.email,
+            name: user.displayName || "New User",
+            password: "social_login",
+            role: "student",
+            walletBalance: 1000
+        };
+        users.push(newUser);
+        localStorage.setItem('userDatabase', JSON.stringify(users));
+        localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('loggedInUser', newUser.email);
+        localStorage.setItem('isTutor', 'false');
+        localStorage.setItem('isAdmin', 'false');
+    }
+
+    // This makes sure other tabs know about the login status change
+    window.dispatchEvent(new Event("storage"));
     router.push(destination);
   }
 
@@ -77,7 +87,7 @@ export default function LoginForm() {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
       toast({ title: 'Logged In!', description: 'Redirecting to your dashboard...' });
-      await handleRedirect(userCredential.user);
+      handleRedirect(userCredential.user);
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -119,7 +129,7 @@ export default function LoginForm() {
     try {
       const result = await signInWithPopup(auth, provider);
       toast({ title: 'Logged In with Google!', description: 'Redirecting...' });
-      await handleRedirect(result.user);
+      handleRedirect(result.user);
     } catch (error: any) {
       toast({
         variant: 'destructive',

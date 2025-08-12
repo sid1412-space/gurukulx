@@ -7,8 +7,7 @@ import { Users, DollarSign, BookOpen, UserPlus, Hourglass, Banknote } from 'luci
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useIsClient } from '@/hooks/use-is-client';
-import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, getCountFromServer } from 'firebase/firestore';
+import { initializeMockData } from '@/lib/mock-data';
 
 
 export default function AdminOverviewPage() {
@@ -27,37 +26,29 @@ export default function AdminOverviewPage() {
   const isClient = useIsClient();
 
   useEffect(() => {
-    if (!isClient) return;
+    if (isClient) {
+      initializeMockData();
+      const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
+      const applicants = JSON.parse(localStorage.getItem('tutorApplicants') || '[]');
+      const rechargeRequests = JSON.parse(localStorage.getItem('rechargeRequests') || '[]');
+      const payoutRequests = JSON.parse(localStorage.getItem('payoutRequests') || '[]');
 
-    // --- Main Stats ---
-    const countUsers = async (role: 'tutor' | 'student') => {
-      const q = query(collection(db, "users"), where("role", "==", role));
-      const snapshot = await getCountFromServer(q);
-      return snapshot.data().count;
+
+      const tutors = users.filter((u:any) => u.role === 'tutor');
+      const students = users.filter((u:any) => u.role === 'student');
+      
+      setStats(prev => ({ ...prev, totalTutors: tutors.length, activeStudents: students.length }));
+
+      const pendingApplicants = applicants.filter((a: any) => a.applicationStatus === 'Pending');
+      const pendingRecharges = rechargeRequests.filter((r: any) => r.status === 'pending');
+      const pendingPayouts = payoutRequests.filter((p: any) => p.status === 'pending');
+
+      setActionItemsData({
+          newApplicants: pendingApplicants.length,
+          pendingRecharges: pendingRecharges.length,
+          pendingPayouts: pendingPayouts.length,
+      })
     }
-    
-    countUsers('tutor').then(count => setStats(prev => ({ ...prev, totalTutors: count })));
-    countUsers('student').then(count => setStats(prev => ({ ...prev, activeStudents: count })));
-
-    // --- Action Items (Real-time) ---
-    const unsubscribers: (() => void)[] = [];
-
-    // Pending Applicants
-    const qApplicants = query(collection(db, "users"), where("applicationStatus", "==", "Pending"));
-    unsubscribers.push(onSnapshot(qApplicants, (snapshot) => setActionItemsData(prev => ({ ...prev, newApplicants: snapshot.size }))));
-
-    // Pending Recharges
-    const qRecharges = query(collection(db, "rechargeRequests"), where("status", "==", "pending"));
-     unsubscribers.push(onSnapshot(qRecharges, (snapshot) => setActionItemsData(prev => ({ ...prev, pendingRecharges: snapshot.size }))));
-
-    // Pending Payouts
-    const qPayouts = query(collection(db, "payoutRequests"), where("status", "==", "pending"));
-    unsubscribers.push(onSnapshot(qPayouts, (snapshot) => setActionItemsData(prev => ({ ...prev, pendingPayouts: snapshot.size }))));
-
-    // Cleanup
-    return () => {
-      unsubscribers.forEach(unsub => unsub());
-    };
   }, [isClient]);
 
   const statCards = [

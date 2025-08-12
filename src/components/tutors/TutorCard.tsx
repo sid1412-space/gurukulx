@@ -23,9 +23,6 @@ import { useEffect, useState, useRef } from 'react';
 import { useIsClient } from '@/hooks/use-is-client';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, updateDoc, setDoc, onSnapshot } from 'firebase/firestore';
 
 
 type Tutor = {
@@ -48,7 +45,6 @@ export default function TutorCard({ tutor }: TutorCardProps) {
   const router = useRouter();
   const isClient = useIsClient();
   const { toast } = useToast();
-  const [user] = useAuthState(auth);
   
   const [isWaiting, setIsWaiting] = useState(false);
   const [sessionRequestId, setSessionRequestId] = useState<string | null>(null);
@@ -56,16 +52,15 @@ export default function TutorCard({ tutor }: TutorCardProps) {
   const [walletBalance, setWalletBalance] = useState(0);
 
   useEffect(() => {
-    if (isClient && user) {
-        const userDocRef = doc(db, "users", user.uid);
-        const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
-            if (docSnap.exists()) {
-                setWalletBalance(docSnap.data().walletBalance || 0);
-            }
-        });
-        return () => unsubscribe();
+    if (isClient) {
+        const loggedInUserEmail = localStorage.getItem('loggedInUser');
+        const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
+        const currentUser = users.find((u:any) => u.email === loggedInUserEmail);
+        if (currentUser) {
+            setWalletBalance(currentUser.walletBalance || 0);
+        }
     }
-  }, [isClient, user]);
+  }, [isClient]);
 
   useEffect(() => {
     if (!isWaiting || !sessionRequestId) {
@@ -80,57 +75,63 @@ export default function TutorCard({ tutor }: TutorCardProps) {
         handleCancelRequest(true);
     }, 120000);
     
-    const requestDocRef = doc(db, 'sessionRequests', sessionRequestId);
-    const unsubscribe = onSnapshot(requestDocRef, (docSnap) => {
-        if(docSnap.exists()) {
-            const request = docSnap.data();
-            if(request.status === 'accepted') {
-                if (timeoutRef.current) clearTimeout(timeoutRef.current);
-                setIsWaiting(false);
-                router.push(`/session/${request.sessionId}?tutorId=${tutor.id}&role=student`);
-                unsubscribe();
-            } else if (request.status === 'rejected') {
-                if (timeoutRef.current) clearTimeout(timeoutRef.current);
-                setIsWaiting(false);
-                setSessionRequestId(null);
-                toast({
-                    variant: 'destructive',
-                    title: 'Session Rejected',
-                    description: `${tutor.name} is unable to take your session right now.`,
-                });
-                unsubscribe();
-            }
+    const intervalId = setInterval(() => {
+        const requests = JSON.parse(localStorage.getItem('sessionRequests') || '[]');
+        const currentRequest = requests.find((r: any) => r.id === sessionRequestId);
+
+        if (currentRequest && currentRequest.status === 'accepted') {
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            setIsWaiting(false);
+            router.push(`/session/${currentRequest.sessionId}?tutorId=${tutor.id}&role=student`);
+            clearInterval(intervalId);
+        } else if (currentRequest && currentRequest.status === 'rejected') {
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            setIsWaiting(false);
+            setSessionRequestId(null);
+            toast({
+                variant: 'destructive',
+                title: 'Session Rejected',
+                description: `${tutor.name} is unable to take your session right now.`,
+            });
+            clearInterval(intervalId);
         }
-    });
+    }, 2000);
 
     return () => {
-        unsubscribe();
+        clearInterval(intervalId);
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, [isWaiting, sessionRequestId, router, tutor.id, tutor.name, toast]);
 
   const handleRequestSession = async () => {
-    if(!user) {
+    const loggedInUserEmail = localStorage.getItem('loggedInUser');
+    if(!loggedInUserEmail) {
         toast({ variant: 'destructive', title: 'Not Logged In', description: 'You must be logged in to request a session.' });
         return;
     }
-    const requestId = `req_${Math.random().toString(36).substring(2, 11)}`;
-    const requestDocRef = doc(db, 'sessionRequests', requestId);
     
-    await setDoc(requestDocRef, {
+    const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
+    const student = users.find((u:any) => u.email === loggedInUserEmail);
+
+    const requestId = `req_${Math.random().toString(36).substring(2, 11)}`;
+    const requests = JSON.parse(localStorage.getItem('sessionRequests') || '[]');
+    const newRequest = {
+        id: requestId,
         tutorId: tutor.id,
-        studentUid: user.uid,
-        studentName: user.displayName || 'A Student', 
+        studentName: student?.name || 'A Student', 
         status: 'pending',
-    });
+    };
+    requests.push(newRequest);
+    localStorage.setItem('sessionRequests', JSON.stringify(requests));
     setSessionRequestId(requestId);
     setIsWaiting(true);
   };
   
   const handleCancelRequest = async (isTimeout = false) => {
     if(sessionRequestId) {
-        const requestDocRef = doc(db, "sessionRequests", sessionRequestId);
-        await updateDoc(requestDocRef, { status: 'rejected' });
+        let requests = JSON.parse(localStorage.getItem('sessionRequests') || '[]');
+        requests = requests.filter((r:any) => r.id !== sessionRequestId);
+        localStorage.setItem('sessionRequests', JSON.stringify(requests));
     }
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setIsWaiting(false);
@@ -229,5 +230,3 @@ export default function TutorCard({ tutor }: TutorCardProps) {
     </Card>
   );
 }
-
-    

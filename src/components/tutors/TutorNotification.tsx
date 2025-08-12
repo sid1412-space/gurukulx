@@ -9,9 +9,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Bell } from 'lucide-react';
 import { useIsClient } from '@/hooks/use-is-client';
-import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth, db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 
 
 interface SessionRequest {
@@ -26,56 +23,55 @@ export default function TutorNotification() {
   const { toast } = useToast();
   const router = useRouter();
   const isClient = useIsClient();
-  const [user, loading] = useAuthState(auth);
   const [activeRequest, setActiveRequest] = useState<SessionRequest | null>(null);
 
   useEffect(() => {
-    if (!isClient || !user) return;
+    if (!isClient) return;
 
-    // Query for pending requests for this tutor
-    const q = query(
-        collection(db, "sessionRequests"), 
-        where("tutorId", "==", user.uid), 
-        where("status", "==", "pending")
-    );
+    const loggedInUserEmail = localStorage.getItem('loggedInUser');
+    if (!loggedInUserEmail) return;
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-        if (!snapshot.empty) {
-            // Get the first pending request
-            const requestDoc = snapshot.docs[0];
-            setActiveRequest({ id: requestDoc.id, ...requestDoc.data() } as SessionRequest);
-        } else {
-            setActiveRequest(null);
-        }
-    });
+    const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
+    const currentUser = users.find((u:any) => u.email === loggedInUserEmail);
+    if (!currentUser) return;
 
-    return () => unsubscribe();
-  }, [isClient, user]);
+    // Poll localStorage for new requests
+    const intervalId = setInterval(() => {
+        const requests = JSON.parse(localStorage.getItem('sessionRequests') || '[]');
+        const pendingRequest = requests.find((r: SessionRequest) => r.tutorId === currentUser.id && r.status === 'pending');
+        setActiveRequest(pendingRequest || null);
+    }, 2000); // Check every 2 seconds
+
+    return () => clearInterval(intervalId);
+  }, [isClient]);
 
   const handleAccept = async () => {
-    if (!activeRequest || !user) return;
+    if (!activeRequest) return;
 
     const sessionId = `sess_${Math.random().toString(36).substring(2, 11)}`;
-    const requestDocRef = doc(db, "sessionRequests", activeRequest.id);
-    
-    await updateDoc(requestDocRef, { 
-        status: 'accepted',
-        sessionId: sessionId 
-    });
-    
-    // Set tutor as busy
-    const tutorDocRef = doc(db, "users", user.uid);
-    await updateDoc(tutorDocRef, { isBusy: true });
+    let requests = JSON.parse(localStorage.getItem('sessionRequests') || '[]');
+    const requestIndex = requests.findIndex((r:any) => r.id === activeRequest.id);
 
+    if (requestIndex !== -1) {
+        requests[requestIndex].status = 'accepted';
+        requests[requestIndex].sessionId = sessionId;
+        localStorage.setItem('sessionRequests', JSON.stringify(requests));
+    }
+    
     setActiveRequest(null);
-    router.push(`/session/${sessionId}?tutorId=${user.uid}&role=tutor`);
+    router.push(`/session/${sessionId}?tutorId=${activeRequest.tutorId}&role=tutor`);
   };
 
   const handleReject = async () => {
     if (!activeRequest) return;
     
-    const requestDocRef = doc(db, "sessionRequests", activeRequest.id);
-    await updateDoc(requestDocRef, { status: 'rejected' });
+    let requests = JSON.parse(localStorage.getItem('sessionRequests') || '[]');
+    const requestIndex = requests.findIndex((r:any) => r.id === activeRequest.id);
+
+    if (requestIndex !== -1) {
+        requests[requestIndex].status = 'rejected';
+        localStorage.setItem('sessionRequests', JSON.stringify(requests));
+    }
     
     setActiveRequest(null);
 
@@ -128,5 +124,3 @@ export default function TutorNotification() {
     </Card>
   );
 }
-
-    

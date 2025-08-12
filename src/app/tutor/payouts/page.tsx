@@ -16,9 +16,7 @@ import { Banknote, Wallet, Calendar, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState } from 'react';
-import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth, db } from '@/lib/firebase';
-import { collection, addDoc, doc, onSnapshot, query, where, serverTimestamp } from 'firebase/firestore';
+import { useIsClient } from '@/hooks/use-is-client';
 
 
 type Payout = {
@@ -28,46 +26,25 @@ type Payout = {
     status: 'Pending' | 'Paid';
 };
 
+const MOCK_PAYOUTS: Payout[] = [
+    { id: 'pay_1', date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), amount: 8500, status: 'Paid'},
+    { id: 'pay_2', date: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(), amount: 7200, status: 'Paid'}
+];
+
 export default function PayoutsPage() {
     const { toast } = useToast();
-    const [user] = useAuthState(auth);
-    const [tutorData, setTutorData] = useState({ totalEarnings: 0, pendingEarnings: 0 });
+    const isClient = useIsClient();
+    const [tutorData, setTutorData] = useState({ totalEarnings: 15700, pendingEarnings: 1250 });
     const [payoutHistory, setPayoutHistory] = useState<Payout[]>([]);
 
     useEffect(() => {
-        if (!user) return;
+        if (isClient) {
+            setPayoutHistory(MOCK_PAYOUTS);
+        }
+    }, [isClient]);
 
-        // Listen to tutor's earnings data
-        const tutorDocRef = doc(db, "users", user.uid);
-        const unsubTutor = onSnapshot(tutorDocRef, (doc) => {
-            if (doc.exists()) {
-                const data = doc.data();
-                setTutorData({
-                    totalEarnings: data.totalEarnings || 0,
-                    pendingEarnings: data.pendingEarnings || 0,
-                });
-            }
-        });
-
-        // Listen to payout history
-        const q = query(collection(db, "payoutRequests"), where("tutorUid", "==", user.uid));
-        const unsubPayouts = onSnapshot(q, (snapshot) => {
-            const history = snapshot.docs.map(doc => ({
-                id: doc.id,
-                date: new Date(doc.data().createdAt.seconds * 1000).toISOString(),
-                ...doc.data()
-            })) as Payout[];
-            setPayoutHistory(history);
-        });
-
-        return () => {
-            unsubTutor();
-            unsubPayouts();
-        };
-    }, [user]);
-
-    const handleRequestPayout = async () => {
-        if (!user || tutorData.pendingEarnings <= 0) {
+    const handleRequestPayout = () => {
+        if (tutorData.pendingEarnings <= 0) {
             toast({
                 variant: 'destructive',
                 title: 'No Pending Earnings',
@@ -76,23 +53,21 @@ export default function PayoutsPage() {
             return;
         }
 
-        try {
-            await addDoc(collection(db, "payoutRequests"), {
-                tutorUid: user.uid,
-                tutorEmail: user.email,
-                amount: tutorData.pendingEarnings,
-                status: 'pending',
-                createdAt: serverTimestamp(),
-            });
+        const payoutRequests = JSON.parse(localStorage.getItem('payoutRequests') || '[]');
+        const newRequest = {
+            id: `payoutreq_${Math.random().toString(36).substring(2, 9)}`,
+            tutorEmail: localStorage.getItem('loggedInUser'),
+            amount: tutorData.pendingEarnings,
+            status: 'pending',
+            date: new Date().toISOString()
+        };
+        payoutRequests.push(newRequest);
+        localStorage.setItem('payoutRequests', JSON.stringify(payoutRequests));
 
-            toast({
-                title: 'Payout Requested',
-                description: 'Your request has been submitted and the admin has been notified.'
-            });
-        } catch (error) {
-            console.error(error);
-            toast({ variant: 'destructive', title: 'Error', description: 'Could not submit your request.' });
-        }
+        toast({
+            title: 'Payout Requested',
+            description: 'Your request has been submitted and the admin has been notified.'
+        });
     }
 
   return (

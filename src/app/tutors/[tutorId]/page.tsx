@@ -25,9 +25,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useIsClient } from '@/hooks/use-is-client';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, updateDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { initializeMockData } from '@/lib/mock-data';
 
 
 export default function TutorProfilePage() {
@@ -36,7 +34,6 @@ export default function TutorProfilePage() {
   const { toast } = useToast();
   const { tutorId } = params;
   const isClient = useIsClient();
-  const [user, loading] = useAuthState(auth);
   
   const [tutor, setTutor] = useState<any>(null);
 
@@ -48,39 +45,23 @@ export default function TutorProfilePage() {
   const [walletBalance, setWalletBalance] = useState(0);
 
    useEffect(() => {
-     if (isClient && tutorId) {
-        const tutorDocRef = doc(db, "users", tutorId as string);
-        const unsubscribe = onSnapshot(tutorDocRef, (docSnap) => {
-            if (docSnap.exists()) {
-                const tutorData = docSnap.data();
-                 setTutor({
-                     ...tutorData,
-                     id: docSnap.id,
-                     avatar: tutorData.avatar || 'https://placehold.co/128x128.png',
-                     bio: tutorData.applicationDetails?.qualification || 'A passionate and experienced tutor.',
-                     rating: 4.8 + Math.random() * 0.2, // Randomize rating slightly
-                     subjects: tutorData.applicationDetails?.expertise ? [tutorData.applicationDetails.expertise] : ['Subject'],
-                     qualification: tutorData.applicationDetails?.qualification || 'N/A',
-                 });
-                 setIsOnline(tutorData.isOnline !== false);
-                 setIsBusy(tutorData.isBusy === true);
-            }
-        });
-        return () => unsubscribe();
+     if (isClient) {
+        initializeMockData();
+        const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
+        const currentTutor = users.find((u:any) => u.id === tutorId);
+        if (currentTutor) {
+          setTutor(currentTutor);
+          setIsOnline(currentTutor.isOnline !== false);
+          setIsBusy(currentTutor.isBusy === true);
+        }
+
+        const loggedInUserEmail = localStorage.getItem('loggedInUser');
+        const currentUser = users.find((u:any) => u.email === loggedInUserEmail);
+        if (currentUser) {
+          setWalletBalance(currentUser.walletBalance || 0);
+        }
      }
   }, [isClient, tutorId])
-
-  useEffect(() => {
-    if (isClient && user) {
-        const userDocRef = doc(db, "users", user.uid);
-        const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
-            if (docSnap.exists()) {
-                setWalletBalance(docSnap.data().walletBalance || 0);
-            }
-        });
-        return () => unsubscribe();
-    }
-  }, [isClient, user]);
 
   
   useEffect(() => {
@@ -96,16 +77,17 @@ export default function TutorProfilePage() {
         handleCancelRequest(true);
     }, 120000);
 
-    const requestDocRef = doc(db, 'sessionRequests', sessionRequestId);
-    const unsubscribe = onSnapshot(requestDocRef, (docSnap) => {
-        if(docSnap.exists()) {
-            const request = docSnap.data();
-            if(request.status === 'accepted') {
+    const intervalId = setInterval(() => {
+        const requests = JSON.parse(localStorage.getItem('sessionRequests') || '[]');
+        const currentRequest = requests.find((r: any) => r.id === sessionRequestId);
+
+        if (currentRequest) {
+            if(currentRequest.status === 'accepted') {
                 if (timeoutRef.current) clearTimeout(timeoutRef.current);
                 setIsWaiting(false);
-                router.push(`/session/${request.sessionId}?tutorId=${tutorId}&role=student`);
-                unsubscribe();
-            } else if (request.status === 'rejected') {
+                router.push(`/session/${currentRequest.sessionId}?tutorId=${tutorId}&role=student`);
+                clearInterval(intervalId);
+            } else if (currentRequest.status === 'rejected') {
                 if (timeoutRef.current) clearTimeout(timeoutRef.current);
                 setIsWaiting(false);
                 setSessionRequestId(null);
@@ -114,28 +96,36 @@ export default function TutorProfilePage() {
                     title: 'Session Rejected',
                     description: `${tutor?.name} is unable to take your session right now.`,
                 });
-                unsubscribe();
+                clearInterval(intervalId);
             }
         }
-    });
+    }, 2000);
+
 
     return () => {
-        unsubscribe();
+        clearInterval(intervalId);
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, [isWaiting, sessionRequestId, router, tutorId, tutor?.name, toast]);
 
 
   const handleRequestSession = async () => {
-    if (tutor && user) {
+    if (tutor) {
+      const loggedInUserEmail = localStorage.getItem('loggedInUser');
+      const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
+      const student = users.find((u:any) => u.email === loggedInUserEmail);
+
       const requestId = `req_${Math.random().toString(36).substring(2, 11)}`;
-      const requestDocRef = doc(db, 'sessionRequests', requestId);
-      await setDoc(requestDocRef, {
+      const requests = JSON.parse(localStorage.getItem('sessionRequests') || '[]');
+      
+      const newRequest = {
+        id: requestId,
         tutorId,
-        studentUid: user.uid,
-        studentName: user.displayName || 'A Student', 
+        studentName: student?.name || 'A Student', 
         status: 'pending',
-      });
+      };
+      requests.push(newRequest);
+      localStorage.setItem('sessionRequests', JSON.stringify(requests));
       setSessionRequestId(requestId);
       setIsWaiting(true);
     }
@@ -143,8 +133,9 @@ export default function TutorProfilePage() {
   
   const handleCancelRequest = async (isTimeout = false) => {
     if(sessionRequestId) {
-        const requestDocRef = doc(db, "sessionRequests", sessionRequestId);
-        await updateDoc(requestDocRef, { status: 'rejected' });
+        let requests = JSON.parse(localStorage.getItem('sessionRequests') || '[]');
+        requests = requests.filter((r:any) => r.id !== sessionRequestId);
+        localStorage.setItem('sessionRequests', JSON.stringify(requests));
     }
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setIsWaiting(false);
@@ -217,7 +208,7 @@ export default function TutorProfilePage() {
                         <div className="grid grid-cols-2 gap-4 text-sm">
                             <div className="flex items-center gap-2">
                                 <GraduationCap className="h-5 w-5 text-primary" />
-                                <span className="text-muted-foreground"><span className="font-semibold text-foreground">Qualification:</span> {tutor.qualification || 'N/A'}</span>
+                                <span className="text-muted-foreground"><span className="font-semibold text-foreground">Qualification:</span> {tutor.applicationDetails?.qualification || 'N/A'}</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <Briefcase className="h-5 w-5 text-primary" />
@@ -293,5 +284,3 @@ export default function TutorProfilePage() {
     </div>
   );
 }
-
-    

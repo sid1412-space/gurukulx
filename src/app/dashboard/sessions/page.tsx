@@ -17,9 +17,7 @@ import { BookOpen, Download, Star } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useState, useEffect } from 'react';
 import RatingDialog from '@/components/session/RatingDialog';
-import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth, db } from '@/lib/firebase';
-import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
+import { useIsClient } from '@/hooks/use-is-client';
 
 
 type Session = { 
@@ -34,23 +32,40 @@ type Session = {
   status: 'Completed' | 'Upcoming';
 };
 
+const MOCK_SESSIONS: Session[] = [
+  {
+    id: 'ses_1',
+    tutorName: 'Dr. Arwin',
+    tutorAvatar: 'https://i.ibb.co/kX3Drj2/3d-illustration-person-with-sunglasses-23-2149436188.jpg',
+    subject: 'Physics',
+    date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    duration: 30,
+    cost: 400,
+    status: 'Completed',
+    rating: 5,
+  },
+  {
+    id: 'ses_2',
+    tutorName: 'Alena Y.',
+    tutorAvatar: 'https://i.ibb.co/zVvL48G/3d-illustration-business-woman-holding-clipboard-with-copy-space-107791-16474.jpg',
+    subject: 'Chemistry',
+    date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    duration: 45,
+    cost: 600,
+    status: 'Completed',
+  },
+];
+
 export default function SessionHistoryPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [ratingSession, setRatingSession] = useState<Session | null>(null);
-  const [user] = useAuthState(auth);
+  const isClient = useIsClient();
 
   useEffect(() => {
-    if(!user) return;
-    const q = query(collection(db, "sessions"), where("studentUid", "==", user.uid));
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-        const sessionList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Session));
-        setSessions(sessionList);
-    });
-
-    return () => unsubscribe();
-
-  }, [user]);
+    if(isClient) {
+        setSessions(MOCK_SESSIONS);
+    }
+  }, [isClient]);
 
   const handleOpenRating = (session: Session) => {
     setRatingSession(session);
@@ -62,7 +77,6 @@ export default function SessionHistoryPage() {
 
   const handleRateSession = (sessionId: string, rating: number, feedback: string) => {
     console.log(`Rating session ${sessionId} with ${rating} stars and feedback: ${feedback}`);
-    // Here you would update the session document in Firestore with the rating
     setSessions(prevSessions => 
       prevSessions.map(s => s.id === sessionId ? { ...s, rating: rating } : s)
     );
@@ -168,5 +182,3 @@ export default function SessionHistoryPage() {
     </div>
   );
 }
-
-    

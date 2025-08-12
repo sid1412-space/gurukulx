@@ -9,57 +9,54 @@ import { useToast } from '@/hooks/use-toast';
 import { useIsClient } from '@/hooks/use-is-client';
 import TutorNotification from '@/components/tutors/TutorNotification';
 import { DollarSign, CalendarCheck } from 'lucide-react';
-import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth, db } from '@/lib/firebase';
-import { doc, onSnapshot, updateDoc, Unsubscribe } from 'firebase/firestore';
+import { initializeMockData } from '@/lib/mock-data';
 
 
 export default function TutorDashboardPage() {
   const { toast } = useToast();
-  const [user, loading] = useAuthState(auth);
+  const [tutorData, setTutorData] = useState({
+      name: 'Tutor',
+      isOnline: true,
+      isBusy: false,
+      todayEarnings: 0,
+      todaySessions: 0,
+  });
   const isClient = useIsClient();
   
-  const [isOnline, setIsOnline] = useState(true);
-  const [isBusy, setIsBusy] = useState(false);
-  const [tutorName, setTutorName] = useState('Tutor');
-  const [todaySessions, setTodaySessions] = useState(0);
-  const [todayEarnings, setTodayEarnings] = useState(0);
-
-  // Listen for real-time updates on the tutor's document
   useEffect(() => {
-    if (!user) return;
-    
-    const tutorDocRef = doc(db, "users", user.uid);
-    const unsubscribe = onSnapshot(tutorDocRef, (doc) => {
-        if (doc.exists()) {
-            const data = doc.data();
-            setTutorName(data.name || 'Tutor');
-            setIsOnline(data.isOnline !== false); // Default to online if not set
-            setIsBusy(data.isBusy === true);
-            setTodayEarnings(data.todayEarnings || 0); // Placeholder for now
-            setTodaySessions(data.todaySessions || 0); // Placeholder for now
+    if (isClient) {
+        initializeMockData();
+        const loggedInUserEmail = localStorage.getItem('loggedInUser');
+        if(loggedInUserEmail) {
+            const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
+            const currentTutor = users.find((u:any) => u.email === loggedInUserEmail);
+            if(currentTutor) {
+                setTutorData({
+                    name: currentTutor.name || 'Tutor',
+                    isOnline: currentTutor.isOnline !== false,
+                    isBusy: currentTutor.isBusy === true,
+                    todayEarnings: currentTutor.todayEarnings || 0,
+                    todaySessions: currentTutor.todaySessions || 0,
+                });
+            }
         }
-    });
+    }
+  }, [isClient]);
 
-    return () => unsubscribe();
-  }, [user]);
+  const handleStatusChange = (online: boolean) => {
+    const loggedInUserEmail = localStorage.getItem('loggedInUser');
+    if(!loggedInUserEmail) return;
 
-  const handleStatusChange = async (online: boolean) => {
-    if(!user) return;
-    
-    const tutorDocRef = doc(db, "users", user.uid);
-    try {
-        await updateDoc(tutorDocRef, { isOnline: online });
-        setIsOnline(online);
+    const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
+    const userIndex = users.findIndex((u:any) => u.email === loggedInUserEmail);
+
+    if(userIndex !== -1) {
+        users[userIndex].isOnline = online;
+        localStorage.setItem('userDatabase', JSON.stringify(users));
+        setTutorData(prev => ({...prev, isOnline: online}));
         toast({
           title: `You are now ${online ? 'Online' : 'Offline'}`,
           description: online ? 'You will now appear in student search results.' : 'You will be hidden from students.',
-        });
-    } catch (error) {
-        toast({
-            variant: 'destructive',
-            title: 'Error',
-            description: 'Could not update your status.'
         });
     }
   };
@@ -68,13 +65,13 @@ export default function TutorDashboardPage() {
     <div className="space-y-8 animate-fade-in">
       <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight font-headline">Welcome, {tutorName}!</h1>
+          <h1 className="text-3xl font-bold tracking-tight font-headline">Welcome, {tutorData.name}!</h1>
           <p className="text-muted-foreground">Here's your summary for today.</p>
         </div>
         <div className="flex items-center space-x-2 p-2 border rounded-lg bg-secondary/50">
-          <Switch id="online-status" checked={isOnline} onCheckedChange={handleStatusChange} disabled={isBusy} />
+          <Switch id="online-status" checked={tutorData.isOnline} onCheckedChange={handleStatusChange} disabled={tutorData.isBusy} />
           <Label htmlFor="online-status" className="font-semibold">
-            {isBusy ? 'Busy (In Session)' : isOnline ? 'Online' : 'Offline'}
+            {tutorData.isBusy ? 'Busy (In Session)' : tutorData.isOnline ? 'Online' : 'Offline'}
           </Label>
         </div>
       </header>
@@ -88,7 +85,7 @@ export default function TutorDashboardPage() {
               <CalendarCheck className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-4xl font-bold text-primary">{todaySessions}</div>
+              <div className="text-4xl font-bold text-primary">{tutorData.todaySessions}</div>
             </CardContent>
         </Card>
         <Card className="hover:shadow-md transition-shadow">
@@ -97,7 +94,7 @@ export default function TutorDashboardPage() {
               <DollarSign className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-4xl font-bold text-primary">₹{todayEarnings.toFixed(2)}</div>
+              <div className="text-4xl font-bold text-primary">₹{tutorData.todayEarnings.toFixed(2)}</div>
             </CardContent>
         </Card>
       </div>
@@ -105,5 +102,3 @@ export default function TutorDashboardPage() {
     </div>
   );
 }
-
-    

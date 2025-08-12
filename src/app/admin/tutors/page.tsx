@@ -29,12 +29,11 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useIsClient } from '@/hooks/use-is-client';
 import { Label } from '@/components/ui/label';
-import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, doc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
+import { initializeMockData } from '@/lib/mock-data';
 
 
 type Applicant = {
-    uid: string;
+    id: string;
     name: string;
     email: string;
     applicationStatus: 'Pending' | 'Approved' | 'Rejected';
@@ -51,7 +50,7 @@ type PayoutDetails = {
 };
 
 type Tutor = {
-  uid: string;
+  id: string;
   email: string;
   name: string;
   role: 'tutor' | 'banned';
@@ -73,28 +72,22 @@ export default function TutorManagementPage() {
   const [viewingTutor, setViewingTutor] = useState<Tutor | null>(null);
   const [tutorRate, setTutorRate] = useState<number | string>('');
 
-  const fetchAllData = async () => {
-        if (isClient) {
-            // Fetch Applicants
-            const qApplicants = query(collection(db, "users"), where("applicationStatus", "in", ["Pending", "Rejected"]));
-            const applicantSnapshot = await getDocs(qApplicants);
-            const applicantList = applicantSnapshot.docs.map(d => ({ uid: d.id, ...d.data() })) as Applicant[];
-            setApplicants(applicantList);
+  const fetchAllData = () => {
+    if (isClient) {
+        initializeMockData();
+        const storedApplicants = JSON.parse(localStorage.getItem('tutorApplicants') || '[]');
+        const storedUsers = JSON.parse(localStorage.getItem('userDatabase') || '[]');
 
-            // Fetch Tutors (approved and banned)
-            const qTutors = query(collection(db, "users"), where("role", "in", ["tutor", "banned"]));
-            const tutorSnapshot = await getDocs(qTutors);
-            const tutorList = tutorSnapshot.docs.map(d => ({ uid: d.id, ...d.data() })) as Tutor[];
-            setTutors(tutorList);
-        }
-    };
-
+        setApplicants(storedApplicants);
+        setTutors(storedUsers.filter((u: any) => u.role === 'tutor' || u.role === 'banned'));
+    }
+  };
 
   useEffect(() => {
     fetchAllData();
   }, [isClient]);
 
-  const handleApprove = async () => {
+  const handleApprove = () => {
     if (!approvingApplicant || !tutorRate || +tutorRate <= 0) {
       toast({
         variant: 'destructive',
@@ -104,60 +97,64 @@ export default function TutorManagementPage() {
       return;
     }
     
-    try {
-        const userDocRef = doc(db, "users", approvingApplicant.uid);
-        await updateDoc(userDocRef, {
-            role: 'tutor',
-            applicationStatus: 'Approved',
-            price: +tutorRate
-        });
-
-        toast({
-            title: `Applicant Approved`,
-            description: `${approvingApplicant.name} has been approved with a rate of ₹${tutorRate}/minute.`,
-        });
-
-        setApprovingApplicant(null);
-        setTutorRate('');
-        fetchAllData(); // Refresh all data
-
-    } catch(error) {
-        console.error("Error approving tutor: ", error);
-        toast({
-            variant: 'destructive',
-            title: 'Approval Failed',
-            description: 'There was an error while approving the tutor.',
-        });
+    // Update userDatabase
+    const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
+    const userIndex = users.findIndex((u: any) => u.id === approvingApplicant.id);
+    if(userIndex !== -1) {
+        users[userIndex].role = 'tutor';
+        users[userIndex].applicationStatus = 'Approved';
+        users[userIndex].price = +tutorRate;
+        localStorage.setItem('userDatabase', JSON.stringify(users));
     }
 
-  };
-
-  const handleReject = async (uid: string) => {
-    const applicantToUpdate = applicants.find(applicant => applicant.uid === uid);
-    if (!applicantToUpdate) return;
-    
-    const userDocRef = doc(db, "users", uid);
-    await updateDoc(userDocRef, { applicationStatus: 'Rejected' });
-
-    toast({
-      title: `Applicant Rejected`,
-      description: `${applicantToUpdate.name} has been rejected.`,
-    });
-    fetchAllData();
-  };
-
-  const handleReconsider = async (uid: string) => {
-    const applicantToUpdate = applicants.find(applicant => applicant.uid === uid);
-    if (!applicantToUpdate) return;
-    
-    const userDocRef = doc(db, "users", uid);
-    await updateDoc(userDocRef, { applicationStatus: 'Pending' });
+    // Update tutorApplicants
+    const allApplicants = JSON.parse(localStorage.getItem('tutorApplicants') || '[]');
+    const applicantIndex = allApplicants.findIndex((a: any) => a.id === approvingApplicant.id);
+    if (applicantIndex !== -1) {
+      allApplicants[applicantIndex].applicationStatus = 'Approved';
+      localStorage.setItem('tutorApplicants', JSON.stringify(allApplicants));
+    }
 
     toast({
-      title: `Applicant Status Reset`,
-      description: `${applicantToUpdate.name}'s application is now pending.`,
+      title: `Applicant Approved`,
+      description: `${approvingApplicant.name} has been approved with a rate of ₹${tutorRate}/minute.`,
     });
-    fetchAllData();
+
+    setApprovingApplicant(null);
+    setTutorRate('');
+    fetchAllData(); // Refresh all data
+  };
+
+  const handleReject = (id: string) => {
+    const allApplicants = JSON.parse(localStorage.getItem('tutorApplicants') || '[]');
+    const applicantIndex = allApplicants.findIndex((a: any) => a.id === id);
+    if (applicantIndex !== -1) {
+      allApplicants[applicantIndex].applicationStatus = 'Rejected';
+      localStorage.setItem('tutorApplicants', JSON.stringify(allApplicants));
+
+      toast({
+        title: `Applicant Rejected`,
+        description: `${allApplicants[applicantIndex].name} has been rejected.`,
+      });
+
+      fetchAllData();
+    }
+  };
+
+  const handleReconsider = (id: string) => {
+     const allApplicants = JSON.parse(localStorage.getItem('tutorApplicants') || '[]');
+    const applicantIndex = allApplicants.findIndex((a: any) => a.id === id);
+    if (applicantIndex !== -1) {
+      allApplicants[applicantIndex].applicationStatus = 'Pending';
+      localStorage.setItem('tutorApplicants', JSON.stringify(allApplicants));
+
+      toast({
+        title: `Applicant Status Reset`,
+        description: `${allApplicants[applicantIndex].name}'s application is now pending.`,
+      });
+
+      fetchAllData();
+    }
   };
 
   const handleViewApplication = (applicantName: string) => {
@@ -167,33 +164,46 @@ export default function TutorManagementPage() {
     });
   };
   
-   const handleBan = async (tutorUid: string, tutorName: string) => {
-    const userDocRef = doc(db, "users", tutorUid);
-    await updateDoc(userDocRef, { role: 'banned' });
-    toast({
-        variant: 'destructive',
-        title: 'Tutor Banned',
-        description: `${tutorName} has been banned from the platform.`
-    });
-    fetchAllData();
+  const handleBan = (tutorId: string, tutorName: string) => {
+    const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
+    const userIndex = users.findIndex((u: any) => u.id === tutorId);
+    if(userIndex !== -1) {
+        users[userIndex].role = 'banned';
+        localStorage.setItem('userDatabase', JSON.stringify(users));
+        toast({
+            variant: 'destructive',
+            title: 'Tutor Banned',
+            description: `${tutorName} has been banned from the platform.`
+        });
+        fetchAllData();
+    }
   };
 
-  const handleUnban = async (tutorUid: string, tutorName: string) => {
-    const userDocRef = doc(db, "users", tutorUid);
-    await updateDoc(userDocRef, { role: 'tutor' });
-    toast({
-        title: 'Tutor Unbanned',
-        description: `${tutorName} has been reinstated.`
-    });
-    fetchAllData();
+  const handleUnban = (tutorId: string, tutorName: string) => {
+    const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
+    const userIndex = users.findIndex((u: any) => u.id === tutorId);
+    if(userIndex !== -1) {
+        users[userIndex].role = 'tutor';
+        localStorage.setItem('userDatabase', JSON.stringify(users));
+        toast({
+            title: 'Tutor Unbanned',
+            description: `${tutorName} has been reinstated.`
+        });
+        fetchAllData();
+    }
   };
 
-  const handleDeleteTutor = async () => {
+  const handleDeleteTutor = () => {
     if (!deletingTutor) return;
     
-    const userDocRef = doc(db, "users", deletingTutor.uid);
-    await deleteDoc(userDocRef);
+    let users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
+    users = users.filter((u: any) => u.id !== deletingTutor.id);
+    localStorage.setItem('userDatabase', JSON.stringify(users));
 
+    let allApplicants = JSON.parse(localStorage.getItem('tutorApplicants') || '[]');
+    allApplicants = allApplicants.filter((a: any) => a.id !== deletingTutor.id);
+    localStorage.setItem('tutorApplicants', JSON.stringify(allApplicants));
+    
     toast({
         variant: 'destructive',
         title: 'Tutor Deleted',
@@ -242,7 +252,7 @@ export default function TutorManagementPage() {
             </TableHeader>
             <TableBody>
               {applicants.map((applicant) => (
-                <TableRow key={applicant.uid}>
+                <TableRow key={applicant.id}>
                   <TableCell className="font-medium">{applicant.name}</TableCell>
                   <TableCell>{applicant.email}</TableCell>
                   <TableCell>{applicant.applicationDetails?.expertise || 'N/A'}</TableCell>
@@ -275,13 +285,13 @@ export default function TutorManagementPage() {
                         {applicant.applicationStatus === 'Pending' ? (
                            <DropdownMenuItem
                               className="text-red-600 focus:text-red-600"
-                              onClick={() => handleReject(applicant.uid)}
+                              onClick={() => handleReject(applicant.id)}
                             >
                               Reject
                             </DropdownMenuItem>
                         ) : (
                            <DropdownMenuItem
-                              onClick={() => handleReconsider(applicant.uid)}
+                              onClick={() => handleReconsider(applicant.id)}
                             >
                               Reconsider
                             </DropdownMenuItem>
@@ -347,7 +357,7 @@ export default function TutorManagementPage() {
                                         <DropdownMenuSeparator/>
                                         {tutor.role === 'banned' ? (
                                             <>
-                                                <DropdownMenuItem onClick={() => handleUnban(tutor.uid, tutor.name)}>
+                                                <DropdownMenuItem onClick={() => handleUnban(tutor.id, tutor.name)}>
                                                     Unban Tutor
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
@@ -356,7 +366,7 @@ export default function TutorManagementPage() {
                                                 </DropdownMenuItem>
                                             </>
                                         ) : (
-                                            <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => handleBan(tutor.uid, tutor.name)}>
+                                            <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => handleBan(tutor.id, tutor.name)}>
                                                 Ban Tutor
                                             </DropdownMenuItem>
                                         )}
@@ -451,5 +461,3 @@ export default function TutorManagementPage() {
     </div>
   );
 }
-
-    

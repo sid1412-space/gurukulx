@@ -13,8 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useIsClient } from '@/hooks/use-is-client';
-import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { initializeMockData } from '@/lib/mock-data';
 
 const exams = {
   JEE: ['Physics', 'Chemistry', 'Mathematics'],
@@ -28,23 +27,13 @@ export default function TutorsPage() {
   const [allTutors, setAllTutors] = useState<any[]>([]);
   const isClient = useIsClient();
 
-   useEffect(() => {
-        if (isClient) {
-            const q = query(collection(db, "users"), where("role", "==", "tutor"));
-            const unsubscribe = onSnapshot(q, (querySnapshot) => {
-                const tutorsData = querySnapshot.docs.map(doc => ({
-                    ...doc.data(),
-                    id: doc.id,
-                    avatar: doc.data().avatar || 'https://placehold.co/100x100.png',
-                    bio: doc.data().applicationDetails?.qualification || 'A passionate and experienced tutor.',
-                    rating: 4.8 + Math.random() * 0.2, // Keep random rating for demo
-                    subjects: doc.data().applicationDetails?.expertise ? [doc.data().applicationDetails.expertise] : ['Subject'],
-                }));
-                setAllTutors(tutorsData);
-            });
-            return () => unsubscribe();
-        }
-    }, [isClient]);
+  useEffect(() => {
+    if (isClient) {
+      initializeMockData();
+      const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
+      setAllTutors(users.filter((u: any) => u.role === 'tutor'));
+    }
+  }, [isClient]);
 
   const handleExamChange = (value: string) => {
     setSelectedExam(value);
@@ -153,5 +142,3 @@ export default function TutorsPage() {
     </div>
   );
 }
-
-    

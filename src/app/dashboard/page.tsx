@@ -8,52 +8,30 @@ import Link from 'next/link';
 import { useIsClient } from '@/hooks/use-is-client';
 import { useEffect, useState, useMemo } from 'react';
 import TutorCard from '@/components/tutors/TutorCard';
-import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth, db } from '@/lib/firebase';
-import { collection, doc, getDoc, getDocs, onSnapshot, query, where } from 'firebase/firestore';
+import { initializeMockData } from '@/lib/mock-data';
 
 
 export default function DashboardPage() {
     const isClient = useIsClient();
-    const [user] = useAuthState(auth);
     const [allTutors, setAllTutors] = useState<any[]>([]);
     const [walletBalance, setWalletBalance] = useState(0);
     const [studentName, setStudentName] = useState('User');
 
-    // Fetch Tutors
     useEffect(() => {
         if (isClient) {
-            const q = query(collection(db, "users"), where("role", "==", "tutor"));
-            const unsubscribe = onSnapshot(q, (querySnapshot) => {
-                const tutorsData = querySnapshot.docs.map(doc => ({
-                    ...doc.data(),
-                    id: doc.id,
-                    avatar: doc.data().avatar || 'https://placehold.co/100x100.png',
-                    bio: doc.data().applicationDetails?.qualification || 'A passionate and experienced tutor.',
-                    rating: 4.8 + Math.random() * 0.2, // Keep random rating for demo
-                    subjects: doc.data().applicationDetails?.expertise ? [doc.data().applicationDetails.expertise] : ['Subject'],
-                }));
-                setAllTutors(tutorsData);
-            });
-            return () => unsubscribe();
+            initializeMockData();
+            const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
+            setAllTutors(users.filter((u: any) => u.role === 'tutor'));
+            
+            const loggedInUserEmail = localStorage.getItem('loggedInUser');
+            const currentUser = users.find((u: any) => u.email === loggedInUserEmail);
+            
+            if(currentUser) {
+                setStudentName(currentUser.name);
+                setWalletBalance(currentUser.walletBalance || 0);
+            }
         }
     }, [isClient]);
-
-    // Fetch Student data and listen for wallet changes
-    useEffect(() => {
-        if (user) {
-            const userDocRef = doc(db, "users", user.uid);
-            const unsubscribe = onSnapshot(userDocRef, (doc) => {
-                if (doc.exists()) {
-                    const userData = doc.data();
-                    setStudentName(userData.name || 'User');
-                    setWalletBalance(userData.walletBalance || 0);
-                }
-            });
-            return () => unsubscribe();
-        }
-    }, [user]);
-
 
     const recommendedTutors = useMemo(() => {
         if (!allTutors.length) return [];
