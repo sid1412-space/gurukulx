@@ -67,6 +67,7 @@ export default function TutorManagementPage() {
   const updateLocalStorage = (updatedApplicants: Applicant[]) => {
     if(isClient) {
         localStorage.setItem('tutorApplicants', JSON.stringify(updatedApplicants));
+        window.dispatchEvent(new Event('storage'));
     }
   };
 
