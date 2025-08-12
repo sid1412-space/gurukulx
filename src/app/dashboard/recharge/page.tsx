@@ -14,8 +14,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
 import { useIsClient } from '@/hooks/use-is-client';
+import { auth, db } from '@/lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 
 const amountSchema = z.object({
@@ -61,28 +62,27 @@ export default function RechargePage() {
   }
 
   const handleFormSubmitted = async () => {
-    const loggedInUserEmail = localStorage.getItem('loggedInUser');
-    if (!loggedInUserEmail) {
+    if (!auth.currentUser) {
         toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to make a request.' });
         return;
     }
 
-    const rechargeRequests = JSON.parse(localStorage.getItem('rechargeRequests') || '[]');
-    const newRequest = {
-        id: `recharge_${Math.random().toString(36).substring(2, 9)}`,
-        studentEmail: loggedInUserEmail,
-        amount: rechargeAmount,
-        status: 'pending',
-        createdAt: new Date().toISOString(),
-    };
-    rechargeRequests.push(newRequest);
-    localStorage.setItem('rechargeRequests', JSON.stringify(rechargeRequests));
-    
-    toast({
-        title: 'Request Submitted',
-        description: 'Your recharge request has been sent for admin approval.'
-    });
-    setStep('pending');
+    try {
+        await addDoc(collection(db, "rechargeRequests"), {
+            studentId: auth.currentUser.uid,
+            studentEmail: auth.currentUser.email,
+            amount: rechargeAmount,
+            status: 'pending',
+            createdAt: serverTimestamp(),
+        });
+        toast({
+            title: 'Request Submitted',
+            description: 'Your recharge request has been sent for admin approval.'
+        });
+        setStep('pending');
+    } catch(error) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not submit your request.' });
+    }
   }
 
   const renderStep = () => {

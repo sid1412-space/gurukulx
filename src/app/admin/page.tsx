@@ -7,7 +7,8 @@ import { Users, DollarSign, BookOpen, UserPlus, Hourglass, Banknote } from 'luci
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useIsClient } from '@/hooks/use-is-client';
-import { initializeMockData } from '@/lib/mock-data';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, collectionGroup,getCountFromServer } from 'firebase/firestore';
 
 
 export default function AdminOverviewPage() {
@@ -26,28 +27,38 @@ export default function AdminOverviewPage() {
   const isClient = useIsClient();
 
   useEffect(() => {
-    if (isClient) {
-      initializeMockData();
-      const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
-      const applicants = JSON.parse(localStorage.getItem('tutorApplicants') || '[]');
-      const rechargeRequests = JSON.parse(localStorage.getItem('rechargeRequests') || '[]');
-      const payoutRequests = JSON.parse(localStorage.getItem('payoutRequests') || '[]');
-
-
-      const tutors = users.filter((u:any) => u.role === 'tutor');
-      const students = users.filter((u:any) => u.role === 'student');
+    const fetchData = async () => {
+      // Fetch stats
+      const tutorsQuery = query(collection(db, "users"), where("role", "==", "tutor"));
+      const studentsQuery = query(collection(db, "users"), where("role", "==", "student"));
       
-      setStats(prev => ({ ...prev, totalTutors: tutors.length, activeStudents: students.length }));
+      const tutorsSnapshot = await getCountFromServer(tutorsQuery);
+      const studentsSnapshot = await getCountFromServer(studentsQuery);
 
-      const pendingApplicants = applicants.filter((a: any) => a.applicationStatus === 'Pending');
-      const pendingRecharges = rechargeRequests.filter((r: any) => r.status === 'pending');
-      const pendingPayouts = payoutRequests.filter((p: any) => p.status === 'pending');
+      setStats(prev => ({ 
+          ...prev, 
+          totalTutors: tutorsSnapshot.data().count, 
+          activeStudents: studentsSnapshot.data().count 
+      }));
 
+      // Fetch action items
+      const applicantsQuery = query(collection(db, "users"), where("applicationStatus", "==", "Pending"));
+      const rechargeQuery = query(collection(db, "rechargeRequests"), where("status", "==", "pending"));
+      const payoutQuery = query(collection(db, "payoutRequests"), where("status", "==", "pending"));
+
+      const applicantsSnapshot = await getCountFromServer(applicantsQuery);
+      const rechargeSnapshot = await getCountFromServer(rechargeQuery);
+      const payoutSnapshot = await getCountFromServer(payoutQuery);
+      
       setActionItemsData({
-          newApplicants: pendingApplicants.length,
-          pendingRecharges: pendingRecharges.length,
-          pendingPayouts: pendingPayouts.length,
-      })
+          newApplicants: applicantsSnapshot.data().count,
+          pendingRecharges: rechargeSnapshot.data().count,
+          pendingPayouts: payoutSnapshot.data().count,
+      });
+    };
+    
+    if (isClient) {
+      fetchData();
     }
   }, [isClient]);
 
@@ -59,7 +70,7 @@ export default function AdminOverviewPage() {
   ];
 
   const actionItems = [
-    { title: 'New Tutor Applicants', value: actionItemsData.newApplicants.toString(), icon: UserPlus, href: '/admin/tutors' },
+    { title: 'New Tutor Applicants', value: actionItemsData.newApplicants.toString(), icon: UserPlus, href: '/admin/tutors', isVisible: actionItemsData.newApplicants > 0 },
     { title: 'Pending Payout Requests', value: actionItemsData.pendingPayouts.toString(), icon: Banknote, href: '/admin/finances', isVisible: actionItemsData.pendingPayouts > 0 },
     { title: 'Pending Recharges', value: actionItemsData.pendingRecharges.toString(), icon: Hourglass, href: '/admin/finances', isVisible: actionItemsData.pendingRecharges > 0 },
   ];
@@ -86,7 +97,7 @@ export default function AdminOverviewPage() {
       
        <div className="grid gap-6 md:grid-cols-2">
          {actionItems.map((item, index) => (
-           item.isVisible !== false && (
+           item.isVisible && (
             <Card key={index} className="hover:shadow-md transition-shadow flex flex-row items-center">
                 <CardHeader className="flex-shrink-0">
                     <item.icon className="h-8 w-8 text-primary" />

@@ -17,34 +17,48 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState } from 'react';
 import { useIsClient } from '@/hooks/use-is-client';
+import { auth, db } from '@/lib/firebase';
+import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 
 
 type Payout = {
     id: string;
-    date: string;
+    date: any;
     amount: number;
     status: 'Pending' | 'Paid';
 };
 
-const MOCK_PAYOUTS: Payout[] = [
-    { id: 'pay_1', date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), amount: 8500, status: 'Paid'},
-    { id: 'pay_2', date: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(), amount: 7200, status: 'Paid'}
-];
 
 export default function PayoutsPage() {
     const { toast } = useToast();
     const isClient = useIsClient();
-    const [tutorData, setTutorData] = useState({ totalEarnings: 15700, pendingEarnings: 1250 });
+    const [tutorData, setTutorData] = useState({ totalEarnings: 0, pendingEarnings: 0 });
     const [payoutHistory, setPayoutHistory] = useState<Payout[]>([]);
 
     useEffect(() => {
-        if (isClient) {
-            setPayoutHistory(MOCK_PAYOUTS);
+        const fetchData = async () => {
+            if (isClient && auth.currentUser) {
+                const tutorRef = doc(db, 'users', auth.currentUser.uid);
+                const tutorSnap = await getDoc(tutorRef);
+                if (tutorSnap.exists()) {
+                    const data = tutorSnap.data();
+                    setTutorData({
+                        totalEarnings: data.totalEarnings || 0,
+                        pendingEarnings: data.pendingEarnings || 0,
+                    });
+                }
+                
+                const payoutsQuery = query(collection(db, "payouts"), where("tutorId", "==", auth.currentUser.uid));
+                const payoutsSnapshot = await getDocs(payoutsQuery);
+                const history = payoutsSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as Payout));
+                setPayoutHistory(history);
+            }
         }
+        fetchData();
     }, [isClient]);
 
-    const handleRequestPayout = () => {
-        if (tutorData.pendingEarnings <= 0) {
+    const handleRequestPayout = async () => {
+        if (tutorData.pendingEarnings <= 0 || !auth.currentUser) {
             toast({
                 variant: 'destructive',
                 title: 'No Pending Earnings',
@@ -53,21 +67,25 @@ export default function PayoutsPage() {
             return;
         }
 
-        const payoutRequests = JSON.parse(localStorage.getItem('payoutRequests') || '[]');
-        const newRequest = {
-            id: `payoutreq_${Math.random().toString(36).substring(2, 9)}`,
-            tutorEmail: localStorage.getItem('loggedInUser'),
-            amount: tutorData.pendingEarnings,
-            status: 'pending',
-            date: new Date().toISOString()
-        };
-        payoutRequests.push(newRequest);
-        localStorage.setItem('payoutRequests', JSON.stringify(payoutRequests));
-
-        toast({
-            title: 'Payout Requested',
-            description: 'Your request has been submitted and the admin has been notified.'
-        });
+        try {
+            await addDoc(collection(db, 'payoutRequests'), {
+                tutorId: auth.currentUser.uid,
+                tutorEmail: auth.currentUser.email,
+                amount: tutorData.pendingEarnings,
+                status: 'pending',
+                requestedAt: serverTimestamp(),
+            });
+             toast({
+                title: 'Payout Requested',
+                description: 'Your request has been submitted and the admin has been notified.'
+            });
+        } catch (error) {
+             toast({
+                variant: 'destructive',
+                title: 'Request Failed',
+                description: 'Could not submit your payout request.'
+            });
+        }
     }
 
   return (
@@ -137,7 +155,7 @@ export default function PayoutsPage() {
                         payoutHistory.map((payout) => (
                         <TableRow key={payout.id}>
                             <TableCell className="font-mono text-xs">{payout.id}</TableCell>
-                            <TableCell>{format(new Date(payout.date), 'PPP')}</TableCell>
+                            <TableCell>{payout.date ? format(payout.date.toDate(), 'PPP') : 'N/A'}</TableCell>
                             <TableCell className="font-medium">₹{payout.amount.toFixed(2)}</TableCell>
                             <TableCell>
                                 <Badge variant={payout.status === 'Paid' ? 'default' : 'outline'}>

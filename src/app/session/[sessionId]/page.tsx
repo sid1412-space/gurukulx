@@ -17,6 +17,8 @@ import { Input } from '@/components/ui/input';
 import { getExerciseSuggestions } from '@/lib/actions';
 import { Separator } from '@/components/ui/separator';
 import Lobby from '@/components/session/Lobby';
+import { auth, db } from '@/lib/firebase';
+import { doc, updateDoc, getDoc, onSnapshot } from 'firebase/firestore';
 
 
 const Whiteboard = dynamic(() => import('@/components/session/Whiteboard'), { ssr: false });
@@ -27,6 +29,7 @@ export default function SessionPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const userRole = searchParams.get('role'); // 'student' or 'tutor'
+  const tutorId = searchParams.get('tutorId');
   const { toast } = useToast();
 
   const [jitsiApi, setJitsiApi] = useState<JitsiAPI | null>(null);
@@ -39,40 +42,36 @@ export default function SessionPage() {
 
   // Session timer and wallet states
   const [sessionDuration, setSessionDuration] = useState(0); // in seconds
-  const [walletBalance, setWalletBalance] = useState(1000); // Mock starting balance
+  const [walletBalance, setWalletBalance] = useState(0); 
   const [pricePerMinute, setPricePerMinute] = useState(1);
 
   const isClient = useIsClient();
 
    // Set tutor as busy when session starts and fetch tutor data
   useEffect(() => {
-    if (isClient && hasAgreedToTerms) {
-      const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
-      const tutorId = searchParams.get('tutorId');
-      const tutorIndex = users.findIndex((u:any) => u.id === tutorId);
-
-      if (tutorIndex !== -1) {
-        users[tutorIndex].isBusy = true;
-        setPricePerMinute(users[tutorIndex].price || 1);
-        localStorage.setItem('userDatabase', JSON.stringify(users));
-      }
-    }
-  }, [hasAgreedToTerms, isClient, searchParams]);
+    const startSession = async () => {
+        if (isClient && hasAgreedToTerms && tutorId) {
+            const tutorRef = doc(db, 'users', tutorId);
+            const tutorSnap = await getDoc(tutorRef);
+            if (tutorSnap.exists()) {
+                await updateDoc(tutorRef, { isBusy: true });
+                setPricePerMinute(tutorSnap.data().price || 1);
+            }
+        }
+    };
+    startSession();
+  }, [hasAgreedToTerms, isClient, tutorId]);
 
   // Wallet and student data listener
    useEffect(() => {
-        if (isClient && userRole === 'student') {
-            const loggedInUserEmail = localStorage.getItem('loggedInUser');
-            if(loggedInUserEmail) {
-                const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
-                const currentUser = users.find((u:any) => u.email === loggedInUserEmail);
-                if (currentUser) {
-                    setWalletBalance(currentUser.walletBalance || 0);
+        if (isClient && userRole === 'student' && auth.currentUser) {
+            const studentRef = doc(db, 'users', auth.currentUser.uid);
+            const unsubscribe = onSnapshot(studentRef, (doc) => {
+                if(doc.exists()){
+                    setWalletBalance(doc.data().walletBalance || 0);
                 }
-            }
-        } else {
-            // Tutors don't need to see student balance
-            setWalletBalance(Infinity);
+            });
+            return () => unsubscribe();
         }
     }, [isClient, userRole]);
 
@@ -88,36 +87,32 @@ export default function SessionPage() {
   }, [hasAgreedToTerms]);
 
   useEffect(() => {
-    if (!hasAgreedToTerms || !pricePerMinute || userRole !== 'student' || sessionDuration === 0) return;
+    const deductFunds = async () => {
+        if (!hasAgreedToTerms || !pricePerMinute || userRole !== 'student' || sessionDuration === 0 || !auth.currentUser) return;
 
-    // Deduct funds every 60 seconds (1 minute)
-    if (sessionDuration > 0 && sessionDuration % 60 === 0) {
-        const newBalance = walletBalance - pricePerMinute;
-        
-        if (newBalance < 0) {
-            toast({
-              variant: 'destructive',
-              title: 'Insufficient Funds',
-              description: 'Your wallet balance is empty. The session will now end.',
-            });
-            hangUp();
-        } else {
-          setWalletBalance(newBalance);
-          const loggedInUserEmail = localStorage.getItem('loggedInUser');
-          if (loggedInUserEmail) {
-              let users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
-              const userIndex = users.findIndex((u:any) => u.email === loggedInUserEmail);
-              if (userIndex !== -1) {
-                  users[userIndex].walletBalance = newBalance;
-                  localStorage.setItem('userDatabase', JSON.stringify(users));
-              }
-          }
-          toast({
-              title: 'Charge Applied',
-              description: `₹${pricePerMinute.toFixed(2)} deducted. New balance: ₹${newBalance.toFixed(2)}`,
-          });
+        // Deduct funds every 60 seconds (1 minute)
+        if (sessionDuration > 0 && sessionDuration % 60 === 0) {
+            const newBalance = walletBalance - pricePerMinute;
+            
+            if (newBalance < 0) {
+                toast({
+                  variant: 'destructive',
+                  title: 'Insufficient Funds',
+                  description: 'Your wallet balance is empty. The session will now end.',
+                });
+                hangUp();
+            } else {
+              const studentRef = doc(db, 'users', auth.currentUser.uid);
+              await updateDoc(studentRef, { walletBalance: newBalance });
+              // Tutor earnings can be updated here or via a server function for more robustness
+              toast({
+                  title: 'Charge Applied',
+                  description: `₹${pricePerMinute.toFixed(2)} deducted. New balance: ₹${newBalance.toFixed(2)}`,
+              });
+            }
         }
-    }
+    };
+    deductFunds();
   }, [sessionDuration, hasAgreedToTerms, pricePerMinute, userRole, toast, walletBalance]);
 
 
@@ -149,16 +144,10 @@ export default function SessionPage() {
     jitsiApi?.executeCommand('toggleAudio');
   };
 
-  const hangUp = () => {
-     if (isClient) {
-      const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
-      const tutorId = searchParams.get('tutorId');
-      const tutorIndex = users.findIndex((u:any) => u.id === tutorId);
-
-      if (tutorIndex !== -1) {
-        users[tutorIndex].isBusy = false;
-        localStorage.setItem('userDatabase', JSON.stringify(users));
-      }
+  const hangUp = async () => {
+     if (isClient && tutorId) {
+        const tutorRef = doc(db, 'users', tutorId);
+        await updateDoc(tutorRef, { isBusy: false });
     }
     jitsiApi?.executeCommand('hangup');
     const destination = userRole === 'tutor' ? '/tutor/sessions' : '/dashboard/sessions';

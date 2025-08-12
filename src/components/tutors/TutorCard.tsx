@@ -23,13 +23,17 @@ import { useEffect, useState, useRef } from 'react';
 import { useIsClient } from '@/hooks/use-is-client';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { auth, db } from '@/lib/firebase';
+import { doc, getDoc, onSnapshot, addDoc, collection, serverTimestamp, deleteDoc } from 'firebase/firestore';
 
 
 type Tutor = {
   id: string;
   name: string;
   avatar: string;
-  subjects: string[];
+  applicationDetails?: {
+    expertise: string[];
+  };
   bio: string;
   rating: number;
   price: number;
@@ -52,86 +56,77 @@ export default function TutorCard({ tutor }: TutorCardProps) {
   const [walletBalance, setWalletBalance] = useState(0);
 
   useEffect(() => {
-    if (isClient) {
-        const loggedInUserEmail = localStorage.getItem('loggedInUser');
-        const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
-        const currentUser = users.find((u:any) => u.email === loggedInUserEmail);
-        if (currentUser) {
-            setWalletBalance(currentUser.walletBalance || 0);
-        }
+    if (isClient && auth.currentUser) {
+        const unsub = onSnapshot(doc(db, "users", auth.currentUser.uid), (doc) => {
+            if (doc.exists()) {
+                setWalletBalance(doc.data().walletBalance || 0);
+            }
+        });
+        return () => unsub();
     }
   }, [isClient]);
 
+  // Listener for session request updates
   useEffect(() => {
-    if (!isWaiting || !sessionRequestId) {
-        if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
-            timeoutRef.current = null;
-        }
-        return;
-    };
+    if (!sessionRequestId) return;
 
+    const requestRef = doc(db, 'sessionRequests', sessionRequestId);
+    const unsubscribe = onSnapshot(requestRef, (docSnap) => {
+        if (docSnap.exists()) {
+            const requestData = docSnap.data();
+            if(requestData.status === 'accepted') {
+                if (timeoutRef.current) clearTimeout(timeoutRef.current);
+                setIsWaiting(false);
+                router.push(`/session/${requestData.sessionId}?tutorId=${tutor.id}&role=student`);
+            } else if (requestData.status === 'rejected') {
+                if (timeoutRef.current) clearTimeout(timeoutRef.current);
+                setIsWaiting(false);
+                setSessionRequestId(null);
+                toast({
+                    variant: 'destructive',
+                    title: 'Session Rejected',
+                    description: `${tutor.name} is unable to take your session right now.`,
+                });
+            }
+        }
+    });
+
+    // Set a timeout for the request
     timeoutRef.current = setTimeout(() => {
         handleCancelRequest(true);
-    }, 120000);
-    
-    const intervalId = setInterval(() => {
-        const requests = JSON.parse(localStorage.getItem('sessionRequests') || '[]');
-        const currentRequest = requests.find((r: any) => r.id === sessionRequestId);
-
-        if (currentRequest && currentRequest.status === 'accepted') {
-            if (timeoutRef.current) clearTimeout(timeoutRef.current);
-            setIsWaiting(false);
-            router.push(`/session/${currentRequest.sessionId}?tutorId=${tutor.id}&role=student`);
-            clearInterval(intervalId);
-        } else if (currentRequest && currentRequest.status === 'rejected') {
-            if (timeoutRef.current) clearTimeout(timeoutRef.current);
-            setIsWaiting(false);
-            setSessionRequestId(null);
-            toast({
-                variant: 'destructive',
-                title: 'Session Rejected',
-                description: `${tutor.name} is unable to take your session right now.`,
-            });
-            clearInterval(intervalId);
-        }
-    }, 2000);
+    }, 120000); // 2 minutes
 
     return () => {
-        clearInterval(intervalId);
+        unsubscribe();
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, [isWaiting, sessionRequestId, router, tutor.id, tutor.name, toast]);
 
   const handleRequestSession = async () => {
-    const loggedInUserEmail = localStorage.getItem('loggedInUser');
-    if(!loggedInUserEmail) {
+    if (!auth.currentUser) {
         toast({ variant: 'destructive', title: 'Not Logged In', description: 'You must be logged in to request a session.' });
         return;
     }
     
-    const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
-    const student = users.find((u:any) => u.email === loggedInUserEmail);
+    const studentRef = doc(db, 'users', auth.currentUser.uid);
+    const studentSnap = await getDoc(studentRef);
+    const studentName = studentSnap.exists() ? studentSnap.data().name : 'A Student';
 
-    const requestId = `req_${Math.random().toString(36).substring(2, 11)}`;
-    const requests = JSON.parse(localStorage.getItem('sessionRequests') || '[]');
-    const newRequest = {
-        id: requestId,
+    const requestDoc = await addDoc(collection(db, 'sessionRequests'), {
         tutorId: tutor.id,
-        studentName: student?.name || 'A Student', 
+        studentId: auth.currentUser.uid,
+        studentName: studentName,
         status: 'pending',
-    };
-    requests.push(newRequest);
-    localStorage.setItem('sessionRequests', JSON.stringify(requests));
-    setSessionRequestId(requestId);
+        createdAt: serverTimestamp()
+    });
+    
+    setSessionRequestId(requestDoc.id);
     setIsWaiting(true);
   };
   
   const handleCancelRequest = async (isTimeout = false) => {
     if(sessionRequestId) {
-        let requests = JSON.parse(localStorage.getItem('sessionRequests') || '[]');
-        requests = requests.filter((r:any) => r.id !== sessionRequestId);
-        localStorage.setItem('sessionRequests', JSON.stringify(requests));
+        await deleteDoc(doc(db, 'sessionRequests', sessionRequestId));
     }
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setIsWaiting(false);
@@ -179,7 +174,7 @@ export default function TutorCard({ tutor }: TutorCardProps) {
       </CardHeader>
       <CardContent className="flex-grow">
         <div className="flex flex-wrap gap-2 mb-4">
-          {tutor.subjects.map((subject) => (
+          {(tutor.applicationDetails?.expertise || []).map((subject) => (
             <Badge key={subject} variant="secondary">{subject}</Badge>
           ))}
         </div>

@@ -27,7 +27,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useIsClient } from '@/hooks/use-is-client';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { initializeMockData } from '@/lib/mock-data';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
 
 
 type Student = {
@@ -44,11 +45,12 @@ export default function StudentManagementPage() {
   const [managingStudent, setManagingStudent] = useState<Student | null>(null);
   const [walletAmount, setWalletAmount] = useState<number | string>('');
 
-  const fetchAllData = () => {
+  const fetchAllData = async () => {
     if (isClient) {
-      initializeMockData();
-      const allUsers = JSON.parse(localStorage.getItem('userDatabase') || '[]');
-      setStudents(allUsers.filter((u: any) => u.role === 'student'));
+      const q = query(collection(db, "users"), where("role", "==", "student"));
+      const querySnapshot = await getDocs(q);
+      const studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
+      setStudents(studentsData);
     }
   };
 
@@ -56,7 +58,7 @@ export default function StudentManagementPage() {
     fetchAllData();
   }, [isClient]);
 
-  const handleUpdateBalance = () => {
+  const handleUpdateBalance = async () => {
     if (!managingStudent || walletAmount === '') {
       toast({
         variant: 'destructive',
@@ -67,22 +69,18 @@ export default function StudentManagementPage() {
     }
 
     const newBalance = parseFloat(walletAmount as string);
-    const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
-    const studentIndex = users.findIndex((u: any) => u.id === managingStudent.id);
+    const studentRef = doc(db, 'users', managingStudent.id);
 
-    if (studentIndex !== -1) {
-      users[studentIndex].walletBalance = newBalance;
-      localStorage.setItem('userDatabase', JSON.stringify(users));
-      
-      toast({
-        title: 'Wallet Updated',
-        description: `${managingStudent.name}'s wallet balance has been updated to ₹${newBalance.toFixed(2)}.`,
-      });
-
-      setManagingStudent(null);
-      setWalletAmount('');
-      fetchAllData();
-    } else {
+    try {
+        await updateDoc(studentRef, { walletBalance: newBalance });
+        toast({
+            title: 'Wallet Updated',
+            description: `${managingStudent.name}'s wallet balance has been updated to ₹${newBalance.toFixed(2)}.`,
+        });
+        setManagingStudent(null);
+        setWalletAmount('');
+        fetchAllData();
+    } catch (error) {
         toast({
             variant: 'destructive',
             title: 'Update Failed',

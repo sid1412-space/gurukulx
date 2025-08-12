@@ -63,6 +63,7 @@ export default function TutorSessionHistoryPage() {
 
   useEffect(() => {
     if(isClient) {
+        // This would be a firestore query in a real app
         setSessions(MOCK_SESSIONS);
     }
   }, [isClient]);

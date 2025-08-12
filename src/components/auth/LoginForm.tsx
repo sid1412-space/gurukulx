@@ -12,9 +12,10 @@ import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Separator } from '../ui/separator';
-import { auth } from '@/lib/firebase';
-import { signInWithEmailAndPassword, sendPasswordResetEmail, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { mockUsers, initializeMockData } from '@/lib/mock-data';
+import { auth, db } from '@/lib/firebase';
+import { signInWithEmailAndPassword, sendPasswordResetEmail, signInWithPopup, GoogleAuthProvider, User } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -44,35 +45,35 @@ export default function LoginForm() {
     },
   });
 
-  const handleRedirect = (user: any) => {
-    initializeMockData();
-    const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
-    const loggedInUser = users.find((u: any) => u.email === user.email);
+  const handleRedirect = async (user: User) => {
+    const userRef = doc(db, "users", user.uid);
+    const docSnap = await getDoc(userRef);
 
     let destination = '/dashboard'; // Default for students
     
-    if (loggedInUser) {
+    if (docSnap.exists()) {
+        const userData = docSnap.data();
         localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('loggedInUser', loggedInUser.email);
-        localStorage.setItem('isTutor', (loggedInUser.role === 'tutor').toString());
-        localStorage.setItem('isAdmin', (loggedInUser.role === 'admin').toString());
+        localStorage.setItem('loggedInUser', userData.email); // Store email for client-side use
+        localStorage.setItem('isTutor', (userData.role === 'tutor').toString());
+        localStorage.setItem('isAdmin', (userData.role === 'admin').toString());
 
-        if(loggedInUser.role === 'admin') destination = '/admin';
-        if(loggedInUser.role === 'tutor') destination = '/tutor/dashboard';
+        if(userData.role === 'admin') destination = '/admin';
+        if(userData.role === 'tutor') destination = '/tutor/dashboard';
     } else {
-         // This case handles new Google sign-ins that aren't in our mock DB
-        const newUser = {
-            id: `user_${Math.random().toString(36).substring(2, 9)}`,
-            email: user.email,
+        // This case handles new Google sign-ins that aren't in our DB
+        const newUserDoc = {
+             uid: user.uid,
             name: user.displayName || "New User",
-            password: "social_login",
-            role: "student",
-            walletBalance: 1000
+            email: user.email,
+            role: 'student',
+            walletBalance: 1000,
+            createdAt: new Date().toISOString(),
         };
-        users.push(newUser);
-        localStorage.setItem('userDatabase', JSON.stringify(users));
+        await setDoc(userRef, newUserDoc);
+        
         localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('loggedInUser', newUser.email);
+        localStorage.setItem('loggedInUser', newUserDoc.email);
         localStorage.setItem('isTutor', 'false');
         localStorage.setItem('isAdmin', 'false');
     }
@@ -87,7 +88,7 @@ export default function LoginForm() {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
       toast({ title: 'Logged In!', description: 'Redirecting to your dashboard...' });
-      handleRedirect(userCredential.user);
+      await handleRedirect(userCredential.user);
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -125,17 +126,20 @@ export default function LoginForm() {
   };
 
   const handleGoogleSignIn = async () => {
+    setIsLoading(true);
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
       toast({ title: 'Logged In with Google!', description: 'Redirecting...' });
-      handleRedirect(result.user);
+      await handleRedirect(result.user);
     } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Google Sign-In Failed',
         description: error.message,
       });
+    } finally {
+        setIsLoading(false);
     }
   };
 
@@ -192,7 +196,8 @@ export default function LoginForm() {
       </div>
 
       <div className="grid grid-cols-1 gap-2">
-          <Button variant="outline" onClick={handleGoogleSignIn}>
+          <Button variant="outline" onClick={handleGoogleSignIn} disabled={isLoading}>
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               <GoogleIcon />
               Google
           </Button>

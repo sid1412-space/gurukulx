@@ -8,7 +8,8 @@ import Link from 'next/link';
 import { useIsClient } from '@/hooks/use-is-client';
 import { useEffect, useState, useMemo } from 'react';
 import TutorCard from '@/components/tutors/TutorCard';
-import { initializeMockData } from '@/lib/mock-data';
+import { auth, db } from '@/lib/firebase';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 
 
 export default function DashboardPage() {
@@ -18,19 +19,27 @@ export default function DashboardPage() {
     const [studentName, setStudentName] = useState('User');
 
     useEffect(() => {
-        if (isClient) {
-            initializeMockData();
-            const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
-            setAllTutors(users.filter((u: any) => u.role === 'tutor'));
-            
-            const loggedInUserEmail = localStorage.getItem('loggedInUser');
-            const currentUser = users.find((u: any) => u.email === loggedInUserEmail);
-            
-            if(currentUser) {
-                setStudentName(currentUser.name);
-                setWalletBalance(currentUser.walletBalance || 0);
+        const fetchData = async () => {
+            if (isClient) {
+                // Fetch tutors
+                const tutorsQuery = query(collection(db, "users"), where("role", "==", "tutor"));
+                const tutorsSnapshot = await getDocs(tutorsQuery);
+                const tutorsData = tutorsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setAllTutors(tutorsData);
+
+                // Fetch current student's data
+                if (auth.currentUser) {
+                    const studentRef = doc(db, 'users', auth.currentUser.uid);
+                    const studentSnap = await getDoc(studentRef);
+                    if (studentSnap.exists()) {
+                        const studentData = studentSnap.data();
+                        setStudentName(studentData.name || 'User');
+                        setWalletBalance(studentData.walletBalance || 0);
+                    }
+                }
             }
-        }
+        };
+        fetchData();
     }, [isClient]);
 
     const recommendedTutors = useMemo(() => {
@@ -101,7 +110,7 @@ export default function DashboardPage() {
        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Activity className="h-5 w-5"/> Recent Activity</CardTitle>
-          </CardHeader>
+          </Header>
           <CardContent>
             <div className="text-center text-muted-foreground py-8">
                 <p>You have no recent activity.</p>

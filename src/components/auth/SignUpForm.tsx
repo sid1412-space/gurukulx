@@ -13,9 +13,9 @@ import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Separator } from '../ui/separator';
-import { auth } from '@/lib/firebase';
-import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { initializeMockData } from '@/lib/mock-data';
+import { auth, db } from '@/lib/firebase';
+import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, User } from 'firebase/auth';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 
 // Base schema for common fields
@@ -110,7 +110,7 @@ export default function SignUpForm() {
 
 
   const accountType = form.watch('accountType');
-  const selectedExam = form.watch('exam' as 'exam'); // Watch the exam field for tutors
+  const selectedExam = form.watch('exam' as 'exam'); 
 
   const handleSuccessfulSignup = (message: string) => {
     toast({ title: 'Account Created!', description: message });
@@ -119,60 +119,56 @@ export default function SignUpForm() {
       router.push('/login');
     }, 1500);
   };
+  
+  async function createFirestoreUserDocument(user: User, values: z.infer<typeof formSchema>) {
+    const userRef = doc(db, "users", user.uid);
+    if (values.accountType === 'student') {
+        await setDoc(userRef, {
+            uid: user.uid,
+            name: values.name,
+            email: values.email,
+            role: 'student',
+            walletBalance: 1000, // Starting balance
+            createdAt: new Date().toISOString(),
+        });
+        handleSuccessfulSignup('Welcome to GurukulX. Please log in.');
+    } else if (values.accountType === 'tutor') {
+         await setDoc(userRef, {
+            uid: user.uid,
+            name: values.name,
+            email: values.email,
+            role: 'student', // Start as student, admin will approve
+            walletBalance: 0,
+            applicationStatus: 'Pending',
+            applicationDetails: {
+                qualification: values.qualification,
+                phoneNumber: values.phoneNumber,
+                experience: values.experience,
+                exam: values.exam,
+                expertise: values.expertise,
+                college: values.college || '',
+                location: values.location || '',
+            },
+            createdAt: new Date().toISOString(),
+        });
+        handleSuccessfulSignup('Your application is submitted! Please log in to continue.');
+    }
+  }
+
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    initializeMockData(); // Ensure mock data is in localStorage
     
     try {
-        await createUserWithEmailAndPassword(auth, values.email, values.password);
-        
-        const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
-        const applicants = JSON.parse(localStorage.getItem('tutorApplicants') || '[]');
-        const userId = `user_${Math.random().toString(36).substring(2, 9)}`;
-
-        if (values.accountType === 'student') {
-            const newStudent = {
-                id: userId,
-                name: values.name,
-                email: values.email,
-                password: values.password,
-                role: 'student',
-                walletBalance: 1000,
-            };
-            users.push(newStudent);
-            localStorage.setItem('userDatabase', JSON.stringify(users));
-            handleSuccessfulSignup('Welcome to GurukulX. Please log in.');
-        } else if (values.accountType === 'tutor') {
-            const newApplicant = {
-                id: userId,
-                name: values.name,
-                email: values.email,
-                password: values.password, // Storing this temporarily
-                role: 'student', // All signups start as students
-                applicationStatus: 'Pending',
-                applicationDetails: {
-                  qualification: values.qualification,
-                  phoneNumber: values.phoneNumber,
-                  experience: values.experience,
-                  exam: values.exam,
-                  expertise: values.expertise,
-                  college: values.college,
-                  location: values.location,
-                }
-            };
-            applicants.push(newApplicant);
-            localStorage.setItem('tutorApplicants', JSON.stringify(applicants));
-            // Also add them to the main user database so they can log in
-            users.push(newApplicant);
-            localStorage.setItem('userDatabase', JSON.stringify(users));
-            handleSuccessfulSignup('Your application is submitted! Please log in to continue.');
-        }
+        const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+        await createFirestoreUserDocument(userCredential.user, values);
     } catch (error: any) {
          toast({
             variant: 'destructive',
             title: 'Sign Up Error',
-            description: error.message,
+            description: error.code === 'auth/email-already-in-use' 
+              ? 'This email is already in use. Please log in or use a different email.'
+              : error.message,
         });
         setIsLoading(false);
     }
@@ -181,25 +177,28 @@ export default function SignUpForm() {
   const handleGoogleSignUp = async () => {
     setIsLoading(true);
     const provider = new GoogleAuthProvider();
-    initializeMockData();
     try {
         const result = await signInWithPopup(auth, provider);
         const user = result.user;
-        const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
-        const existingUser = users.find((u: any) => u.email === user.email);
+        
+        // Check if user already exists in Firestore
+        const userRef = doc(db, "users", user.uid);
+        const docSnap = await getDoc(userRef);
 
-        if (!existingUser) {
-            const newUser = {
-                id: `user_${Math.random().toString(36).substring(2, 9)}`,
-                email: user.email,
+        if (!docSnap.exists()) {
+            // New user, create document
+             await setDoc(userRef, {
+                uid: user.uid,
                 name: user.displayName,
+                email: user.email,
                 role: 'student',
                 walletBalance: 1000,
-            };
-            users.push(newUser);
-            localStorage.setItem('userDatabase', JSON.stringify(users));
+                createdAt: new Date().toISOString(),
+            });
         }
+        
         handleSuccessfulSignup('Welcome to GurukulX. Please log in.');
+
     } catch (error: any) {
          toast({
             variant: 'destructive',
@@ -447,7 +446,8 @@ export default function SignUpForm() {
         </div>
 
         <div className="grid grid-cols-1 gap-2">
-            <Button variant="outline" onClick={handleGoogleSignUp}>
+            <Button variant="outline" onClick={handleGoogleSignUp} disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 <GoogleIcon />
                 Google
             </Button>

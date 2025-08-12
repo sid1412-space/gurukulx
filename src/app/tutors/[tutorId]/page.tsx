@@ -25,7 +25,8 @@ import { useEffect, useState, useRef } from 'react';
 import { useIsClient } from '@/hooks/use-is-client';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { initializeMockData } from '@/lib/mock-data';
+import { auth, db } from '@/lib/firebase';
+import { doc, getDoc, onSnapshot, addDoc, collection, serverTimestamp, updateDoc, deleteDoc } from 'firebase/firestore';
 
 
 export default function TutorProfilePage() {
@@ -36,58 +37,51 @@ export default function TutorProfilePage() {
   const isClient = useIsClient();
   
   const [tutor, setTutor] = useState<any>(null);
+  const [walletBalance, setWalletBalance] = useState(0);
 
-  const [isOnline, setIsOnline] = useState(false);
-  const [isBusy, setIsBusy] = useState(false);
   const [isWaiting, setIsWaiting] = useState(false);
   const [sessionRequestId, setSessionRequestId] = useState<string | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const [walletBalance, setWalletBalance] = useState(0);
 
    useEffect(() => {
      if (isClient) {
-        initializeMockData();
-        const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
-        const currentTutor = users.find((u:any) => u.id === tutorId);
-        if (currentTutor) {
-          setTutor(currentTutor);
-          setIsOnline(currentTutor.isOnline !== false);
-          setIsBusy(currentTutor.isBusy === true);
-        }
+        // Fetch tutor data
+        const tutorRef = doc(db, "users", tutorId as string);
+        const unsubscribeTutor = onSnapshot(tutorRef, (doc) => {
+             if (doc.exists()) {
+                setTutor({ id: doc.id, ...doc.data() });
+            }
+        });
 
-        const loggedInUserEmail = localStorage.getItem('loggedInUser');
-        const currentUser = users.find((u:any) => u.email === loggedInUserEmail);
-        if (currentUser) {
-          setWalletBalance(currentUser.walletBalance || 0);
+        // Fetch student wallet balance
+        if (auth.currentUser) {
+            const studentRef = doc(db, "users", auth.currentUser.uid);
+            const unsubscribeStudent = onSnapshot(studentRef, (doc) => {
+                 if (doc.exists()) {
+                    setWalletBalance(doc.data().walletBalance || 0);
+                }
+            });
+            return () => unsubscribeStudent();
         }
+        
+        return () => unsubscribeTutor();
      }
   }, [isClient, tutorId])
 
   
+  // Listener for session request updates
   useEffect(() => {
-    if (!isWaiting || !sessionRequestId) {
-        if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
-            timeoutRef.current = null;
-        }
-        return;
-    };
+    if (!sessionRequestId) return;
 
-    timeoutRef.current = setTimeout(() => {
-        handleCancelRequest(true);
-    }, 120000);
-
-    const intervalId = setInterval(() => {
-        const requests = JSON.parse(localStorage.getItem('sessionRequests') || '[]');
-        const currentRequest = requests.find((r: any) => r.id === sessionRequestId);
-
-        if (currentRequest) {
-            if(currentRequest.status === 'accepted') {
+    const requestRef = doc(db, 'sessionRequests', sessionRequestId);
+    const unsubscribe = onSnapshot(requestRef, (docSnap) => {
+        if (docSnap.exists()) {
+            const requestData = docSnap.data();
+            if(requestData.status === 'accepted') {
                 if (timeoutRef.current) clearTimeout(timeoutRef.current);
                 setIsWaiting(false);
-                router.push(`/session/${currentRequest.sessionId}?tutorId=${tutorId}&role=student`);
-                clearInterval(intervalId);
-            } else if (currentRequest.status === 'rejected') {
+                router.push(`/session/${requestData.sessionId}?tutorId=${tutorId}&role=student`);
+            } else if (requestData.status === 'rejected') {
                 if (timeoutRef.current) clearTimeout(timeoutRef.current);
                 setIsWaiting(false);
                 setSessionRequestId(null);
@@ -96,46 +90,44 @@ export default function TutorProfilePage() {
                     title: 'Session Rejected',
                     description: `${tutor?.name} is unable to take your session right now.`,
                 });
-                clearInterval(intervalId);
             }
         }
-    }, 2000);
+    });
 
+    // Set a timeout for the request
+    timeoutRef.current = setTimeout(() => {
+        handleCancelRequest(true);
+    }, 120000); // 2 minutes
 
     return () => {
-        clearInterval(intervalId);
+        unsubscribe();
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
+
   }, [isWaiting, sessionRequestId, router, tutorId, tutor?.name, toast]);
 
 
   const handleRequestSession = async () => {
-    if (tutor) {
-      const loggedInUserEmail = localStorage.getItem('loggedInUser');
-      const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
-      const student = users.find((u:any) => u.email === loggedInUserEmail);
+    if (tutor && auth.currentUser) {
+      const studentRef = doc(db, 'users', auth.currentUser.uid);
+      const studentSnap = await getDoc(studentRef);
+      const studentName = studentSnap.exists() ? studentSnap.data().name : 'A Student';
 
-      const requestId = `req_${Math.random().toString(36).substring(2, 11)}`;
-      const requests = JSON.parse(localStorage.getItem('sessionRequests') || '[]');
-      
-      const newRequest = {
-        id: requestId,
-        tutorId,
-        studentName: student?.name || 'A Student', 
-        status: 'pending',
-      };
-      requests.push(newRequest);
-      localStorage.setItem('sessionRequests', JSON.stringify(requests));
-      setSessionRequestId(requestId);
+      const requestDoc = await addDoc(collection(db, 'sessionRequests'), {
+          tutorId: tutor.id,
+          studentId: auth.currentUser.uid,
+          studentName: studentName, 
+          status: 'pending',
+          createdAt: serverTimestamp()
+      });
+      setSessionRequestId(requestDoc.id);
       setIsWaiting(true);
     }
   };
   
   const handleCancelRequest = async (isTimeout = false) => {
     if(sessionRequestId) {
-        let requests = JSON.parse(localStorage.getItem('sessionRequests') || '[]');
-        requests = requests.filter((r:any) => r.id !== sessionRequestId);
-        localStorage.setItem('sessionRequests', JSON.stringify(requests));
+        await deleteDoc(doc(db, 'sessionRequests', sessionRequestId));
     }
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setIsWaiting(false);
@@ -158,8 +150,8 @@ export default function TutorProfilePage() {
     );
   }
 
-  const statusText = isBusy ? 'In Session' : (isOnline ? 'Online' : 'Offline');
-  const statusColor = isBusy ? 'bg-yellow-500' : (isOnline ? 'bg-green-500' : 'bg-gray-400');
+  const statusText = tutor.isBusy ? 'In Session' : (tutor.isOnline ? 'Online' : 'Offline');
+  const statusColor = tutor.isBusy ? 'bg-yellow-500' : (tutor.isOnline ? 'bg-green-500' : 'bg-gray-400');
   const hasFunds = walletBalance > 0;
 
   return (
@@ -183,12 +175,12 @@ export default function TutorProfilePage() {
 
             <div className="flex items-center justify-center gap-2 mt-2 text-muted-foreground">
                 <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
-                <span className="font-semibold text-lg">{tutor.rating.toFixed(1)}</span>
-                <span>(25 reviews)</span>
+                <span className="font-semibold text-lg">{tutor.rating?.toFixed(1) || 'N/A'}</span>
+                <span>({tutor.reviewCount || 0} reviews)</span>
             </div>
             
             <div className="mt-6 flex flex-wrap justify-center gap-2">
-                {tutor.subjects.map((subject: string) => (
+                {(tutor.applicationDetails?.expertise || []).map((subject: string) => (
                     <Badge key={subject} variant="secondary" className="text-base px-4 py-1">{subject}</Badge>
                 ))}
             </div>
@@ -234,8 +226,8 @@ export default function TutorProfilePage() {
                         <CardContent className="p-2">
                              <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                     <Button size="lg" className="w-full" disabled={!isOnline || isBusy || !hasFunds}>
-                                        {isBusy ? 'In Session' : (isOnline ? (hasFunds ? 'Request Session' : 'Insufficient Funds') : 'Currently Offline')}
+                                     <Button size="lg" className="w-full" disabled={!tutor.isOnline || tutor.isBusy || !hasFunds}>
+                                        {tutor.isBusy ? 'In Session' : (tutor.isOnline ? (hasFunds ? 'Request Session' : 'Insufficient Funds') : 'Currently Offline')}
                                     </Button>
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>

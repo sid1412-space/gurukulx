@@ -13,7 +13,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useIsClient } from '@/hooks/use-is-client';
-import { initializeMockData } from '@/lib/mock-data';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+
 
 const exams = {
   JEE: ['Physics', 'Chemistry', 'Mathematics'],
@@ -28,11 +30,15 @@ export default function TutorsPage() {
   const isClient = useIsClient();
 
   useEffect(() => {
-    if (isClient) {
-      initializeMockData();
-      const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
-      setAllTutors(users.filter((u: any) => u.role === 'tutor'));
+    const fetchTutors = async () => {
+        if (isClient) {
+            const q = query(collection(db, "users"), where("role", "==", "tutor"));
+            const querySnapshot = await getDocs(q);
+            const tutorsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setAllTutors(tutorsData);
+        }
     }
+    fetchTutors();
   }, [isClient]);
 
   const handleExamChange = (value: string) => {
@@ -49,7 +55,7 @@ export default function TutorsPage() {
 
     if (selectedSubject) {
       filtered = filtered.filter((tutor) =>
-        tutor.subjects.includes(selectedSubject)
+        tutor.applicationDetails?.expertise?.includes(selectedSubject)
       );
     }
 
@@ -57,7 +63,7 @@ export default function TutorsPage() {
       filtered = filtered.filter(
         (tutor) =>
           tutor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          tutor.subjects.some((s:string) =>
+          tutor.applicationDetails?.expertise?.some((s:string) =>
             s.toLowerCase().includes(searchQuery.toLowerCase())
           )
       );

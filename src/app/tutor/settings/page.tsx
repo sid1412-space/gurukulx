@@ -14,6 +14,8 @@ import { Loader2, KeyRound, Landmark, User } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useIsClient } from '@/hooks/use-is-client';
+import { auth, db } from '@/lib/firebase';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
 
 const profileSchema = z.object({
@@ -40,20 +42,12 @@ export default function TutorSettingsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isClient = useIsClient();
+  const [user, setUser] = useState<any>(null);
 
-  const [currentUser, setCurrentUser] = useState({
-    name: '',
-    email: '',
-    bio: '',
-    subjects: '',
-    avatar: 'https://placehold.co/128x128.png'
-  });
-  
-  const [avatarPreview, setAvatarPreview] = useState(currentUser.avatar);
+  const [avatarPreview, setAvatarPreview] = useState('https://placehold.co/128x128.png');
 
   const profileForm = useForm<z.infer<typeof profileSchema>>({
-    resolver: zodResolver(profileSchema),
-    defaultValues: currentUser,
+    resolver: zodResolver(profileSchema)
   });
 
   const passwordForm = useForm<z.infer<typeof passwordSchema>>({
@@ -62,41 +56,32 @@ export default function TutorSettingsPage() {
   });
   
   const payoutForm = useForm<z.infer<typeof payoutSchema>>({
-    resolver: zodResolver(payoutSchema),
-    defaultValues: {
-        accountHolderName: '',
-        accountNumber: '',
-        ifscCode: '',
-        upiId: ''
-    }
+    resolver: zodResolver(payoutSchema)
   });
 
 
   useEffect(() => {
-    if (isClient) {
-      const loggedInUserEmail = localStorage.getItem('loggedInUser');
-      if (loggedInUserEmail) {
-        const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
-        const userProfile = users.find((u: any) => u.email === loggedInUserEmail);
-        
-        if (userProfile) {
-          const profileData = {
-            name: userProfile.name || '',
-            email: userProfile.email,
-            bio: userProfile.applicationDetails?.qualification || 'PhD in Physics with 10+ years of teaching experience...',
-            subjects: userProfile.applicationDetails?.expertise || 'Physics, Calculus',
-            avatar: userProfile.avatar || 'https://placehold.co/128x128.png',
-          };
-          setCurrentUser(profileData);
-          setAvatarPreview(profileData.avatar);
-          profileForm.reset(profileData);
-
-          if (userProfile.payoutDetails) {
-            payoutForm.reset(userProfile.payoutDetails);
-          }
+    const fetchUserData = async () => {
+        if (isClient && auth.currentUser) {
+            const userRef = doc(db, "users", auth.currentUser.uid);
+            const docSnap = await getDoc(userRef);
+            if (docSnap.exists()) {
+                const userData = docSnap.data();
+                setUser(userData);
+                profileForm.reset({
+                    name: userData.name || '',
+                    email: userData.email,
+                    bio: userData.applicationDetails?.qualification || '',
+                    subjects: (userData.applicationDetails?.expertise || []).toString()
+                });
+                payoutForm.reset(userData.payoutDetails || {
+                    accountHolderName: '', accountNumber: '', ifscCode: '', upiId: ''
+                });
+                setAvatarPreview(userData.avatar || 'https://placehold.co/128x128.png');
+            }
         }
-      }
     }
+    fetchUserData();
   }, [isClient, profileForm, payoutForm]);
 
   
@@ -112,26 +97,24 @@ export default function TutorSettingsPage() {
   };
 
 
-  function onProfileSubmit(values: z.infer<typeof profileSchema>) {
+  async function onProfileSubmit(values: z.infer<typeof profileSchema>) {
+    if (!auth.currentUser) return;
     setIsLoading(true);
     
-    const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
-    const userIndex = users.findIndex((u: any) => u.email === values.email);
+    const userRef = doc(db, "users", auth.currentUser.uid);
 
-    if (userIndex !== -1) {
-        users[userIndex].name = values.name;
-        users[userIndex].avatar = avatarPreview;
-        users[userIndex].applicationDetails.expertise = values.subjects;
-        users[userIndex].applicationDetails.qualification = values.bio;
-
-        localStorage.setItem('userDatabase', JSON.stringify(users));
-        
+    try {
+        await updateDoc(userRef, {
+            name: values.name,
+            avatar: avatarPreview,
+            'applicationDetails.expertise': values.subjects,
+            'applicationDetails.qualification': values.bio
+        });
         toast({
             title: 'Profile Updated',
             description: 'Your information has been saved successfully.',
         });
-        setCurrentUser(prev => ({...prev, ...values, avatar: avatarPreview}));
-    } else {
+    } catch(error) {
          toast({ variant: 'destructive', title: 'Error', description: 'Could not update profile.' });
     }
     
@@ -151,28 +134,26 @@ export default function TutorSettingsPage() {
     }, 1000);
   }
   
-  function onPayoutSubmit(values: z.infer<typeof payoutSchema>) {
+  async function onPayoutSubmit(values: z.infer<typeof payoutSchema>) {
+    if (!auth.currentUser) return;
     setIsLoading(true);
     
-    const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
-    const userIndex = users.findIndex((u: any) => u.email === currentUser.email);
+    const userRef = doc(db, "users", auth.currentUser.uid);
 
-    if (userIndex !== -1) {
-        users[userIndex].payoutDetails = values;
-        localStorage.setItem('userDatabase', JSON.stringify(users));
-
+    try {
+        await updateDoc(userRef, { payoutDetails: values });
         toast({
             title: 'Payout Details Updated',
             description: 'Your bank information has been saved.',
         });
-    } else {
+    } catch(error) {
         toast({
             variant: 'destructive',
             title: 'Error Saving Details',
             description: 'Could not save your payout information.',
         });
     }
-
+    
     setIsLoading(false);
   }
 
@@ -195,8 +176,8 @@ export default function TutorSettingsPage() {
                     <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-8">
                     <div className="flex items-center gap-4">
                         <Avatar className="h-20 w-20">
-                           <AvatarImage src={avatarPreview} alt={currentUser.name} data-ai-hint="person portrait"/>
-                           <AvatarFallback>{currentUser.name ? currentUser.name.charAt(0) : 'T'}</AvatarFallback>
+                           <AvatarImage src={avatarPreview} alt={user?.name || ''} data-ai-hint="person portrait"/>
+                           <AvatarFallback>{user?.name ? user.name.charAt(0) : 'T'}</AvatarFallback>
                         </Avatar>
                         <Input type="file" ref={fileInputRef} onChange={handlePhotoChange} className="hidden" accept="image/*" />
                         <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>Change Photo</Button>

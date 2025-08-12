@@ -9,7 +9,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useIsClient } from '@/hooks/use-is-client';
 import TutorNotification from '@/components/tutors/TutorNotification';
 import { DollarSign, CalendarCheck } from 'lucide-react';
-import { initializeMockData } from '@/lib/mock-data';
+import { auth, db } from '@/lib/firebase';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
 
 export default function TutorDashboardPage() {
@@ -24,40 +25,38 @@ export default function TutorDashboardPage() {
   const isClient = useIsClient();
   
   useEffect(() => {
-    if (isClient) {
-        initializeMockData();
-        const loggedInUserEmail = localStorage.getItem('loggedInUser');
-        if(loggedInUserEmail) {
-            const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
-            const currentTutor = users.find((u:any) => u.email === loggedInUserEmail);
-            if(currentTutor) {
+    const fetchTutorData = async () => {
+        if (isClient && auth.currentUser) {
+            const tutorRef = doc(db, 'users', auth.currentUser.uid);
+            const docSnap = await getDoc(tutorRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
                 setTutorData({
-                    name: currentTutor.name || 'Tutor',
-                    isOnline: currentTutor.isOnline !== false,
-                    isBusy: currentTutor.isBusy === true,
-                    todayEarnings: currentTutor.todayEarnings || 0,
-                    todaySessions: currentTutor.todaySessions || 0,
+                    name: data.name || 'Tutor',
+                    isOnline: data.isOnline !== false,
+                    isBusy: data.isBusy === true,
+                    todayEarnings: data.todayEarnings || 0,
+                    todaySessions: data.todaySessions || 0,
                 });
             }
         }
     }
+    fetchTutorData();
   }, [isClient]);
 
-  const handleStatusChange = (online: boolean) => {
-    const loggedInUserEmail = localStorage.getItem('loggedInUser');
-    if(!loggedInUserEmail) return;
-
-    const users = JSON.parse(localStorage.getItem('userDatabase') || '[]');
-    const userIndex = users.findIndex((u:any) => u.email === loggedInUserEmail);
-
-    if(userIndex !== -1) {
-        users[userIndex].isOnline = online;
-        localStorage.setItem('userDatabase', JSON.stringify(users));
+  const handleStatusChange = async (online: boolean) => {
+    if (!auth.currentUser) return;
+    const tutorRef = doc(db, 'users', auth.currentUser.uid);
+    
+    try {
+        await updateDoc(tutorRef, { isOnline: online });
         setTutorData(prev => ({...prev, isOnline: online}));
         toast({
           title: `You are now ${online ? 'Online' : 'Offline'}`,
           description: online ? 'You will now appear in student search results.' : 'You will be hidden from students.',
         });
+    } catch(e) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to update status.' });
     }
   };
 
