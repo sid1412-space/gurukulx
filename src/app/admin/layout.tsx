@@ -23,6 +23,7 @@ import React, { useEffect, useState } from 'react';
 const adminMenuItems = [
   { href: '/admin', label: 'Overview', icon: LayoutDashboard },
   { href: '/admin/tutors', label: 'Tutor Management', icon: Users },
+  { href: '/admin/students', label: 'Student Management', icon: Users },
   { href: '/admin/finances', label: 'Financials', icon: DollarSign },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ];
@@ -98,7 +99,7 @@ export default function AdminLayout({
             <div className="flex items-center gap-4">
                 <p className="text-sm font-semibold">Admin</p>
                 <Avatar>
-                    <AvatarImage src="https://placehold.co/100x100.png" alt="Admin Avatar" data-ai-hint="person avatar"/>
+                    <AvatarImage src="https://i.ibb.co/xqvy59YP/Chat-GPT-Image-Aug-12-2025-11-06-21-PM.png" alt="Admin Avatar" data-ai-hint="person avatar"/>
                     <AvatarFallback>A</AvatarFallback>
                 </Avatar>
                   <Button variant="ghost" onClick={handleLogout}>Logout</Button>
