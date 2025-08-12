@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -31,20 +32,35 @@ export default function LoginForm() {
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    console.log(values);
+    
     // Mock API call
     setTimeout(() => {
       // In a real app, upon successful login, you'd set a session/token.
       // Here, we'll use localStorage to mock the logged-in state.
       localStorage.setItem('isLoggedIn', 'true');
       
+      // Mock check for admin user
+      if (values.email.toLowerCase() === 'admin@example.com') {
+          localStorage.setItem('isAdmin', 'true');
+      }
+
+      // Dispatch a storage event to notify other tabs/windows
+      window.dispatchEvent(new Event("storage"));
+
       toast({
         title: 'Logged In!',
         description: 'Redirecting to your dashboard...',
       });
-      setIsLoading(false);
-      router.push('/dashboard');
-    }, 1500);
+      
+      // Redirect based on role
+      if (values.email.toLowerCase() === 'admin@example.com') {
+        router.push('/admin');
+      } else {
+        router.push('/dashboard');
+      }
+
+      // No need to setIsLoading(false) as we are navigating away
+    }, 1000);
   }
 
   return (
@@ -57,7 +73,7 @@ export default function LoginForm() {
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input placeholder="you@example.com" {...field} />
+                <Input placeholder="you@example.com or admin@example.com" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

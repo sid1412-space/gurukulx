@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import Logo from './Logo';
 import { useIsClient } from '@/hooks/use-is-client';
+import { useRouter } from 'next/navigation';
 
 const navLinks = [
   { href: '/tutors', label: 'Find a Tutor' },
@@ -18,19 +19,31 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const isClient = useIsClient();
+  const router = useRouter();
 
   useEffect(() => {
     if (isClient) {
-      const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
-      setIsAuthenticated(loggedIn);
+      const checkAuth = () => {
+        const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
+        setIsAuthenticated(loggedIn);
+      };
+
+      checkAuth();
+
+      // Listen for storage changes to sync tabs
+      window.addEventListener('storage', checkAuth);
+      return () => {
+        window.removeEventListener('storage', checkAuth);
+      };
     }
   }, [isClient]);
 
   const handleLogout = () => {
     localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('isAdmin'); // Also clear admin status
     setIsAuthenticated(false);
-    // Optionally redirect to home or login page
-    // window.location.href = '/'; 
+    // Use router to push to login page for a clean navigation
+    router.push('/login'); 
   }
 
   return (
@@ -105,7 +118,7 @@ export default function Header() {
                {isClient && isAuthenticated ? (
                   <>
                     <Link href="/dashboard" className="w-full">
-                      <Button className="w-full" variant="ghost">Dashboard</Button>
+                      <Button className="w-full" variant="ghost" onClick={() => setIsMenuOpen(false)}>Dashboard</Button>
                     </Link>
                     <Button className="w-full" onClick={() => {
                       handleLogout();
@@ -115,10 +128,10 @@ export default function Header() {
                 ) : (
                   <>
                     <Link href="/login" className="w-full">
-                      <Button variant="ghost" className="w-full">Log In</Button>
+                      <Button variant="ghost" className="w-full" onClick={() => setIsMenuOpen(false)}>Log In</Button>
                     </Link>
                     <Link href="/signup" className="w-full">
-                      <Button className="w-full">Sign Up</Button>
+                      <Button className="w-full" onClick={() => setIsMenuOpen(false)}>Sign Up</Button>
                     </Link>
                   </>
                 )}

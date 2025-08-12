@@ -19,7 +19,7 @@ import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import React, { useEffect, useState } from 'react';
-
+import { useIsClient } from '@/hooks/use-is-client';
 
 const adminMenuItems = [
   { href: '/admin', label: 'Overview', icon: LayoutDashboard },
@@ -28,53 +28,43 @@ const adminMenuItems = [
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ];
 
-const useAuth = () => {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-    useEffect(() => {
-        // NOTE: This is a mock auth check. In a real app, you'd check a session or token.
-        // We'll also check for a specific admin flag in localStorage.
-        const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
-        const isAdmin = localStorage.getItem('isAdmin') === 'true';
-        setIsAuthenticated(loggedIn && isAdmin);
-    }, []);
-
-    return { isAuthenticated }; 
-};
-
-
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { isAuthenticated } = useAuth();
   const router = useRouter();
-  const [isChecking, setIsChecking] = useState(true);
-
+  const isClient = useIsClient();
+  const [isAuthenticated, setIsAuthenticated] = useState(true); // Assume true to prevent flicker
 
   useEffect(() => {
-    if (isAuthenticated === false) {
-      router.push('/login');
+    if (isClient) {
+      const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
+      const isAdmin = localStorage.getItem('isAdmin') === 'true';
+      if (!loggedIn || !isAdmin) {
+        setIsAuthenticated(false);
+        router.push('/login'); // Or a dedicated "unauthorized" page
+      } else {
+        setIsAuthenticated(true);
+      }
     }
-    setIsChecking(false);
-  }, [isAuthenticated, router]);
+  }, [isClient, router, pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('isAdmin');
+    setIsAuthenticated(false);
     router.push('/login');
   }
 
-  if (isChecking || !isAuthenticated) {
+  if (!isClient || !isAuthenticated) {
      return (
-        <div className="flex items-center justify-center h-screen">
+        <div className="flex items-center justify-center h-screen bg-background">
             <p>Loading...</p>
         </div>
     );
   }
-
 
   return (
     <SidebarProvider>

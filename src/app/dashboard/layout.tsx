@@ -19,6 +19,7 @@ import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import React, { useEffect, useState } from 'react';
+import { useIsClient } from '@/hooks/use-is-client';
 
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -28,44 +29,42 @@ const menuItems = [
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ];
 
-const useAuth = () => {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    
-    useEffect(() => {
-        const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
-        setIsAuthenticated(loggedIn);
-    }, []);
-    
-    return { isAuthenticated }; 
-};
-
-
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { isAuthenticated } = useAuth();
   const router = useRouter();
-  const [isChecking, setIsChecking] = useState(true);
+  const isClient = useIsClient();
+  const [isAuthenticated, setIsAuthenticated] = useState(true); // Assume true initially to avoid flicker
 
   useEffect(() => {
-    if (isAuthenticated === false) {
-      router.push('/login');
+    if (isClient) {
+      const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
+      if (!loggedIn) {
+        setIsAuthenticated(false);
+        router.push('/login');
+      } else {
+        setIsAuthenticated(true);
+      }
     }
-    setIsChecking(false);
-  }, [isAuthenticated, router]);
+  }, [isClient, router, pathname]); // Rerun on path change to protect all dashboard routes
 
   const handleLogout = () => {
     localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('isAdmin');
+    setIsAuthenticated(false);
     router.push('/login');
   }
 
-  if (isChecking || !isAuthenticated) {
+  // Render a loading state or nothing while waiting for client-side check
+  if (!isClient || !isAuthenticated) {
      return (
-        <div className="flex items-center justify-center h-screen">
-            <p>Loading...</p>
+        <div className="flex items-center justify-center h-screen bg-background">
+            <div className="flex flex-col items-center gap-2">
+                 <p className="text-muted-foreground">Loading...</p>
+            </div>
         </div>
     );
   }
