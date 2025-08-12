@@ -1,6 +1,7 @@
 
 'use client';
 
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CalendarCheck, DollarSign, Clock } from 'lucide-react';
@@ -16,9 +17,15 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useRouter } from 'next/navigation';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
 
 export default function TutorDashboardPage() {
   const router = useRouter();
+  const { toast } = useToast();
+  const [isOnline, setIsOnline] = useState(true);
+
   const dailyStats = [
     { title: "Today's Sessions", value: '4', icon: CalendarCheck },
     { title: "Today's Earnings", value: '₹12,500', icon: DollarSign },
@@ -34,12 +41,26 @@ export default function TutorDashboardPage() {
     router.push(`/session/${sessionId}`);
   };
 
+  const handleStatusChange = (online: boolean) => {
+    setIsOnline(online);
+    toast({
+        title: `You are now ${online ? 'Online' : 'Offline'}`,
+        description: online ? 'You will now appear in search results.' : 'You will be hidden from students.'
+    });
+  }
+
   return (
     <div className="space-y-8 animate-fade-in">
       <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <h1 className="text-3xl font-bold tracking-tight font-headline">Tutor Dashboard</h1>
             <p className="text-muted-foreground">Here's your summary for today.</p>
+        </div>
+         <div className="flex items-center space-x-2 p-2 border rounded-lg bg-secondary/50">
+          <Switch id="online-status" checked={isOnline} onCheckedChange={handleStatusChange} />
+          <Label htmlFor="online-status" className="font-semibold">
+            {isOnline ? 'Online' : 'Offline'}
+          </Label>
         </div>
       </header>
 
