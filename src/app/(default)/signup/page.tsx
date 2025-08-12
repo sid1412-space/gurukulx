@@ -7,7 +7,7 @@ import Link from 'next/link';
 
 export default function SignUpPage() {
   return (
-    <div className="flex items-center justify-center p-4 bg-secondary/30 py-12">
+    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center p-4 bg-secondary/30">
       <Card className="w-full max-w-md shadow-lg animate-fade-in">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
