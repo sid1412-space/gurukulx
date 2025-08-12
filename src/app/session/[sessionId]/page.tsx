@@ -3,7 +3,7 @@
 
 import dynamic from 'next/dynamic';
 import { useState, useEffect, useRef, MouseEvent as ReactMouseEvent } from 'react';
-import { Mic, MicOff, ScreenShare, ScreenShareOff, PhoneOff, GripVertical, MessageSquare, VideoOff } from 'lucide-react';
+import { Mic, MicOff, ScreenShare, ScreenShareOff, PhoneOff, GripVertical, MessageSquare, VideoOff, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -13,6 +13,7 @@ import { useIsClient } from '@/hooks/use-is-client';
 import { cn } from '@/lib/utils';
 import ChatPanel from '@/components/session/ChatPanel';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
 const JitsiMeetComponent = dynamic(() => import('@/components/session/JitsiMeetComponent'), {
@@ -32,6 +33,8 @@ export default function SessionPage() {
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [jitsiLoadFailed, setJitsiLoadFailed] = useState(false);
+
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
@@ -70,6 +73,12 @@ export default function SessionPage() {
   const handleApiReady = (api: JitsiAPI) => {
     setJitsiApi(api);
   };
+
+  const handleJitsiError = (error: any) => {
+    console.error('Jitsi fatal error:', error);
+    setJitsiLoadFailed(true);
+  };
+
 
   const toggleMute = () => {
     jitsiApi?.executeCommand('toggleAudio');
@@ -118,6 +127,17 @@ export default function SessionPage() {
 
   const startRecording = async () => {
     if (isRecording || isMobile) return;
+    
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+        console.error("getDisplayMedia is not supported in this browser.");
+        toast({
+            variant: "destructive",
+            title: "Recording Not Supported",
+            description: "Your browser does not support screen recording.",
+        });
+        return;
+    }
+
     try {
         const displayStream = await navigator.mediaDevices.getDisplayMedia({
             video: { mediaSource: 'tab' } as any,
@@ -252,9 +272,24 @@ export default function SessionPage() {
 
   return (
     <div className="h-screen w-screen relative overflow-hidden bg-background">
-      <div className="absolute top-0 left-0 w-full h-full z-0 opacity-100">
-        <JitsiMeetComponent onApiReady={handleApiReady} />
-      </div>
+      {!jitsiLoadFailed && (
+        <div className="absolute top-0 left-0 w-full h-full z-0 opacity-100">
+          <JitsiMeetComponent onApiReady={handleApiReady} onError={handleJitsiError} />
+        </div>
+      )}
+
+      {jitsiLoadFailed && (
+         <div className="absolute inset-0 flex items-center justify-center z-10 p-4">
+             <Alert variant="destructive" className="max-w-lg">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Video Connection Error</AlertTitle>
+                <AlertDescription>
+                    The video conferencing service failed to load. This might be due to a network issue or browser incompatibility. Please check your connection and try again, or use a different browser.
+                </AlertDescription>
+            </Alert>
+         </div>
+      )}
+
 
       {isClient && <Whiteboard />}
 
@@ -278,7 +313,7 @@ export default function SessionPage() {
                 </div>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <Button variant="outline" size="icon" onClick={toggleMute} className={cn("rounded-full", isMuted ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : "")}>
+                        <Button variant="outline" size="icon" onClick={toggleMute} className={cn("rounded-full", isMuted ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : "")} disabled={jitsiLoadFailed}>
                             {isMuted ? <MicOff /> : <Mic />}
                         </Button>
                     </TooltipTrigger>
@@ -290,7 +325,7 @@ export default function SessionPage() {
                 {!isMobile && (
                   <Tooltip>
                       <TooltipTrigger asChild>
-                          <Button variant="outline" size="icon" onClick={toggleScreenShare} className={cn("rounded-full", isScreenSharing ? "bg-primary text-primary-foreground" : "")}>
+                          <Button variant="outline" size="icon" onClick={toggleScreenShare} className={cn("rounded-full", isScreenSharing ? "bg-primary text-primary-foreground" : "")} disabled={jitsiLoadFailed}>
                              {isScreenSharing ? <ScreenShareOff /> : <ScreenShare />}
                           </Button>
                       </TooltipTrigger>
@@ -340,3 +375,5 @@ export default function SessionPage() {
     </div>
   );
 }
+
+    

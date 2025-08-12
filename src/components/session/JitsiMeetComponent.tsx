@@ -6,9 +6,10 @@ import { JitsiMeeting, type JitsiAPI } from '@jitsi/react-sdk';
 
 interface JitsiMeetComponentProps {
   onApiReady: (api: JitsiAPI) => void;
+  onError: (error: any) => void;
 }
 
-export default function JitsiMeetComponent({ onApiReady }: JitsiMeetComponentProps) {
+export default function JitsiMeetComponent({ onApiReady, onError }: JitsiMeetComponentProps) {
   const pathname = usePathname();
   const sessionId = pathname.split('/').pop() || `tutorconnect-session-${Math.random().toString(36).substring(2, 15)}`;
 
@@ -46,6 +47,10 @@ export default function JitsiMeetComponent({ onApiReady }: JitsiMeetComponentPro
           MOBILE_APP_PROMO: false,
         }}
         onApiReady={onApiReady}
+        onReadyToClose={() => {
+            // Optional: Handle cleanup or state changes when the meeting is ready to close
+        }}
+        onFatalError={onError}
         getIFrameRef={(iframeRef) => {
           iframeRef.style.height = '100%';
           iframeRef.style.width = '100%';
@@ -55,3 +60,5 @@ export default function JitsiMeetComponent({ onApiReady }: JitsiMeetComponentPro
     </div>
   );
 }
+
+    
