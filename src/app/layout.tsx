@@ -8,6 +8,13 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { usePathname } from 'next/navigation';
 import React from 'react';
+import { Inter } from 'next/font/google';
+
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter',
+});
 
 export default function RootLayout({
   children,
@@ -22,16 +29,10 @@ export default function RootLayout({
   const showHeaderAndFooter = !isSessionPage && !isAuthPage && !isAdminOrDashboard;
 
   return (
-    <html lang="en" className="!scroll-smooth">
+    <html lang="en" className={cn('!scroll-smooth', inter.variable)}>
       <head>
         <title>TutorConnect</title>
         <meta name="description" content="The future of online tutoring." />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-          rel="stylesheet"
-        ></link>
       </head>
        <body className={cn('font-body antialiased bg-background')}>
           <div className="flex flex-col min-h-screen">

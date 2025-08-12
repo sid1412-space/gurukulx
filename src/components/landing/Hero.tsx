@@ -1,3 +1,4 @@
+
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -34,6 +35,7 @@ export default function Hero() {
               height={400}
               className="rounded-xl shadow-2xl transform hover:scale-105 transition-transform duration-500"
               data-ai-hint="online learning education"
+              priority
             />
           </div>
         </div>
