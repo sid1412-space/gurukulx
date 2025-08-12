@@ -26,7 +26,7 @@ const predefinedAmounts = [50, 100, 200, 500, 1000];
 
 const qrCodeMapping: { [key: number]: string } = {
   50: 'https://i.ibb.co/DPmy6GW/photo-2025-08-13-00-27-57.jpg',
-  100: 'https://i.ibb.co/3kM2sW4/qr-100.png',
+  100: 'https://i.ibb.co/G659rg8/100.jpg',
   200: 'https://i.ibb.co/dG7pD4g/qr-200.png',
   500: 'https://i.ibb.co/X3s5T3r/qr-500.png',
   1000: 'https://i.ibb.co/vYv2TfS/qr-1000.png',
