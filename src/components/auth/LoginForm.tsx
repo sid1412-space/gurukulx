@@ -40,7 +40,7 @@ export default function LoginForm() {
       localStorage.setItem('isLoggedIn', 'true');
       
       // Mock check for admin user
-      if (values.email.toLowerCase() === 'admin@example.com') {
+      if (values.email.toLowerCase() === 'quotesparkconnect@yahoo.com') {
           localStorage.setItem('isAdmin', 'true');
       }
 
@@ -53,7 +53,7 @@ export default function LoginForm() {
       });
       
       // Redirect based on role
-      if (values.email.toLowerCase() === 'admin@example.com') {
+      if (values.email.toLowerCase() === 'quotesparkconnect@yahoo.com') {
         router.push('/admin');
       } else {
         router.push('/dashboard');
@@ -73,7 +73,7 @@ export default function LoginForm() {
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input placeholder="you@example.com or admin@example.com" {...field} />
+                <Input placeholder="you@example.com or quotesparkconnect@yahoo.com" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
