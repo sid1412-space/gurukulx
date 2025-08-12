@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import TutorCard from '@/components/tutors/TutorCard';
@@ -23,6 +23,18 @@ export default function TutorsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedExam, setSelectedExam] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
+  // Force re-render when tutor status changes in another tab
+  const [updateTrigger, setUpdateTrigger] = useState(0);
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setUpdateTrigger(Math.random());
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   const handleExamChange = (value: string) => {
     setSelectedExam(value);
@@ -30,7 +42,20 @@ export default function TutorsPage() {
   };
 
   const filteredTutors = useMemo(() => {
-    let filtered = tutors;
+    // For the demo, we check a single mocked tutor's status.
+    // In a real app, you would check each tutor's status from a database.
+    const isTutorOnline = localStorage.getItem('tutor-status-tutor@example.com') === 'online';
+
+    let onlineTutors = tutors.filter(tutor => {
+        // Mock logic: Assume all tutors are online except our specific tutor if they are toggled off.
+        if (tutor.id === '1') { // Dr. Evelyn Reed's ID is '1', and email is 'tutor@example.com'
+            return isTutorOnline;
+        }
+        return true; // All other tutors are assumed online for this demo.
+    });
+
+
+    let filtered = onlineTutors;
 
     if (selectedSubject) {
       filtered = filtered.filter((tutor) =>
@@ -49,7 +74,7 @@ export default function TutorsPage() {
     }
 
     return filtered;
-  }, [searchQuery, selectedSubject]);
+  }, [searchQuery, selectedSubject, updateTrigger]);
 
   const subjectsForSelectedExam = selectedExam ? exams[selectedExam as keyof typeof exams] : [];
 
@@ -121,7 +146,7 @@ export default function TutorsPage() {
        {filteredTutors.length === 0 && (
           <div className="text-center col-span-full py-12 text-muted-foreground">
             <p>No tutors found for your selection.</p>
-            <p>Try adjusting your filters.</p>
+            <p>Try adjusting your filters or check back later.</p>
           </div>
         )}
     </div>

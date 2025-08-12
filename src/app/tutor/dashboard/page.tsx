@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CalendarCheck, DollarSign, Clock } from 'lucide-react';
@@ -21,10 +21,23 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 
+const TUTOR_ID = 'tutor@example.com'; // Mock tutor ID for localStorage key
+
 export default function TutorDashboardPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isOnline, setIsOnline] = useState(true);
+
+  // Load status from localStorage on mount
+  useEffect(() => {
+    const storedStatus = localStorage.getItem(`tutor-status-${TUTOR_ID}`);
+    if (storedStatus) {
+      setIsOnline(storedStatus === 'online');
+    } else {
+      // Default to online if no status is set
+      localStorage.setItem(`tutor-status-${TUTOR_ID}`, 'online');
+    }
+  }, []);
 
   const dailyStats = [
     { title: "Today's Sessions", value: '4', icon: CalendarCheck },
@@ -43,6 +56,8 @@ export default function TutorDashboardPage() {
 
   const handleStatusChange = (online: boolean) => {
     setIsOnline(online);
+    const newStatus = online ? 'online' : 'offline';
+    localStorage.setItem(`tutor-status-${TUTOR_ID}`, newStatus);
     toast({
         title: `You are now ${online ? 'Online' : 'Offline'}`,
         description: online ? 'You will now appear in search results.' : 'You will be hidden from students.'
