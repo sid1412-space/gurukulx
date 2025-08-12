@@ -29,7 +29,7 @@ const qrCodeMapping: { [key: number]: string } = {
   100: 'https://i.ibb.co/G659rg8/100.jpg',
   200: 'https://i.ibb.co/YBFNJ85y/200.jpg',
   500: 'https://i.ibb.co/whQ1gvLr/500.jpg',
-  1000: 'https://i.ibb.co/vYv2TfS/qr-1000.png',
+  1000: 'https://i.ibb.co/XxPGbQmx/1000.jpg',
   default: 'https://i.ibb.co/Mx48YJYX/photo-2025-08-11-20-34-51.jpg' // Fallback for custom amounts
 };
 
@@ -97,7 +97,7 @@ export default function RechargePage() {
         return (
           <div className="space-y-6">
             <div>
-              <FormLabel className="text-lg">Select an Amount</FormLabel>
+              <p className="text-lg font-medium">Select an Amount</p>
               <div className="grid grid-cols-3 gap-4 mt-2">
                 {predefinedAmounts.map((amount) => (
                   <Button
