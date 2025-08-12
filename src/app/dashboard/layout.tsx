@@ -24,7 +24,7 @@ const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/dashboard/recharge', label: 'Recharge Wallet', icon: Wallet },
   { href: '/dashboard/sessions', label: 'My Sessions', icon: BookOpen },
-  { href: '/dashboard/practice', label: 'Practice', icon: ClipboardPen },
+  { href: ' /dashboard/practice', label: 'Practice', icon: ClipboardPen },
   { href: '/dashboard/profile', label: 'Profile', icon: User },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ];
@@ -43,17 +43,22 @@ export default function DashboardLayout({
     const isTutor = localStorage.getItem('isTutor') === 'true';
     const isAdmin = localStorage.getItem('isAdmin') === 'true';
     
-    if (loggedIn && !isTutor && !isAdmin) {
-      setAuthStatus('authenticated');
+    if (loggedIn) {
+        if (isTutor) {
+             setAuthStatus('unauthorized');
+             router.push('/tutor/dashboard');
+             return;
+        }
+        if (isAdmin) {
+            setAuthStatus('unauthorized');
+            router.push('/admin');
+            return;
+        }
+        // It's a student
+        setAuthStatus('authenticated');
     } else {
       setAuthStatus('unauthorized');
-      if (!loggedIn) {
-        router.push('/login');
-      } else if (isTutor) {
-         router.push('/tutor/dashboard');
-      } else if (isAdmin) {
-        router.push('/admin');
-      }
+      router.push('/login');
     }
   }, [router, pathname]);
 
