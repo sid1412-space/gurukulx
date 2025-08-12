@@ -414,7 +414,7 @@ export default function SessionPage() {
   return (
     <div className="h-screen w-screen relative overflow-hidden bg-background">
       {!jitsiLoadFailed && (
-        <div className="absolute top-0 left-0 w-full h-full z-0 opacity-100">
+        <div className="absolute top-0 left-0 w-full h-full z-0 opacity-100 pointer-events-none">
           <JitsiMeetComponent onApiReady={handleApiReady} onError={handleJitsiError} isMobile={isMobile} />
         </div>
       )}
@@ -443,7 +443,7 @@ export default function SessionPage() {
          </div>
       )}
 
-      <div className="absolute inset-0 z-10 pointer-events-none">
+      <div className="absolute inset-0 z-10">
         <Whiteboard />
       </div>
 
@@ -561,4 +561,3 @@ export default function SessionPage() {
 }
 
     
-
