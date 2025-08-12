@@ -26,9 +26,12 @@ export default function PayoutsPage() {
     const { toast } = useToast();
 
     const handleRequestPayout = () => {
+        const currentRequests = parseInt(localStorage.getItem('pendingPayoutRequests') || '0');
+        localStorage.setItem('pendingPayoutRequests', (currentRequests + 1).toString());
+
         toast({
             title: 'Payout Requested',
-            description: 'Your request for the pending amount has been submitted.'
+            description: 'Your request has been submitted. The admin has been notified.'
         })
     }
   return (

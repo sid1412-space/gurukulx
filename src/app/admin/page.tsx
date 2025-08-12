@@ -1,10 +1,24 @@
 
+'use client';
+
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, DollarSign, BookOpen, UserPlus, Hourglass } from 'lucide-react';
+import { Users, DollarSign, BookOpen, UserPlus, Hourglass, Banknote } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { useIsClient } from '@/hooks/use-is-client';
 
 export default function AdminOverviewPage() {
+  const [pendingPayouts, setPendingPayouts] = useState(0);
+  const isClient = useIsClient();
+
+  useEffect(() => {
+    if (isClient) {
+      const storedPayouts = localStorage.getItem('pendingPayoutRequests');
+      setPendingPayouts(parseInt(storedPayouts || '0'));
+    }
+  }, [isClient]);
+
   const stats = [
     { title: 'Total Tutors', value: '1,250', icon: Users },
     { title: 'Active Students', value: '15,830', icon: Users },
@@ -14,7 +28,8 @@ export default function AdminOverviewPage() {
 
   const actionItems = [
     { title: 'New Tutor Applicants', value: '42', icon: UserPlus, href: '/admin/tutors' },
-    { title: 'Pending Recharges', value: '8', icon: Hourglass, href: '#' }, // Add href later if a dedicated page is made
+    { title: 'Pending Payout Requests', value: pendingPayouts.toString(), icon: Banknote, href: '/admin/finances', isVisible: pendingPayouts > 0 },
+    { title: 'Pending Recharges', value: '8', icon: Hourglass, href: '#' },
   ];
 
   return (
@@ -39,6 +54,7 @@ export default function AdminOverviewPage() {
       
        <div className="grid gap-6 md:grid-cols-2">
          {actionItems.map((item, index) => (
+           item.isVisible !== false && (
             <Card key={index} className="hover:shadow-md transition-shadow flex flex-row items-center">
                 <CardHeader className="flex-shrink-0">
                     <item.icon className="h-8 w-8 text-primary" />
@@ -53,6 +69,7 @@ export default function AdminOverviewPage() {
                     </Link>
                 </div>
             </Card>
+           )
          ))}
       </div>
 
