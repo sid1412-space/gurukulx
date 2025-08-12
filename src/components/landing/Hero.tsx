@@ -20,7 +20,7 @@ export default function Hero() {
               <Link href="/tutors">
                 <Button size="lg">Find Your Tutor</Button>
               </Link>
-              <Link href="/dashboard">
+              <Link href="/signup?role=tutor">
                 <Button size="lg" variant="outline">
                   Become a Tutor
                 </Button>

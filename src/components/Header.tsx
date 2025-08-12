@@ -19,16 +19,25 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isTutor, setIsTutor] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const isClient = useIsClient();
   const router = useRouter();
+
+  const getDashboardUrl = () => {
+    if (isAdmin) return '/admin';
+    if (isTutor) return '/tutor/dashboard';
+    return '/dashboard';
+  }
 
   useEffect(() => {
     if (isClient) {
       const checkAuth = () => {
         const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
         const tutor = localStorage.getItem('isTutor') === 'true';
+        const admin = localStorage.getItem('isAdmin') === 'true';
         setIsAuthenticated(loggedIn);
         setIsTutor(tutor);
+        setIsAdmin(admin);
       };
 
       checkAuth();
@@ -43,10 +52,11 @@ export default function Header() {
 
   const handleLogout = () => {
     localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('isAdmin'); // Also clear admin status
-    localStorage.removeItem('isTutor'); // Also clear tutor status
+    localStorage.removeItem('isAdmin');
+    localStorage.removeItem('isTutor');
     setIsAuthenticated(false);
     setIsTutor(false);
+    setIsAdmin(false);
     // Dispatch a storage event to notify other tabs/windows
     window.dispatchEvent(new Event("storage"));
     router.push('/'); 
@@ -67,7 +77,7 @@ export default function Header() {
             </Link>
           ))}
            <Link
-              href="/signup"
+              href="/signup?role=tutor"
               className="transition-colors hover:text-foreground/80 text-foreground/60"
             >
               Become a Tutor
@@ -76,7 +86,7 @@ export default function Header() {
         <div className="hidden md:flex items-center gap-2">
           {isClient && isAuthenticated ? (
             <>
-              <Link href={isTutor ? "/tutor/dashboard" : "/dashboard"}>
+              <Link href={getDashboardUrl()}>
                 <Button variant="ghost">Dashboard</Button>
               </Link>
               <Button onClick={handleLogout}>Logout</Button>
@@ -114,7 +124,7 @@ export default function Header() {
               </Link>
             ))}
              <Link
-                href="/signup"
+                href="/signup?role=tutor"
                 className="w-full text-center py-2 transition-colors hover:text-foreground/80 text-foreground/60"
                 onClick={() => setIsMenuOpen(false)}
               >
@@ -123,7 +133,7 @@ export default function Header() {
             <div className="flex flex-col w-full gap-2 pt-2 border-t">
                {isClient && isAuthenticated ? (
                   <>
-                    <Link href={isTutor ? "/tutor/dashboard" : "/dashboard"} className="w-full">
+                    <Link href={getDashboardUrl()} className="w-full">
                       <Button className="w-full" variant="ghost" onClick={() => setIsMenuOpen(false)}>Dashboard</Button>
                     </Link>
                     <Button className="w-full" onClick={() => {

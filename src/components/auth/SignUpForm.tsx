@@ -9,10 +9,10 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Textarea } from '../ui/textarea';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 // Base schema for common fields
 const baseSchema = z.object({
@@ -49,16 +49,44 @@ export default function SignUpForm() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const roleFromUrl = searchParams.get('role') === 'tutor' ? 'tutor' : 'student';
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      accountType: 'student',
+      accountType: roleFromUrl,
       name: '',
       email: '',
       password: '',
+      ...(roleFromUrl === 'tutor' && {
+        qualification: '',
+        phoneNumber: '',
+        experience: undefined,
+        expertise: '',
+        college: '',
+        location: '',
+      })
     },
   });
+  
+  useEffect(() => {
+    form.reset({
+      accountType: roleFromUrl,
+      name: '',
+      email: '',
+      password: '',
+      ...(roleFromUrl === 'tutor' && {
+        qualification: '',
+        phoneNumber: '',
+        experience: undefined,
+        expertise: '',
+        college: '',
+        location: '',
+      })
+    });
+  }, [roleFromUrl, form]);
+
 
   const accountType = form.watch('accountType');
 
