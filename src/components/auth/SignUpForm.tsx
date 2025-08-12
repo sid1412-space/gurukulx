@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -26,7 +27,7 @@ const formSchema = z.object({
   expertise: z.string().optional(),
 }).superRefine((data, ctx) => {
     if (data.accountType === 'tutor') {
-        if (!data.qualification) {
+        if (!data.qualification || data.qualification.length < 2) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 path: ['qualification'],
@@ -47,11 +48,11 @@ const formSchema = z.object({
                 message: 'Experience is required for tutors.',
             });
         }
-        if (!data.expertise) {
+        if (!data.expertise || data.expertise.length < 10) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 path: ['expertise'],
-                message: 'Expertise is required for tutors.',
+                message: 'Expertise must be at least 10 characters for tutors.',
             });
         }
     }
@@ -69,10 +70,12 @@ export default function SignUpForm() {
       name: '',
       email: '',
       password: '',
+      accountType: undefined,
       qualification: '',
       phoneNumber: '',
       college: '',
       location: '',
+      experience: undefined,
       expertise: '',
     },
   });
