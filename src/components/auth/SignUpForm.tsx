@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -29,15 +29,16 @@ const studentSchema = baseSchema.extend({
 // Schema for the tutor with additional required fields
 const tutorSchema = baseSchema.extend({
   accountType: z.literal('tutor'),
-  qualification: z.string().min(2, 'Qualification is required.'),
-  phoneNumber: z.string().min(10, 'A valid phone number is required.'),
+  qualification: z.string().min(2, { message: 'Qualification is required.' }),
+  phoneNumber: z.string().min(10, { message: 'A valid phone number is required.' }),
   college: z.string().optional(),
   location: z.string().optional(),
   experience: z.enum(['fresher', '1-2', '3-4', '5+'], { required_error: 'Experience is required.' }),
-  expertise: z.string().min(10, 'Expertise must be at least 10 characters.'),
+  expertise: z.string().min(10, { message: 'Expertise must be at least 10 characters.' }),
 });
 
-// The final discriminated union schema
+// The final discriminated union schema ensures that when 'tutor' is selected,
+// the tutor-specific fields are validated.
 const formSchema = z.discriminatedUnion('accountType', [
   studentSchema,
   tutorSchema,

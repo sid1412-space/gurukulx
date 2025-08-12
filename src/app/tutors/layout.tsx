@@ -2,13 +2,22 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 
 // Mock authentication check
 const useAuth = () => {
     // In a real app, this would be a hook that checks a JWT, a session, etc.
-    // Set to true to allow access for layout development.
-    return { isAuthenticated: true }; 
+    const [isAuthenticated, setIsAuthenticated] = useState(true); // Default to true for development
+
+    // This is just to simulate a check that might run on the client
+    useEffect(() => {
+        // For example, you might check localStorage or a cookie here.
+        // For this mock, we'll just keep it simple.
+        // To test the redirect, you can manually set this to false.
+        // setIsAuthenticated(false);
+    }, []);
+    
+    return { isAuthenticated }; 
 };
 
 export default function TutorsLayout({

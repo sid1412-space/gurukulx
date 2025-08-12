@@ -18,7 +18,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -31,7 +31,17 @@ const menuItems = [
 // Mock authentication check
 const useAuth = () => {
     // In a real app, this would be a hook that checks a JWT, a session, etc.
-    return { isAuthenticated: true }; 
+    const [isAuthenticated, setIsAuthenticated] = useState(true); // Default to true for development
+
+    // This is just to simulate a check that might run on the client
+    useEffect(() => {
+        // For example, you might check localStorage or a cookie here.
+        // For this mock, we'll just keep it simple.
+        // To test the redirect, you can manually set this to false.
+        // setIsAuthenticated(false);
+    }, []);
+    
+    return { isAuthenticated }; 
 };
 
 
