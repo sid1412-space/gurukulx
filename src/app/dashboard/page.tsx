@@ -14,11 +14,15 @@ export default function DashboardPage() {
     const [allTutors, setAllTutors] = useState<any[]>([]);
     const [walletBalance, setWalletBalance] = useState(0);
     const [studentName, setStudentName] = useState('User');
+    
+    // In a real app, get current user from session/context.
+    const studentEmail = 'student@example.com';
+    const studentWalletKey = `student-wallet-${studentEmail}`;
+
 
     useEffect(() => {
         if (isClient) {
-            const fetchAllData = () => {
-                // In a real app, this data would come from an API
+            const fetchTutorAndStudentData = () => {
                 const usersJSON = localStorage.getItem('userDatabase');
                 if (usersJSON) {
                     const users = JSON.parse(usersJSON);
@@ -32,7 +36,7 @@ export default function DashboardPage() {
                         return {
                             ...t,
                             id: t.email,
-                            name: applicantData.name || t.name, // Ensure name is included
+                            name: applicantData.name,
                             avatar: 'https://placehold.co/100x100.png',
                             bio: applicantData.qualification || 'A passionate and experienced tutor.',
                             rating: 4.8 + Math.random() * 0.2,
@@ -41,28 +45,38 @@ export default function DashboardPage() {
                     });
                     setAllTutors(tutorsWithFullData);
 
-                    // This is a mock for demo. In real app, get current user from session/context.
-                    const studentEmail = 'student@example.com';
                     const currentUser = users.find((u:any) => u.email === studentEmail);
                     if (currentUser && currentUser.name) {
                         setStudentName(currentUser.name);
                     }
                 }
-                const storedBalance = localStorage.getItem('student-wallet-student@example.com') || '0';
-                setWalletBalance(parseFloat(storedBalance));
             };
-
-            fetchAllData();
-
-            // Listen for changes from other tabs
-            window.addEventListener('storage', fetchAllData);
-
-            // Cleanup
+            fetchTutorAndStudentData();
+            window.addEventListener('storage', fetchTutorAndStudentData);
             return () => {
-                window.removeEventListener('storage', fetchAllData);
+                window.removeEventListener('storage', fetchTutorAndStudentData);
             };
         }
     }, [isClient]);
+
+    // Dedicated effect for wallet balance to ensure it updates correctly
+    useEffect(() => {
+        if(isClient) {
+            const updateBalance = () => {
+                const storedBalance = localStorage.getItem(studentWalletKey) || '0';
+                setWalletBalance(parseFloat(storedBalance));
+            };
+
+            updateBalance(); // Initial fetch
+            
+            // Listen for changes specifically for the wallet
+            window.addEventListener('storage', updateBalance);
+
+            return () => {
+                window.removeEventListener('storage', updateBalance);
+            }
+        }
+    }, [isClient, studentWalletKey]);
 
     const recommendedTutors = useMemo(() => {
         if (!allTutors.length) return [];
