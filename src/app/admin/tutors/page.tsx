@@ -38,41 +38,65 @@ type Applicant = {
     status: 'Pending' | 'Approved' | 'Rejected';
 };
 
+type Tutor = {
+  email: string;
+  name: string;
+  role: 'tutor' | 'banned';
+  price?: number;
+  subject?: string;
+};
+
+
 export default function TutorManagementPage() {
   const [applicants, setApplicants] = useState<Applicant[]>([]);
+  const [tutors, setTutors] = useState<Tutor[]>([]);
   const { toast } = useToast();
   const isClient = useIsClient();
   const [approvingApplicant, setApprovingApplicant] = useState<Applicant | null>(null);
   const [tutorRate, setTutorRate] = useState<number | string>('');
 
-  useEffect(() => {
-    if (isClient) {
-        const fetchApplicants = () => {
-            const storedApplicants = localStorage.getItem('tutorApplicants');
-            if (storedApplicants) {
-                try {
-                    const allApplicants = JSON.parse(storedApplicants);
-                    // Filter out already approved applicants so they don't clutter the main view
-                    setApplicants(allApplicants.filter((app: Applicant) => app.status !== 'Approved'));
-                } catch (error) {
-                    console.error("Failed to parse tutor applicants from localStorage", error);
-                    setApplicants([]);
-                }
-            } else {
+  const fetchAllData = () => {
+        if (isClient) {
+            // Fetch Applicants
+            const storedApplicants = localStorage.getItem('tutorApplicants') || '[]';
+            try {
+                const allApplicants = JSON.parse(storedApplicants);
+                // Filter out already approved applicants so they don't clutter the main view
+                setApplicants(allApplicants.filter((app: Applicant) => app.status !== 'Approved'));
+            } catch (error) {
+                console.error("Failed to parse tutor applicants from localStorage", error);
                 setApplicants([]);
             }
+
+            // Fetch Tutors (approved and banned)
+            const usersJSON = localStorage.getItem('userDatabase') || '[]';
+            try {
+                 const allUsers = JSON.parse(usersJSON);
+                 const approvedTutors = allUsers.filter((user: any) => user.role === 'tutor' || user.role === 'banned');
+                 // Enrich tutor data with their subject from the application list
+                 const enrichedTutors = approvedTutors.map((tutor:Tutor) => {
+                    const applicantData = JSON.parse(storedApplicants).find((a:any) => a.email === tutor.email);
+                    return {...tutor, subject: applicantData?.subject || 'N/A' };
+                 });
+
+                 setTutors(enrichedTutors);
+            } catch(error) {
+                console.error("Failed to parse user database", error);
+                setTutors([]);
+            }
         }
-        fetchApplicants();
+    };
 
-        window.addEventListener('storage', fetchApplicants);
 
-        return () => {
-            window.removeEventListener('storage', fetchApplicants);
-        };
-    }
+  useEffect(() => {
+    fetchAllData();
+    window.addEventListener('storage', fetchAllData);
+    return () => {
+        window.removeEventListener('storage', fetchAllData);
+    };
   }, [isClient]);
 
-  const updateLocalStorage = (updatedApplicants: Applicant[]) => {
+  const updateLocalStorageApplicants = (updatedApplicants: Applicant[]) => {
     if(isClient) {
         // When updating, we need to merge with any already approved applicants
         const storedApplicants = localStorage.getItem('tutorApplicants') || '[]';
@@ -101,7 +125,7 @@ export default function TutorManagementPage() {
       applicant.id === approvingApplicant.id ? { ...applicant, status: 'Approved' } : applicant
     );
     setApplicants(updatedApplicants.filter(app => app.status !== 'Approved')); // Remove from view
-    updateLocalStorage(updatedApplicants);
+    updateLocalStorageApplicants(updatedApplicants);
 
     try {
       const usersJSON = localStorage.getItem('userDatabase') || '[]';
@@ -123,7 +147,7 @@ export default function TutorManagementPage() {
             applicant.id === approvingApplicant.id ? { ...applicant, status: 'Pending' } : applicant
         );
        setApplicants(revertedApplicants);
-       updateLocalStorage(revertedApplicants);
+       updateLocalStorageApplicants(revertedApplicants);
       return;
     }
 
@@ -134,6 +158,7 @@ export default function TutorManagementPage() {
 
     setApprovingApplicant(null);
     setTutorRate('');
+    fetchAllData(); // Refresh all data
   };
 
   const handleReject = (id: string) => {
@@ -144,7 +169,7 @@ export default function TutorManagementPage() {
       applicant.id === id ? { ...applicant, status: 'Rejected' } : applicant
     );
     setApplicants(updatedApplicants);
-    updateLocalStorage(updatedApplicants);
+    updateLocalStorageApplicants(updatedApplicants);
 
      toast({
       title: `Applicant Rejected`,
@@ -160,7 +185,7 @@ export default function TutorManagementPage() {
       applicant.id === id ? { ...applicant, status: 'Pending' } : applicant
     );
     setApplicants(updatedApplicants);
-    updateLocalStorage(updatedApplicants);
+    updateLocalStorageApplicants(updatedApplicants);
 
      toast({
       title: `Applicant Status Reset`,
@@ -174,8 +199,36 @@ export default function TutorManagementPage() {
       description: `Opening application for ${applicantName}. (This is a placeholder action).`,
     });
   };
+  
+   const handleBan = (tutorEmail: string, tutorName: string) => {
+    const usersJSON = localStorage.getItem('userDatabase') || '[]';
+    const users = JSON.parse(usersJSON);
+    const updatedUsers = users.map((u:any) => u.email === tutorEmail ? {...u, role: 'banned'} : u);
+    localStorage.setItem('userDatabase', JSON.stringify(updatedUsers));
+    window.dispatchEvent(new Event('storage'));
+    toast({
+        variant: 'destructive',
+        title: 'Tutor Banned',
+        description: `${tutorName} has been banned from the platform.`
+    });
+    fetchAllData();
+  };
 
-  const getBadgeVariant = (status: 'Pending' | 'Approved' | 'Rejected') => {
+  const handleUnban = (tutorEmail: string, tutorName: string) => {
+    const usersJSON = localStorage.getItem('userDatabase') || '[]';
+    const users = JSON.parse(usersJSON);
+    const updatedUsers = users.map((u:any) => u.email === tutorEmail ? {...u, role: 'tutor'} : u);
+    localStorage.setItem('userDatabase', JSON.stringify(updatedUsers));
+    window.dispatchEvent(new Event('storage'));
+    toast({
+        title: 'Tutor Unbanned',
+        description: `${tutorName} has been reinstated.`
+    });
+    fetchAllData();
+  };
+
+
+  const getApplicantBadgeVariant = (status: 'Pending' | 'Approved' | 'Rejected') => {
     switch (status) {
       case 'Approved':
         return 'default';
@@ -217,7 +270,7 @@ export default function TutorManagementPage() {
                   <TableCell>{applicant.email}</TableCell>
                   <TableCell>{applicant.subject}</TableCell>
                   <TableCell>
-                    <Badge variant={getBadgeVariant(applicant.status)}>
+                    <Badge variant={getApplicantBadgeVariant(applicant.status)}>
                       {applicant.status}
                     </Badge>
                   </TableCell>
@@ -270,6 +323,70 @@ export default function TutorManagementPage() {
            )}
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+            <CardTitle>Active Tutors</CardTitle>
+            <CardDescription>Manage all approved tutors on the platform.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Primary Subject</TableHead>
+                        <TableHead>Rate</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {tutors.map((tutor) => (
+                        <TableRow key={tutor.email}>
+                            <TableCell className="font-medium">{tutor.name}</TableCell>
+                            <TableCell>{tutor.email}</TableCell>
+                            <TableCell>{tutor.subject}</TableCell>
+                            <TableCell>₹{tutor.price || 'N/A'}/min</TableCell>
+                            <TableCell>
+                                <Badge variant={tutor.role === 'banned' ? 'destructive' : 'default'}>
+                                    {tutor.role === 'banned' ? 'Banned' : 'Active'}
+                                </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" className="h-8 w-8 p-0">
+                                        <span className="sr-only">Open menu</span>
+                                        <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuLabel>Moderation</DropdownMenuLabel>
+                                        {tutor.role === 'banned' ? (
+                                             <DropdownMenuItem onClick={() => handleUnban(tutor.email, tutor.name)}>
+                                                Unban Tutor
+                                            </DropdownMenuItem>
+                                        ) : (
+                                            <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => handleBan(tutor.email, tutor.name)}>
+                                                Ban Tutor
+                                            </DropdownMenuItem>
+                                        )}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+            {isClient && tutors.length === 0 && (
+                <div className="text-center text-muted-foreground py-8">
+                    <p>No active tutors on the platform yet.</p>
+                </div>
+            )}
+        </CardContent>
+      </Card>
+
 
       {approvingApplicant && (
         <AlertDialog open={!!approvingApplicant} onOpenChange={() => setApprovingApplicant(null)}>

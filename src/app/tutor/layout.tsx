@@ -12,7 +12,7 @@ import {
   SidebarInset,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
-import { LayoutDashboard, Settings, Banknote, BookCopy } from 'lucide-react';
+import { LayoutDashboard, Settings, Banknote, BookCopy, AlertTriangle } from 'lucide-react';
 import Logo from '@/components/Logo';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -35,14 +35,25 @@ export default function TutorLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [isAuthorized, setIsAuthorized] = useState(false);
+  const [isBanned, setIsBanned] = useState(false);
 
   useEffect(() => {
     const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
     const isTutor = localStorage.getItem('isTutor') === 'true';
+    const usersJSON = localStorage.getItem('userDatabase') || '[]';
+    const users = JSON.parse(usersJSON);
+    const currentUserEmail = users.find((u:any) => u.role === 'tutor' || u.role === 'banned')?.email; // This is a mock, in real app get from session
+    const currentUser = users.find((u:any) => u.email === currentUserEmail);
 
-    // This layout should only render if the user is a logged-in tutor.
+
     if (loggedIn && isTutor) {
-      setIsAuthorized(true);
+      if(currentUser && currentUser.role === 'banned') {
+        setIsBanned(true);
+        setIsAuthorized(false);
+      } else {
+        setIsBanned(false);
+        setIsAuthorized(true);
+      }
     } else {
       // If they are not a logged-in tutor, send them to the login page.
       router.push('/login');
@@ -54,8 +65,22 @@ export default function TutorLayout({
     localStorage.removeItem('isAdmin');
     localStorage.removeItem('isTutor');
     setIsAuthorized(false);
+    setIsBanned(false);
     window.dispatchEvent(new Event("storage"));
     router.push('/');
+  }
+
+  if (isBanned) {
+    return (
+        <div className="flex flex-col items-center justify-center h-screen bg-background text-center p-4">
+            <AlertTriangle className="h-16 w-16 text-destructive mb-4" />
+            <h1 className="text-2xl font-bold">Account Access Restricted</h1>
+            <p className="text-muted-foreground mt-2 max-w-md">
+                You have been banned from the platform. For more details, please contact us at <a href="mailto:gurukulxconnect@yahoo.com" className="underline text-primary">gurukulxconnect@yahoo.com</a> for further details.
+            </p>
+            <Button onClick={handleLogout} className="mt-6">Logout</Button>
+        </div>
+    )
   }
 
   if (!isAuthorized) {
