@@ -1,3 +1,4 @@
+
 'use client';
 
 import { usePathname } from 'next/navigation';
@@ -52,6 +53,8 @@ export default function JitsiMeetComponent({ onApiReady }: JitsiMeetComponentPro
             if (iframe) {
                 iframe.style.height = '100%';
                 iframe.style.width = '100%';
+                // Grant necessary permissions for screen recording
+                iframe.allow = "camera; microphone; display-capture";
             }
         }}
       />
