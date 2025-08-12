@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { sessionHistory } from '@/lib/mock-data'; // Using same mock for demo
-import { BookCopy, Download } from 'lucide-react';
+import { BookCopy, Download, Users } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 
 export default function TutorSessionHistoryPage() {
@@ -28,6 +28,27 @@ export default function TutorSessionHistoryPage() {
         <p className="text-muted-foreground">Review your past tutoring sessions and earnings.</p>
       </header>
       
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5"/> My Students</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <p className="text-muted-foreground">View and manage your students.</p>
+                <Button variant="secondary" className="mt-4 w-full">View Students</Button>
+            </CardContent>
+        </Card>
+            <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><BookCopy className="h-5 w-5"/> My Subjects</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <p className="text-muted-foreground">Update your teaching subjects.</p>
+                <Button variant="secondary" className="mt-4 w-full">Manage Subjects</Button>
+            </CardContent>
+        </Card>
+      </div>
+
       <Card>
           <CardHeader>
               <CardTitle>Completed Sessions</CardTitle>
@@ -76,7 +97,7 @@ export default function TutorSessionHistoryPage() {
                         </TableCell>
                     </TableRow>
                     ))}
-                </TableBody>
+                </Body>
             </Table>
           </CardContent>
       </Card>
