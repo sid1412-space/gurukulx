@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useIsClient } from '@/hooks/use-is-client';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -39,6 +39,7 @@ export default function TutorProfilePage() {
   const [isBusy, setIsBusy] = useState(false);
   const [isWaiting, setIsWaiting] = useState(false);
   const [sessionRequestId, setSessionRequestId] = useState<string | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (isClient && tutorId) {
@@ -59,7 +60,18 @@ export default function TutorProfilePage() {
   }, [isClient, tutorId]);
 
   useEffect(() => {
-    if (!isWaiting || !sessionRequestId) return;
+    if (!isWaiting || !sessionRequestId) {
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+        }
+        return;
+    };
+
+    // Set a timeout for 2 minutes (120000 ms)
+    timeoutRef.current = setTimeout(() => {
+        handleCancelRequest(true); // Automatically cancel with timeout message
+    }, 120000);
 
     const interval = setInterval(() => {
         const requestJSON = localStorage.getItem(`session-request-${sessionRequestId}`);
@@ -67,10 +79,12 @@ export default function TutorProfilePage() {
             const request = JSON.parse(requestJSON);
             if(request.status === 'accepted') {
                 clearInterval(interval);
+                 if (timeoutRef.current) clearTimeout(timeoutRef.current);
                 setIsWaiting(false);
                 router.push(`/session/${request.sessionId}?tutorId=${tutorId}&role=student`);
             } else if (request.status === 'rejected') {
                 clearInterval(interval);
+                 if (timeoutRef.current) clearTimeout(timeoutRef.current);
                 setIsWaiting(false);
                 setSessionRequestId(null);
                 toast({
@@ -82,9 +96,12 @@ export default function TutorProfilePage() {
         }
     }, 2000); // Check every 2 seconds
 
-    return () => clearInterval(interval);
+    return () => {
+        clearInterval(interval)
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isWaiting, sessionRequestId, router, tutorId, tutor?.name]);
+  }, [isWaiting, sessionRequestId, router, tutorId, tutor?.name, toast]);
 
 
   const handleRequestSession = () => {
@@ -102,12 +119,26 @@ export default function TutorProfilePage() {
     }
   };
   
-  const handleCancelRequest = () => {
+  const handleCancelRequest = (isTimeout = false) => {
     if(sessionRequestId) {
-        localStorage.removeItem(`session-request-${sessionRequestId}`);
+        // Mark as rejected so tutor doesn't see a stale request
+        const requestJSON = localStorage.getItem(`session-request-${sessionRequestId}`);
+         if(requestJSON) {
+            const request = JSON.parse(requestJSON);
+            request.status = 'rejected';
+            localStorage.setItem(`session-request-${sessionRequestId}`, JSON.stringify(request));
+         }
     }
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setIsWaiting(false);
     setSessionRequestId(null);
+    if (isTimeout) {
+        toast({
+            variant: 'destructive',
+            title: 'Request Timed Out',
+            description: `The tutor did not respond in time. Please try again later.`,
+        });
+    }
   }
 
 
@@ -229,14 +260,14 @@ export default function TutorProfilePage() {
                 <AlertDialogHeader>
                     <AlertDialogTitle>Waiting for Tutor</AlertDialogTitle>
                     <AlertDialogDescription>
-                        Your request has been sent to {tutor.name}. Please wait for them to accept.
+                        Your request has been sent to {tutor.name}. Please wait for them to accept. This will time out in 2 minutes.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <div className="flex items-center justify-center p-8">
                     <Loader2 className="h-12 w-12 animate-spin text-primary" />
                 </div>
                 <AlertDialogFooter>
-                    <AlertDialogAction variant="destructive" onClick={handleCancelRequest}>Cancel Request</AlertDialogAction>
+                    <AlertDialogAction variant="destructive" onClick={() => handleCancelRequest(false)}>Cancel Request</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
