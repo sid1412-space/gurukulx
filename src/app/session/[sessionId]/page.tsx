@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import dynamic from 'next/dynamic';
@@ -53,7 +54,7 @@ export default function SessionPage() {
   const [sessionDuration, setSessionDuration] = useState(0); // in seconds
   const [walletBalance, setWalletBalance] = useState(12550); // mock initial balance
   const tutor = tutors.find(t => t.id === tutorId);
-  const pricePerMinute = tutor ? tutor.price / 60 : 1; // Default to 1 to avoid division by zero
+  const pricePerMinute = tutor ? tutor.price : 1; // Default to 1 to avoid division by zero
 
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -342,8 +343,8 @@ export default function SessionPage() {
                         <span>{formatDuration(sessionDuration)}</span>
                     </div>
                 </Card>
-                 <Card className="p-2">
-                    <CardContent className="p-0">
+                 <Card>
+                    <CardContent className="p-2">
                         <div className="flex items-center gap-2 text-sm">
                             <Wallet className="text-green-600"/>
                             <span className="font-semibold">₹{walletBalance.toFixed(2)}</span>
@@ -423,42 +424,42 @@ export default function SessionPage() {
             </div>
          </div>
        </header>
-       <main className="flex-grow relative">
-          <div className="absolute inset-0 z-0">
-            {!jitsiLoadFailed && (
-                <JitsiMeetComponent onApiReady={handleApiReady} onError={handleJitsiError} isMobile={isMobile} />
+       <main className="flex-grow relative bg-muted/20">
+            <div className="absolute inset-0 z-0">
+                {!jitsiLoadFailed && (
+                    <JitsiMeetComponent onApiReady={handleApiReady} onError={handleJitsiError} isMobile={isMobile} />
+                )}
+            </div>
+
+            <div className="absolute inset-0 z-10">
+                <Whiteboard />
+            </div>
+
+            {recordingSupport === 'unsupported' && !isMobile && (
+                <div className="absolute inset-0 flex items-center justify-center z-20 p-4 bg-background/50 pointer-events-none">
+                    <Alert variant="destructive" className="max-w-lg">
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertTitle>Screen Recording Not Supported</AlertTitle>
+                        <AlertDescription>
+                        This session requires screen recording, but your browser does not support this feature. Please switch to a modern desktop browser like Chrome or Firefox to continue.
+                        </AlertDescription>
+                    </Alert>
+                </div>
             )}
-          </div>
-          
-          <div className="absolute inset-0 z-10 pointer-events-none">
-            <Whiteboard />
-          </div>
 
-          {recordingSupport === 'unsupported' && !isMobile && (
-            <div className="absolute inset-0 flex items-center justify-center z-20 p-4 bg-background/50 pointer-events-none">
-                <Alert variant="destructive" className="max-w-lg">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertTitle>Screen Recording Not Supported</AlertTitle>
-                    <AlertDescription>
-                    This session requires screen recording, but your browser does not support this feature. Please switch to a modern desktop browser like Chrome or Firefox to continue.
-                    </AlertDescription>
-                </Alert>
-            </div>
-          )}
+            {jitsiLoadFailed && (
+                <div className="absolute inset-0 flex items-center justify-center z-20 p-4 bg-background/50 pointer-events-none">
+                    <Alert variant="destructive" className="max-w-lg">
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertTitle>Video Connection Error</AlertTitle>
+                        <AlertDescription>
+                            The video conferencing service failed to load. This might be due to a network issue or browser incompatibility. Please check your connection and try again, or use a different browser.
+                        </AlertDescription>
+                    </Alert>
+                </div>
+            )}
 
-          {jitsiLoadFailed && (
-            <div className="absolute inset-0 flex items-center justify-center z-20 p-4 bg-background/50 pointer-events-none">
-                <Alert variant="destructive" className="max-w-lg">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertTitle>Video Connection Error</AlertTitle>
-                    <AlertDescription>
-                        The video conferencing service failed to load. This might be due to a network issue or browser incompatibility. Please check your connection and try again, or use a different browser.
-                    </AlertDescription>
-                </Alert>
-            </div>
-          )}
-
-           {isClient && <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />}
+            {isClient && <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />}
        </main>
     </div>
   );
