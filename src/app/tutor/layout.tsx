@@ -58,7 +58,7 @@ export default function TutorLayout({
   if (!isAuthorized) {
      return (
         <div className="flex items-center justify-center h-screen bg-background">
-            <p>Redirecting...</p>
+            <p>Redirecting to login...</p>
         </div>
     );
   }
