@@ -9,10 +9,11 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription as CardDesc, CardHeader, CardTitle } from '@/components/ui/card';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Loader2, KeyRound, Landmark, User } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useIsClient } from '@/hooks/use-is-client';
 
 
 const profileSchema = z.object({
@@ -38,12 +39,14 @@ export default function TutorSettingsPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isClient = useIsClient();
+  const [loggedInUser, setLoggedInUser] = useState<string | null>(null);
 
   const [currentUser, setCurrentUser] = useState({
-    name: 'Dr. Evelyn Reed',
-    email: 'tutor@example.com',
-    bio: 'PhD in Physics with 10+ years of teaching experience at the university level. I make complex topics easy to understand.',
-    subjects: 'Physics, Calculus',
+    name: '',
+    email: '',
+    bio: '',
+    subjects: '',
     avatar: 'https://placehold.co/128x128.png'
   });
   
@@ -51,12 +54,7 @@ export default function TutorSettingsPage() {
 
   const profileForm = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
-    defaultValues: {
-      name: currentUser.name,
-      email: currentUser.email,
-      bio: currentUser.bio,
-      subjects: currentUser.subjects
-    },
+    defaultValues: currentUser,
   });
 
   const passwordForm = useForm<z.infer<typeof passwordSchema>>({
@@ -67,12 +65,49 @@ export default function TutorSettingsPage() {
   const payoutForm = useForm<z.infer<typeof payoutSchema>>({
     resolver: zodResolver(payoutSchema),
     defaultValues: {
-        accountHolderName: 'Dr. Evelyn Reed',
-        accountNumber: '**** **** 1234',
-        ifscCode: 'ABCDE012345',
-        upiId: 'evelyn.reed@upi'
+        accountHolderName: '',
+        accountNumber: '',
+        ifscCode: '',
+        upiId: ''
     }
   });
+
+  useEffect(() => {
+    if(isClient) {
+      const email = localStorage.getItem('loggedInUser');
+      setLoggedInUser(email);
+    }
+  }, [isClient]);
+
+   useEffect(() => {
+    if (isClient && loggedInUser) {
+      // Load Profile Info
+      const usersJSON = localStorage.getItem('userDatabase') || '[]';
+      const users = JSON.parse(usersJSON);
+      const tutor = users.find((u: any) => u.email === loggedInUser);
+      if (tutor) {
+        const tutorProfile = {
+          name: tutor.name || '',
+          email: tutor.email,
+          bio: tutor.bio || 'PhD in Physics with 10+ years of teaching experience...',
+          subjects: tutor.subjects || 'Physics, Calculus',
+          avatar: tutor.avatar || 'https://placehold.co/128x128.png',
+        };
+        setCurrentUser(tutorProfile);
+        setAvatarPreview(tutorProfile.avatar);
+        profileForm.reset(tutorProfile);
+      }
+
+      // Load Payout Info
+      const payoutDetailsJSON = localStorage.getItem('tutorPayoutDetails') || '{}';
+      const allPayouts = JSON.parse(payoutDetailsJSON);
+      const tutorPayouts = allPayouts[loggedInUser];
+      if (tutorPayouts) {
+        payoutForm.reset(tutorPayouts);
+      }
+    }
+  }, [isClient, loggedInUser, profileForm, payoutForm]);
+
   
   const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
@@ -113,15 +148,30 @@ export default function TutorSettingsPage() {
   }
   
   function onPayoutSubmit(values: z.infer<typeof payoutSchema>) {
-     setIsLoading(true);
-    console.log(values);
-    setTimeout(() => {
-      toast({
-        title: 'Payout Details Updated',
-        description: 'Your bank information has been saved.',
-      });
-      setIsLoading(false);
-    }, 1000);
+    if (!loggedInUser) return;
+    setIsLoading(true);
+
+    try {
+        const payoutDetailsJSON = localStorage.getItem('tutorPayoutDetails') || '{}';
+        const allPayouts = JSON.parse(payoutDetailsJSON);
+        allPayouts[loggedInUser] = values;
+        localStorage.setItem('tutorPayoutDetails', JSON.stringify(allPayouts));
+        
+        window.dispatchEvent(new Event('storage'));
+
+        toast({
+            title: 'Payout Details Updated',
+            description: 'Your bank information has been saved.',
+        });
+    } catch (e) {
+        toast({
+            variant: 'destructive',
+            title: 'Error Saving Details',
+            description: 'Could not save your payout information.',
+        });
+    } finally {
+        setIsLoading(false);
+    }
   }
 
   return (
@@ -144,7 +194,7 @@ export default function TutorSettingsPage() {
                     <div className="flex items-center gap-4">
                         <Avatar className="h-20 w-20">
                            <AvatarImage src={avatarPreview} alt={currentUser.name} data-ai-hint="person portrait"/>
-                           <AvatarFallback>{currentUser.name.charAt(0)}</AvatarFallback>
+                           <AvatarFallback>{currentUser.name ? currentUser.name.charAt(0) : 'T'}</AvatarFallback>
                         </Avatar>
                         <Input type="file" ref={fileInputRef} onChange={handlePhotoChange} className="hidden" accept="image/*" />
                         <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>Change Photo</Button>
@@ -169,7 +219,7 @@ export default function TutorSettingsPage() {
                         <FormItem>
                           <FormLabel>Email Address</FormLabel>
                           <FormControl>
-                            <Input type="email" {...field} />
+                            <Input type="email" {...field} readOnly disabled/>
                           </FormControl>
                           <FormMessage />
                         </FormItem>

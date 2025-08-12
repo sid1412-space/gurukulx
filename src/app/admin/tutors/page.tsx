@@ -13,7 +13,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { MoreHorizontal } from 'lucide-react';
+import { Banknote, MoreHorizontal } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
@@ -38,12 +38,20 @@ type Applicant = {
     status: 'Pending' | 'Approved' | 'Rejected';
 };
 
+type PayoutDetails = {
+    accountHolderName?: string;
+    accountNumber?: string;
+    ifscCode?: string;
+    upiId?: string;
+};
+
 type Tutor = {
   email: string;
   name: string;
   role: 'tutor' | 'banned';
   price?: number;
   subject?: string;
+  payoutDetails?: PayoutDetails;
 };
 
 
@@ -54,6 +62,7 @@ export default function TutorManagementPage() {
   const isClient = useIsClient();
   const [approvingApplicant, setApprovingApplicant] = useState<Applicant | null>(null);
   const [deletingTutor, setDeletingTutor] = useState<Tutor | null>(null);
+  const [viewingTutor, setViewingTutor] = useState<Tutor | null>(null);
   const [tutorRate, setTutorRate] = useState<number | string>('');
 
   const fetchAllData = () => {
@@ -71,18 +80,21 @@ export default function TutorManagementPage() {
 
             // Fetch Tutors (approved and banned)
             const usersJSON = localStorage.getItem('userDatabase') || '[]';
+            const payoutDetailsJSON = localStorage.getItem('tutorPayoutDetails') || '{}';
             try {
                  const allUsers = JSON.parse(usersJSON);
+                 const allPayoutDetails = JSON.parse(payoutDetailsJSON);
                  const approvedTutors = allUsers.filter((user: any) => user.role === 'tutor' || user.role === 'banned');
-                 // Enrich tutor data with their subject from the application list
+                 
                  const enrichedTutors = approvedTutors.map((tutor:Tutor) => {
                     const applicantData = JSON.parse(storedApplicants).find((a:any) => a.email === tutor.email);
-                    return {...tutor, subject: applicantData?.subject || 'N/A' };
+                    const payoutDetails = allPayoutDetails[tutor.email];
+                    return {...tutor, subject: applicantData?.subject || 'N/A', payoutDetails };
                  });
 
                  setTutors(enrichedTutors);
             } catch(error) {
-                console.error("Failed to parse user database", error);
+                console.error("Failed to parse user database or payout details", error);
                 setTutors([]);
             }
         }
@@ -390,6 +402,11 @@ export default function TutorManagementPage() {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuLabel>Moderation</DropdownMenuLabel>
+                                        <DropdownMenuItem onClick={() => setViewingTutor(tutor)}>
+                                            <Banknote className="mr-2 h-4 w-4"/>
+                                            View Payout Details
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator/>
                                         {tutor.role === 'banned' ? (
                                             <>
                                                 <DropdownMenuItem onClick={() => handleUnban(tutor.email, tutor.name)}>
@@ -462,6 +479,32 @@ export default function TutorManagementPage() {
                 <AlertDialogAction onClick={handleDeleteTutor} className="bg-destructive hover:bg-destructive/90">
                     Yes, delete tutor
                 </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+      )}
+      
+      {viewingTutor && (
+        <AlertDialog open={!!viewingTutor} onOpenChange={() => setViewingTutor(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Payout Details for {viewingTutor.name}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Bank account information for processing payouts.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                {viewingTutor.payoutDetails ? (
+                    <div className="text-sm space-y-2">
+                        <p><span className="font-semibold">Account Holder:</span> {viewingTutor.payoutDetails.accountHolderName || 'N/A'}</p>
+                        <p><span className="font-semibold">Account Number:</span> {viewingTutor.payoutDetails.accountNumber || 'N/A'}</p>
+                        <p><span className="font-semibold">IFSC Code:</span> {viewingTutor.payoutDetails.ifscCode || 'N/A'}</p>
+                        <p><span className="font-semibold">UPI ID:</span> {viewingTutor.payoutDetails.upiId || 'N/A'}</p>
+                    </div>
+                ) : (
+                    <p className="text-sm text-muted-foreground">This tutor has not submitted their payout details yet.</p>
+                )}
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Close</AlertDialogCancel>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
