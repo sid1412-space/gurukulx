@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 import ChatPanel from '@/components/session/ChatPanel';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { tutors } from '@/lib/mock-data';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
@@ -561,3 +561,4 @@ export default function SessionPage() {
 }
 
     
+
