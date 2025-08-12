@@ -11,7 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
-import { Textarea } from '../ui/textarea';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 // Base schema for common fields
@@ -21,21 +20,12 @@ const baseSchema = z.object({
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
 });
 
-const subjects = [
-    'Physics', 
-    'Chemistry', 
-    'Mathematics', 
-    'Biology',
-    'Computer Science',
-    'Python',
-    'Spanish',
-    'French',
-    'History',
-    'Literature',
-    'Art',
-    'Design',
-] as const;
+const exams = {
+  JEE: ['Physics', 'Chemistry', 'Mathematics'],
+  NEET: ['Physics', 'Chemistry', 'Biology'],
+} as const;
 
+const allSubjects = [...new Set([...exams.JEE, ...exams.NEET])] as [string, ...string[]];
 
 // Schema for the student
 const studentSchema = baseSchema.extend({
@@ -50,7 +40,8 @@ const tutorSchema = baseSchema.extend({
   college: z.string().optional(),
   location: z.string().optional(),
   experience: z.enum(['fresher', '1-2', '3-4', '5+'], { required_error: 'Experience is required.' }),
-  expertise: z.enum(subjects, { required_error: 'Please select your primary subject.' }),
+  exam: z.enum(['JEE', 'NEET'], { required_error: 'Please select an exam category.'}),
+  expertise: z.enum(allSubjects, { required_error: 'Please select your primary subject.' }),
 });
 
 const formSchema = z.discriminatedUnion('accountType', [
@@ -77,6 +68,7 @@ export default function SignUpForm() {
         qualification: '',
         phoneNumber: '',
         experience: undefined,
+        exam: undefined,
         expertise: undefined,
         college: '',
         location: '',
@@ -94,6 +86,7 @@ export default function SignUpForm() {
         qualification: '',
         phoneNumber: '',
         experience: undefined,
+        exam: undefined,
         expertise: undefined,
         college: '',
         location: '',
@@ -103,6 +96,7 @@ export default function SignUpForm() {
 
 
   const accountType = form.watch('accountType');
+  const selectedExam = form.watch('exam' as 'exam'); // Watch the exam field for tutors
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
@@ -200,6 +194,7 @@ export default function SignUpForm() {
                       qualification: '',
                       phoneNumber: '',
                       experience: undefined,
+                      exam: undefined,
                       expertise: undefined,
                       college: '',
                       location: '',
@@ -284,7 +279,7 @@ export default function SignUpForm() {
                 <FormItem>
                   <FormLabel>Phone Number</FormLabel>
                   <FormControl>
-                    <Input type="tel" placeholder="+1 234 567 890" {...field} />
+                    <Input type="tel" placeholder="+91 12345 67890" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -297,7 +292,7 @@ export default function SignUpForm() {
                 <FormItem>
                   <FormLabel>College (Optional)</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., University of Example" {...field} />
+                    <Input placeholder="e.g., Indian Institute of Technology" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -310,7 +305,7 @@ export default function SignUpForm() {
                 <FormItem>
                   <FormLabel>Location (Optional)</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., New York, USA" {...field} />
+                    <Input placeholder="e.g., New Delhi, India" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -339,20 +334,44 @@ export default function SignUpForm() {
                 </FormItem>
               )}
             />
+             <FormField
+                control={form.control}
+                name="exam"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Exam Category</FormLabel>
+                        <Select onValueChange={(value) => {
+                            field.onChange(value);
+                            form.setValue('expertise', undefined); // Reset subject on exam change
+                        }} defaultValue={field.value}>
+                            <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select an exam category" />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                <SelectItem value="JEE">JEE (Engineering)</SelectItem>
+                                <SelectItem value="NEET">NEET (Medical)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
             <FormField
               control={form.control}
               name="expertise"
               render={({ field }) => (
                 <FormItem>
                     <FormLabel>Primary Subject</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value} disabled={!selectedExam}>
                         <FormControl>
                         <SelectTrigger>
                             <SelectValue placeholder="Select your main subject of expertise" />
                         </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                           {subjects.map(subject => (
+                           {(selectedExam ? exams[selectedExam] : []).map(subject => (
                              <SelectItem key={subject} value={subject}>{subject}</SelectItem>
                            ))}
                         </SelectContent>
