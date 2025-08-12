@@ -117,7 +117,7 @@ export default function SessionPage() {
   };
 
   const startRecording = async () => {
-    if (isRecording) return;
+    if (isRecording || isMobile) return;
     try {
         const displayStream = await navigator.mediaDevices.getDisplayMedia({
             video: { mediaSource: 'tab' } as any,
