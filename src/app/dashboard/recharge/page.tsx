@@ -76,7 +76,7 @@ export default function RechargePage() {
             </div>
             <div className="space-y-2">
                 <p className="font-semibold">Or use UPI ID:</p>
-                <p className="text-lg font-mono p-2 bg-muted rounded-md inline-block">your-upi-id@okhdfcbank</p>
+                <p className="text-lg font-mono p-2 bg-muted rounded-md inline-block">NEUROX@SLC</p>
             </div>
              <Separator />
             <p className="text-sm text-muted-foreground font-semibold">After payment, click the button below to confirm.</p>
