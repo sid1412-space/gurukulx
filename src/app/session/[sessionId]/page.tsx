@@ -19,17 +19,18 @@ export default function SessionPage() {
   const sessionId = pathname.split('/').pop() || 'default-session';
   
   return (
-    <div className="h-screen flex flex-col md:flex-row bg-secondary/30 p-4 gap-4">
-      {/* Whiteboard Panel */}
-      <div className="flex-grow h-1/2 md:h-full md:w-auto">
+    <div className="h-full flex flex-col md:flex-row bg-secondary/30 p-4 gap-4">
+      {/* Video Panel */}
+      <div className="w-full h-[30vh] md:w-[30%] md:h-full flex-shrink-0">
         <Card className="h-full">
-            <Whiteboard />
+          <JitsiMeet roomName={`TutorConnect-Session-${sessionId}`} />
         </Card>
       </div>
-      {/* Video Panel */}
-      <div className="h-1/2 md:h-full md:w-[350px] flex-shrink-0">
+
+      {/* Whiteboard Panel */}
+      <div className="w-full h-[70vh] md:w-[70%] md:h-full flex-grow">
         <Card className="h-full">
-            <JitsiMeet roomName={`TutorConnect-Session-${sessionId}`} />
+          <Whiteboard />
         </Card>
       </div>
     </div>
