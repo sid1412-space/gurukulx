@@ -10,22 +10,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
-import { Loader2, Phone } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Separator } from '../ui/separator';
 import { auth, db } from '@/lib/firebase';
-import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
+import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 
 // Base schema for common fields
@@ -80,11 +70,6 @@ export default function SignUpForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const roleFromUrl = searchParams.get('role') === 'tutor' ? 'tutor' : 'student';
-
-  const [showPhoneDialog, setShowPhoneDialog] = useState(false);
-  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -149,13 +134,6 @@ export default function SignUpForm() {
                 email: values.email,
                 role: 'student'
             });
-            // Also update localStorage userDatabase
-             const usersJSON = localStorage.getItem('userDatabase') || '[]';
-            const users = JSON.parse(usersJSON);
-            users.push({name: values.name, email: values.email, role: 'student'});
-            localStorage.setItem('userDatabase', JSON.stringify(users));
-            window.dispatchEvent(new Event('storage'));
-
             handleSuccessfulSignup('Welcome to GurukulX. Please log in.');
 
         } else if (values.accountType === 'tutor') {
@@ -176,28 +154,6 @@ export default function SignUpForm() {
                 }
             };
             await setDoc(userDocRef, applicantData);
-
-            // Also create a tutor applicant in localStorage for admin view
-            const applicantsJSON = localStorage.getItem('tutorApplicants') || '[]';
-            const applicants = JSON.parse(applicantsJSON);
-            applicants.push({
-                id: user.uid,
-                name: values.name,
-                email: values.email,
-                subject: values.expertise,
-                status: 'Pending',
-                ...applicantData.applicationDetails
-            });
-            localStorage.setItem('tutorApplicants', JSON.stringify(applicants));
-            
-            const usersJSON = localStorage.getItem('userDatabase') || '[]';
-            const users = JSON.parse(usersJSON);
-            users.push({name: values.name, email: values.email, role: 'student'});
-            localStorage.setItem('userDatabase', JSON.stringify(users));
-
-            window.dispatchEvent(new Event('storage'));
-
-
             handleSuccessfulSignup('Your application is submitted! Please log in to continue.');
         }
 
@@ -227,12 +183,6 @@ export default function SignUpForm() {
                 name: user.displayName,
                 role: 'student' // All social signups are students by default
             });
-
-             const usersJSON = localStorage.getItem('userDatabase') || '[]';
-            const users = JSON.parse(usersJSON);
-            users.push({name: user.displayName, email: user.email, role: 'student'});
-            localStorage.setItem('userDatabase', JSON.stringify(users));
-            window.dispatchEvent(new Event('storage'));
         }
         handleSuccessfulSignup('Welcome to GurukulX. Please log in.');
     } catch (error: any) {
@@ -244,72 +194,9 @@ export default function SignUpForm() {
         setIsLoading(false);
     }
   }
-  
-  const setupRecaptcha = () => {
-    // Check if the verifier has already been rendered.
-    if (!window.recaptchaVerifier?.auth) {
-        const container = document.getElementById('recaptcha-container-signup');
-        if (container) {
-            container.innerHTML = ''; // Clear previous instance if any
-            window.recaptchaVerifier = new RecaptchaVerifier(auth, container, {
-                'size': 'invisible',
-                'callback': (response: any) => {},
-            });
-        }
-    }
-  }
-
-  const onPhoneSignUp = async () => {
-    setIsLoading(true);
-    setupRecaptcha();
-    const appVerifier = window.recaptchaVerifier;
-    try {
-        const result = await signInWithPhoneNumber(auth, phone, appVerifier);
-        setConfirmationResult(result);
-        toast({ title: 'OTP Sent!', description: 'Please check your phone for the code.' });
-    } catch (error: any) {
-        toast({ variant: 'destructive', title: 'Phone Sign-Up Failed', description: error.message });
-    } finally {
-        setIsLoading(false);
-    }
-  };
-
-  const onOTPSubmit = async () => {
-    setIsLoading(true);
-    if (!confirmationResult) return setIsLoading(false);
-    
-    try {
-        const result = await confirmationResult.confirm(otp);
-        const user = result.user;
-        const userDocRef = doc(db, "users", user.uid);
-        const userDoc = await getDoc(userDocRef);
-
-        if (!userDoc.exists()) {
-            await setDoc(userDocRef, {
-                uid: user.uid,
-                phoneNumber: user.phoneNumber,
-                name: 'New User',
-                role: 'student'
-            });
-
-            const usersJSON = localStorage.getItem('userDatabase') || '[]';
-            const users = JSON.parse(usersJSON);
-            users.push({name: 'New User', email: `phone-${user.uid}`, role: 'student'}); // Create a mock email for phone users
-            localStorage.setItem('userDatabase', JSON.stringify(users));
-            window.dispatchEvent(new Event('storage'));
-        }
-        setShowPhoneDialog(false);
-        handleSuccessfulSignup('Welcome to GurukulX. Please log in.');
-    } catch(error: any) {
-         toast({ variant: 'destructive', title: 'Login Failed', description: error.message });
-         setIsLoading(false);
-    }
-  };
-
 
   return (
     <>
-    <div id="recaptcha-container-signup"></div>
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
@@ -544,76 +431,14 @@ export default function SignUpForm() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2">
             <Button variant="outline" onClick={handleGoogleSignUp}>
                 <GoogleIcon />
                 Google
             </Button>
-            <Button variant="outline" onClick={() => setShowPhoneDialog(true)}>
-                <Phone className="mr-2" />
-                Phone
-            </Button>
         </div>
 
     </Form>
-    
-    <AlertDialog open={showPhoneDialog} onOpenChange={setShowPhoneDialog}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Sign Up with Phone</AlertDialogTitle>
-          <AlertDialogDescription>
-            {confirmationResult
-              ? "Enter the 6-digit OTP sent to your phone."
-              : "Please enter your phone number to receive a verification code."
-            }
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-
-        {confirmationResult ? (
-              <div className="space-y-4">
-                <Input
-                    type="text"
-                    placeholder="123456"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
-                />
-                <Button onClick={onOTPSubmit} disabled={isLoading} className="w-full">
-                      {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Verify OTP
-                </Button>
-              </div>
-        ) : (
-            <div className="space-y-4">
-                <Input
-                    type="tel"
-                    placeholder="+91 12345 67890"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                />
-                <Button onClick={onPhoneSignUp} disabled={isLoading} className="w-full">
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Send OTP
-                </Button>
-            </div>
-        )}
-        
-        <AlertDialogFooter>
-          <AlertDialogCancel onClick={() => {
-              setConfirmationResult(null);
-              setIsLoading(false);
-          }}>Cancel</AlertDialogCancel>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
     </>
   );
 }
-
-// Add this to the global window interface
-declare global {
-    interface Window {
-        recaptchaVerifier: RecaptchaVerifier;
-    }
-}
-
-    

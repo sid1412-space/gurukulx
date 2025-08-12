@@ -8,37 +8,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { useState, useEffect } from 'react';
-import { Loader2, Phone } from 'lucide-react';
+import { useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Separator } from '../ui/separator';
 import { auth, db } from '@/lib/firebase';
-import { signInWithEmailAndPassword, sendPasswordResetEmail, signInWithPopup, GoogleAuthProvider, RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendPasswordResetEmail, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
 });
-
-const phoneFormSchema = z.object({
-    phoneNumber: z.string().min(10, "Please enter a valid phone number."),
-});
-
-const otpFormSchema = z.object({
-    otp: z.string().length(6, "OTP must be 6 digits."),
-});
-
 
 const GoogleIcon = () => (
     <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -54,11 +35,6 @@ export default function LoginForm() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const [showPhoneDialog, setShowPhoneDialog] = useState(false);
-  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
-
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -152,65 +128,9 @@ export default function LoginForm() {
       });
     }
   };
-  
-  const setupRecaptcha = () => {
-    if (!window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        'size': 'invisible',
-        'callback': (response: any) => {
-          // reCAPTCHA solved, allow signInWithPhoneNumber.
-        }
-      });
-    }
-  }
-
-  const onPhoneSignIn = async () => {
-    setIsLoading(true);
-    setupRecaptcha();
-    const appVerifier = window.recaptchaVerifier;
-    try {
-        const result = await signInWithPhoneNumber(auth, phone, appVerifier);
-        setConfirmationResult(result);
-        toast({ title: 'OTP Sent!', description: 'Please check your phone for the verification code.' });
-    } catch (error: any) {
-        console.error(error);
-        toast({
-            variant: 'destructive',
-            title: 'Phone Sign-In Failed',
-            description: error.message,
-        });
-    } finally {
-        setIsLoading(false);
-    }
-  };
-
-  const onOTPSubmit = async () => {
-    setIsLoading(true);
-    if (!confirmationResult) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Please request an OTP first.' });
-        setIsLoading(false);
-        return;
-    }
-    try {
-        const result = await confirmationResult.confirm(otp);
-        toast({ title: 'Logged In!', description: 'Redirecting...' });
-        await handleRedirect(result.user);
-    } catch(error: any) {
-         toast({
-            variant: 'destructive',
-            title: 'Login Failed',
-            description: error.message,
-        });
-    } finally {
-        setIsLoading(false);
-        setShowPhoneDialog(false);
-    }
-  };
-
 
   return (
     <>
-      <div id="recaptcha-container"></div>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <FormField
@@ -261,73 +181,13 @@ export default function LoginForm() {
           </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 gap-2">
           <Button variant="outline" onClick={handleGoogleSignIn}>
               <GoogleIcon />
               Google
           </Button>
-          <Button variant="outline" onClick={() => setShowPhoneDialog(true)}>
-              <Phone className="mr-2" />
-              Phone
-          </Button>
       </div>
       </Form>
-      
-       <AlertDialog open={showPhoneDialog} onOpenChange={setShowPhoneDialog}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Sign In with Phone</AlertDialogTitle>
-              <AlertDialogDescription>
-                {confirmationResult
-                  ? "Enter the 6-digit OTP sent to your phone."
-                  : "Please enter your phone number to receive a verification code."
-                }
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-
-            {confirmationResult ? (
-                 <div className="space-y-4">
-                    <Input
-                        type="text"
-                        placeholder="123456"
-                        value={otp}
-                        onChange={(e) => setOtp(e.target.value)}
-                    />
-                    <Button onClick={onOTPSubmit} disabled={isLoading} className="w-full">
-                         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Verify OTP
-                    </Button>
-                 </div>
-            ) : (
-                <div className="space-y-4">
-                    <Input
-                        type="tel"
-                        placeholder="+91 12345 67890"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                    />
-                    <Button onClick={onPhoneSignIn} disabled={isLoading} className="w-full">
-                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Send OTP
-                    </Button>
-                </div>
-            )}
-            
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => {
-                  setConfirmationResult(null);
-                  setIsLoading(false);
-              }}>Cancel</AlertDialogCancel>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
     </>
   );
-}
-
-// Add this to the global window interface
-declare global {
-    interface Window {
-        recaptchaVerifier: RecaptchaVerifier;
-    }
 }
