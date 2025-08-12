@@ -19,6 +19,7 @@ const JitsiMeet = dynamic(() => import('@/components/session/JitsiMeet'), {
 
 
 export default function SessionPage({ params }: { params: { sessionId: string } }) {
+  const { sessionId } = params;
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col lg:flex-row gap-4 p-4 bg-secondary/30">
       <div className="flex-grow h-full lg:h-auto lg:w-3/4">
@@ -35,7 +36,7 @@ export default function SessionPage({ params }: { params: { sessionId: string } 
             </CardHeader>
             <CardContent className="flex-grow p-0 relative">
                 <TabsContent value="video" className="w-full h-full absolute top-0 left-0 m-0">
-                    <JitsiMeet roomName={params.sessionId} />
+                    <JitsiMeet roomName={sessionId} />
                 </TabsContent>
                 <TabsContent value="whiteboard" className="w-full h-full absolute top-0 left-0 m-0">
                     <Whiteboard />
