@@ -1,23 +1,33 @@
+'use client';
+
 import type { Metadata } from 'next';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { usePathname } from 'next/navigation';
+import React from 'react';
 
-export const metadata: Metadata = {
-  title: 'TutorConnect',
-  description: 'The future of online tutoring.',
-};
+// Using metadata object for server components, but we need client for pathname
+// export const metadata: Metadata = {
+//   title: 'TutorConnect',
+//   description: 'The future of online tutoring.',
+// };
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const pathname = usePathname();
+  const isSessionPage = pathname.startsWith('/session');
+
   return (
     <html lang="en" className="!scroll-smooth">
       <head>
+        <title>TutorConnect</title>
+        <meta name="description" content="The future of online tutoring." />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
@@ -26,12 +36,19 @@ export default function RootLayout({
         ></link>
       </head>
        <body className={cn('font-body antialiased bg-background')}>
-        <div className="flex flex-col min-h-screen">
-          <Header />
-          <main className="flex-grow">{children}</main>
-          <Footer />
-        </div>
-        <Toaster />
+        {isSessionPage ? (
+          <>
+            {children}
+            <Toaster />
+          </>
+        ) : (
+          <div className="flex flex-col min-h-screen">
+            <Header />
+            <main className="flex-grow">{children}</main>
+            <Footer />
+          </div>
+        )}
+        {!isSessionPage && <Toaster />}
       </body>
     </html>
   );
