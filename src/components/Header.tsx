@@ -18,6 +18,7 @@ const navLinks = [
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isTutor, setIsTutor] = useState(false);
   const isClient = useIsClient();
   const router = useRouter();
 
@@ -25,7 +26,9 @@ export default function Header() {
     if (isClient) {
       const checkAuth = () => {
         const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
+        const tutor = localStorage.getItem('isTutor') === 'true';
         setIsAuthenticated(loggedIn);
+        setIsTutor(tutor);
       };
 
       checkAuth();
@@ -41,7 +44,9 @@ export default function Header() {
   const handleLogout = () => {
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('isAdmin'); // Also clear admin status
+    localStorage.removeItem('isTutor'); // Also clear tutor status
     setIsAuthenticated(false);
+    setIsTutor(false);
     // Dispatch a storage event to notify other tabs/windows
     window.dispatchEvent(new Event("storage"));
     router.push('/'); 
@@ -71,7 +76,7 @@ export default function Header() {
         <div className="hidden md:flex items-center gap-2">
           {isClient && isAuthenticated ? (
             <>
-              <Link href="/dashboard">
+              <Link href={isTutor ? "/tutor/dashboard" : "/dashboard"}>
                 <Button variant="ghost">Dashboard</Button>
               </Link>
               <Button onClick={handleLogout}>Logout</Button>
@@ -118,7 +123,7 @@ export default function Header() {
             <div className="flex flex-col w-full gap-2 pt-2 border-t">
                {isClient && isAuthenticated ? (
                   <>
-                    <Link href="/dashboard" className="w-full">
+                    <Link href={isTutor ? "/tutor/dashboard" : "/dashboard"} className="w-full">
                       <Button className="w-full" variant="ghost" onClick={() => setIsMenuOpen(false)}>Dashboard</Button>
                     </Link>
                     <Button className="w-full" onClick={() => {
