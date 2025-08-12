@@ -29,18 +29,23 @@ export default function SessionPage() {
   const isMobile = useIsMobile();
   const isClient = useIsClient();
   
-  const questionText = searchParams.get('questionText');
+  const [questionText, setQuestionText] = useState<string | null>(null);
   const [questionImage, setQuestionImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (isClient) {
-      const storedImage = sessionStorage.getItem('questionImage');
-      if (storedImage) {
-        setQuestionImage(storedImage);
+      const text = searchParams.get('questionText');
+      const image = sessionStorage.getItem('questionImage');
+      
+      if (text) {
+        setQuestionText(text);
+      }
+      if (image) {
+        setQuestionImage(image);
         sessionStorage.removeItem('questionImage');
       }
     }
-  }, [isClient]);
+  }, [isClient, searchParams]);
 
 
   useEffect(() => {
@@ -58,7 +63,6 @@ export default function SessionPage() {
       return () => {
         jitsiApi.removeListener('audioMuteStatusChanged', onAudioMuteStatusChanged);
         jitsiApi.removeListener('screenSharingStatusChanged', onScreenSharingStatusChanged);
-        jitsiApi.dispose();
       };
     }
   }, [jitsiApi]);
@@ -66,6 +70,7 @@ export default function SessionPage() {
 
   const handleApiReady = (api: JitsiAPI) => {
     setJitsiApi(api);
+    api.executeCommand('toggleVideo');
   };
 
   const toggleMute = () => {
