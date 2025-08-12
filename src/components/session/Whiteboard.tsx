@@ -61,10 +61,12 @@ Use the image tool in the toolbar (7th icon from the top).
 
 export default function Whiteboard() {
 	return (
-		<div style={{ position: 'fixed', inset: 0 }}>
+		<div style={{ position: 'relative', width: '100%', height: '100%' }}>
 			<Tldraw>
                 <EditorEvents />
             </Tldraw>
 		</div>
 	)
 }
+
+    

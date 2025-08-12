@@ -2,15 +2,14 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useState, useEffect, useRef, MouseEvent as ReactMouseEvent, TouchEvent as ReactTouchEvent } from 'react';
-import { Mic, MicOff, ScreenShare, ScreenShareOff, PhoneOff, GripVertical, MessageSquare, VideoOff, AlertTriangle, Timer, Wallet, Wand2, Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Mic, MicOff, ScreenShare, ScreenShareOff, PhoneOff, MessageSquare, AlertTriangle, Timer, Wallet, Wand2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useRouter, useSearchParams, useParams } from 'next/navigation';
 import type { JitsiAPI } from '@jitsi/react-sdk';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useIsClient } from '@/hooks/use-is-client';
-import { cn } from '@/lib/utils';
 import ChatPanel from '@/components/session/ChatPanel';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -19,6 +18,7 @@ import { tutors } from '@/lib/mock-data';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { getExerciseSuggestions } from '@/lib/actions';
+import { Separator } from '@/components/ui/separator';
 
 
 const JitsiMeetComponent = dynamic(() => import('@/components/session/JitsiMeetComponent'), {
@@ -26,7 +26,7 @@ const JitsiMeetComponent = dynamic(() => import('@/components/session/JitsiMeetC
 });
 const Whiteboard = dynamic(() => import('@/components/session/Whiteboard'), {
   ssr: false,
-  loading: () => <p>Loading Whiteboard...</p>,
+  loading: () => <div className="h-full w-full flex items-center justify-center bg-muted"><p>Loading Whiteboard...</p></div>,
 });
 
 type RecordingSupport = 'pending' | 'supported' | 'unsupported';
@@ -63,11 +63,6 @@ export default function SessionPage() {
 
   const isMobile = useIsMobile();
   const isClient = useIsClient();
-
-  const [position, setPosition] = useState({ x: 0, y: 20 });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStartRef = useRef({ x: 0, y: 0 });
-  const controlsRef = useRef<HTMLDivElement>(null);
 
    // Set tutor as busy when session starts
   useEffect(() => {
@@ -285,87 +280,6 @@ export default function SessionPage() {
     const destination = userRole === 'tutor' ? '/tutor/dashboard' : '/dashboard';
     router.push(destination);
   };
-  
-    const handleDragStart = (clientX: number, clientY: number, target: EventTarget) => {
-        if ((target as HTMLElement).closest('[data-drag-handle]') === null) {
-            return;
-        }
-
-        setIsDragging(true);
-        dragStartRef.current = {
-            x: clientX - position.x,
-            y: clientY - position.y,
-        };
-        if (controlsRef.current) {
-            controlsRef.current.style.cursor = 'grabbing';
-            document.body.style.cursor = 'grabbing';
-            document.body.style.userSelect = 'none';
-        }
-    };
-
-    const handleDragMove = (clientX: number, clientY: number) => {
-        if (isDragging) {
-            const newX = clientX - dragStartRef.current.x;
-            const newY = clientY - dragStartRef.current.y;
-            setPosition({ x: newX, y: newY });
-        }
-    };
-
-    const handleDragEnd = () => {
-        setIsDragging(false);
-        if (controlsRef.current) {
-            controlsRef.current.style.cursor = 'default';
-            document.body.style.cursor = 'default';
-            document.body.style.userSelect = 'auto';
-        }
-    };
-
-    const handleMouseDown = (e: ReactMouseEvent<HTMLDivElement, MouseEvent>) => {
-        handleDragStart(e.clientX, e.clientY, e.target);
-    };
-
-    const handleMouseMove = (e: MouseEvent) => {
-        handleDragMove(e.clientX, e.clientY);
-    };
-
-    const handleTouchStart = (e: ReactTouchEvent<HTMLDivElement>) => {
-        const touch = e.touches[0];
-        handleDragStart(touch.clientX, touch.clientY, e.target);
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-        const touch = e.touches[0];
-        handleDragMove(touch.clientX, touch.clientY);
-    };
-
-
-  useEffect(() => {
-    if (isDragging) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleDragEnd);
-      window.addEventListener('touchmove', handleTouchMove);
-      window.addEventListener('touchend', handleDragEnd);
-    } else {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleDragEnd);
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('touchend', handleDragEnd);
-    }
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleDragEnd);
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('touchend', handleDragEnd);
-    };
-  }, [isDragging]);
-
-  useEffect(() => {
-     if (controlsRef.current) {
-      const { offsetWidth } = controlsRef.current;
-      setPosition(pos => ({ ...pos, x: (window.innerWidth - offsetWidth) / 2 }));
-    }
-  }, []);
 
   const formatDuration = (seconds: number) => {
     const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
@@ -412,150 +326,132 @@ export default function SessionPage() {
   }
 
   return (
-    <div className="h-screen w-screen relative overflow-hidden bg-background">
-      {!jitsiLoadFailed && (
-        <div className="absolute top-0 left-0 w-full h-full z-0 opacity-100 pointer-events-none">
-          <JitsiMeetComponent onApiReady={handleApiReady} onError={handleJitsiError} isMobile={isMobile} />
-        </div>
-      )}
-      
-       {recordingSupport === 'unsupported' && !isMobile && (
-         <div className="absolute inset-0 flex items-center justify-center z-10 p-4">
-             <Alert variant="destructive" className="max-w-lg">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Screen Recording Not Supported</AlertTitle>
-                <AlertDescription>
-                   This session requires screen recording, but your browser does not support this feature. Please switch to a modern desktop browser like Chrome or Firefox to continue.
-                </AlertDescription>
-            </Alert>
-         </div>
-      )}
-
-      {jitsiLoadFailed && (
-         <div className="absolute inset-0 flex items-center justify-center z-10 p-4">
-             <Alert variant="destructive" className="max-w-lg">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Video Connection Error</AlertTitle>
-                <AlertDescription>
-                    The video conferencing service failed to load. This might be due to a network issue or browser incompatibility. Please check your connection and try again, or use a different browser.
-                </AlertDescription>
-            </Alert>
-         </div>
-      )}
-
-      <div className="absolute inset-0 z-10">
-        <Whiteboard />
-      </div>
-
-       <div
-        ref={controlsRef}
-        className={cn(
-          "absolute z-20 pointer-events-auto transition-opacity",
-          isDragging ? 'opacity-70' : 'opacity-100',
-        )}
-        style={{
-          transform: `translate(${position.x}px, ${position.y}px)`,
-        }}
-        onMouseDown={handleMouseDown}
-        onTouchStart={handleTouchStart}
-      >
-        <Card className="shadow-2xl rounded-full">
-            <CardContent className="p-2 flex items-center gap-1">
-                 <div
-                    data-drag-handle
-                    className="cursor-grab p-2 text-muted-foreground"
-                    >
-                    <GripVertical />
-                </div>
-                <TooltipProvider>
-                    <div className="flex items-center gap-1">
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" className="rounded-full" onClick={toggleMute}>
-                                    {isMuted ? <MicOff /> : <Mic />}
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>{isMuted ? 'Unmute' : 'Mute'}</p>
-                            </TooltipContent>
-                        </Tooltip>
-
-                        {!isMobile && (
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="rounded-full" onClick={toggleScreenShare}>
-                                        {isScreenSharing ? <ScreenShareOff /> : <ScreenShare />}
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>{isScreenSharing ? 'Stop Sharing' : 'Share Screen'}</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        )}
-                        
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setIsChatOpen(prev => !prev)}>
-                                    <MessageSquare />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>Toggle Chat</p>
-                            </TooltipContent>
-                        </Tooltip>
-
-                        {!isMobile && userRole === 'tutor' && (
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="rounded-full">
-                                        <Wand2 />
-                                    </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                    <AlertDialogTitle>Generate Practice Problems</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        Enter a topic, and the AI will generate exercises and add them to the whiteboard.
-                                    </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <Input ref={practiceTopicRef} placeholder="e.g., Photosynthesis" />
-                                    <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={handleGenerateExercises} disabled={isGenerating}>
-                                        {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                        Generate
-                                    </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        )}
-
-                        <Button variant="destructive" size="icon" className="rounded-full" onClick={hangUp}>
-                            <PhoneOff />
-                        </Button>
+    <div className="h-screen w-screen bg-background flex flex-col">
+       <header className="p-2 border-b bg-background z-20">
+         <div className="flex items-center justify-between gap-4">
+             <div className="flex items-center gap-4">
+                 <Card className="p-2">
+                    <div className="flex items-center gap-2 text-sm">
+                        <Timer className="text-primary"/>
+                        <span>{formatDuration(sessionDuration)}</span>
                     </div>
+                </Card>
+                 <Card className="p-2">
+                    <div className="flex items-center gap-2 text-sm">
+                        <Wallet className="text-green-600"/>
+                        <span className="font-semibold">₹{walletBalance.toFixed(2)}</span>
+                    </div>
+                </Card>
+            </div>
+
+            <div className="flex items-center gap-1">
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="rounded-full" onClick={toggleMute}>
+                                {isMuted ? <MicOff /> : <Mic />}
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>{isMuted ? 'Unmute' : 'Mute'}</p>
+                        </TooltipContent>
+                    </Tooltip>
+
+                    {!isMobile && (
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="rounded-full" onClick={toggleScreenShare}>
+                                    {isScreenSharing ? <ScreenShareOff /> : <ScreenShare />}
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>{isScreenSharing ? 'Stop Sharing' : 'Share Screen'}</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    )}
+                    
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setIsChatOpen(prev => !prev)}>
+                                <MessageSquare />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Toggle Chat</p>
+                        </TooltipContent>
+                    </Tooltip>
+
+                    {!isMobile && userRole === 'tutor' && (
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="rounded-full">
+                                    <Wand2 />
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                <AlertDialogTitle>Generate Practice Problems</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Enter a topic, and the AI will generate exercises and add them to the whiteboard.
+                                </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <Input ref={practiceTopicRef} placeholder="e.g., Photosynthesis" />
+                                <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleGenerateExercises} disabled={isGenerating}>
+                                    {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Generate
+                                </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    )}
+                     <Separator orientation="vertical" className="h-6 mx-2"/>
+                    <Button variant="destructive" size="sm" className="rounded-full px-4" onClick={hangUp}>
+                        <PhoneOff className="mr-2 h-4 w-4" />
+                        End Call
+                    </Button>
                 </TooltipProvider>
-            </CardContent>
-        </Card>
-      </div>
+            </div>
+         </div>
+       </header>
+       <main className="flex-grow relative">
+          <div className="absolute inset-0 z-0 pointer-events-none">
+            {!jitsiLoadFailed && (
+                <JitsiMeetComponent onApiReady={handleApiReady} onError={handleJitsiError} isMobile={isMobile} />
+            )}
+          </div>
+          
+          <div className="absolute inset-0 z-10">
+            <Whiteboard />
+          </div>
 
-       <div className="absolute top-4 left-4 z-20 flex flex-col gap-2">
-           <Card className="p-2">
-                <div className="flex items-center gap-2 text-sm">
-                    <Timer className="text-primary"/>
-                    <span>{formatDuration(sessionDuration)}</span>
-                </div>
-            </Card>
-             <Card className="p-2">
-                <div className="flex items-center gap-2 text-sm">
-                    <Wallet className="text-green-600"/>
-                    <span className="font-semibold">₹{walletBalance.toFixed(2)}</span>
-                </div>
-            </Card>
-       </div>
-      
-      <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+          {recordingSupport === 'unsupported' && !isMobile && (
+            <div className="absolute inset-0 flex items-center justify-center z-20 p-4 bg-background/50">
+                <Alert variant="destructive" className="max-w-lg">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Screen Recording Not Supported</AlertTitle>
+                    <AlertDescription>
+                    This session requires screen recording, but your browser does not support this feature. Please switch to a modern desktop browser like Chrome or Firefox to continue.
+                    </AlertDescription>
+                </Alert>
+            </div>
+          )}
 
+          {jitsiLoadFailed && (
+            <div className="absolute inset-0 flex items-center justify-center z-20 p-4 bg-background/50">
+                <Alert variant="destructive" className="max-w-lg">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Video Connection Error</AlertTitle>
+                    <AlertDescription>
+                        The video conferencing service failed to load. This might be due to a network issue or browser incompatibility. Please check your connection and try again, or use a different browser.
+                    </AlertDescription>
+                </Alert>
+            </div>
+          )}
+
+          <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+       </main>
     </div>
   );
 }
