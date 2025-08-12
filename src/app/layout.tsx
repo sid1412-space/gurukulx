@@ -24,6 +24,8 @@ export default function RootLayout({
       <head>
         <title>TutorConnect</title>
         <meta name="description" content="The future of online tutoring." />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#ffffff" />
       </head>
        <body className={cn('font-body antialiased bg-background')}>
           {children}
