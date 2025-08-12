@@ -61,7 +61,7 @@ export default function LoginForm() {
     
     // Set localStorage items needed for role-based access
     localStorage.setItem('isLoggedIn', 'true');
-    localStorage.setItem('loggedInUser', userData.email);
+    localStorage.setItem('loggedInUser', user.email);
     localStorage.setItem('isTutor', (userData.role === 'tutor').toString());
     localStorage.setItem('isAdmin', (userData.role === 'admin').toString());
     window.dispatchEvent(new Event('storage'));
