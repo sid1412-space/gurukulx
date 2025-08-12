@@ -17,7 +17,7 @@ export default function Logo({ className }: LogoProps) {
         height={32}
         className="h-8 w-8"
       />
-      <span className="text-2xl font-bold text-foreground">GurukulX</span>
+      <span className="text-xl font-bold text-foreground">The Future of Tutoring</span>
     </Link>
   );
 }
