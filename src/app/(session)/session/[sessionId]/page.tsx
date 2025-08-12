@@ -56,7 +56,7 @@ export default function SessionPage() {
 
   const handleApiReady = (api: JitsiAPI) => {
     setJitsiApi(api);
-    api.executeCommand('toggleVideo');
+    // Video is now off by default based on Jitsi config
   };
 
   const toggleMute = () => {
@@ -73,9 +73,11 @@ export default function SessionPage() {
   };
   
   const handleMouseDown = (e: ReactMouseEvent<HTMLDivElement, MouseEvent>) => {
-    if (e.target !== e.currentTarget && (e.target as HTMLElement).closest('button')) {
+    // Only allow dragging from the handle
+    if ((e.target as HTMLElement).closest('[data-drag-handle]') === null) {
       return;
     }
+    
     setIsDragging(true);
     dragStartRef.current = {
         x: e.clientX - position.x,
@@ -83,6 +85,8 @@ export default function SessionPage() {
     };
      if (controlsRef.current) {
       controlsRef.current.style.cursor = 'grabbing';
+      document.body.style.cursor = 'grabbing';
+      document.body.style.userSelect = 'none';
     }
   };
 
@@ -97,7 +101,9 @@ export default function SessionPage() {
   const handleMouseUp = () => {
     setIsDragging(false);
     if (controlsRef.current) {
-        controlsRef.current.style.cursor = 'grab';
+        controlsRef.current.style.cursor = 'default';
+        document.body.style.cursor = 'default';
+        document.body.style.userSelect = 'auto';
     }
   };
 
@@ -125,7 +131,7 @@ export default function SessionPage() {
   }, []);
 
   return (
-    <div className="h-screen w-screen relative">
+    <div className="h-screen w-screen relative overflow-hidden">
       <div className="hidden">
         <JitsiMeetComponent onApiReady={handleApiReady} />
       </div>
@@ -136,11 +142,17 @@ export default function SessionPage() {
         <div
             ref={controlsRef}
             className="absolute z-20"
-            style={{ left: `${position.x}px`, bottom: `${position.y}px` }}
+            style={{ 
+              left: `${position.x}px`, 
+              bottom: `${position.y}px`,
+              touchAction: 'none'
+             }}
             onMouseDown={handleMouseDown}
         >
-            <div className="flex items-center gap-2 p-2 bg-background border rounded-full shadow-lg cursor-grab">
-                <GripVertical className="h-5 w-5 text-muted-foreground" />
+            <div className="flex items-center gap-2 p-2 bg-background border rounded-full shadow-lg">
+                <div data-drag-handle className="cursor-grab p-1">
+                    <GripVertical className="h-5 w-5 text-muted-foreground" />
+                </div>
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <Button variant="outline" size="icon" onClick={toggleMute} className={cn("rounded-full", isMuted ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : "")}>
