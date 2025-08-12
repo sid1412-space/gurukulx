@@ -3,10 +3,10 @@
 
 import dynamic from 'next/dynamic';
 import { useState, useEffect, useRef, MouseEvent as ReactMouseEvent, TouchEvent as ReactTouchEvent } from 'react';
-import { Mic, MicOff, ScreenShare, ScreenShareOff, PhoneOff, GripVertical, MessageSquare, VideoOff, AlertTriangle } from 'lucide-react';
+import { Mic, MicOff, ScreenShare, ScreenShareOff, PhoneOff, GripVertical, MessageSquare, VideoOff, AlertTriangle, Timer, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, useParams } from 'next/navigation';
 import type { JitsiAPI } from '@jitsi/react-sdk';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useIsClient } from '@/hooks/use-is-client';
@@ -14,6 +14,8 @@ import { cn } from '@/lib/utils';
 import ChatPanel from '@/components/session/ChatPanel';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Card } from '@/components/ui/card';
+import { tutors } from '@/lib/mock-data';
 
 
 const JitsiMeetComponent = dynamic(() => import('@/components/session/JitsiMeetComponent'), {
@@ -29,7 +31,10 @@ type RecordingSupport = 'pending' | 'supported' | 'unsupported';
 export default function SessionPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const params = useParams();
+  const { tutorId } = params;
   const { toast } = useToast();
+
   const [jitsiApi, setJitsiApi] = useState<JitsiAPI | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
@@ -37,6 +42,12 @@ export default function SessionPage() {
   const [isRecording, setIsRecording] = useState(false);
   const [jitsiLoadFailed, setJitsiLoadFailed] = useState(false);
   const [recordingSupport, setRecordingSupport] = useState<RecordingSupport>('pending');
+
+  // Session timer and wallet states
+  const [sessionDuration, setSessionDuration] = useState(0); // in seconds
+  const [walletBalance, setWalletBalance] = useState(12550); // mock initial balance
+  const tutor = tutors.find(t => t.id === tutorId);
+  const pricePerMinute = tutor ? tutor.price / 60 : 0;
 
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -52,6 +63,31 @@ export default function SessionPage() {
   const dragStartRef = useRef({ x: 0, y: 0 });
   const controlsRef = useRef<HTMLDivElement>(null);
 
+  // Timer and wallet deduction logic
+  useEffect(() => {
+    const timerInterval = setInterval(() => {
+      setSessionDuration(prev => prev + 1);
+    }, 1000);
+
+    return () => clearInterval(timerInterval);
+  }, []);
+
+  useEffect(() => {
+    if (sessionDuration > 0 && sessionDuration % 60 === 0) {
+      if (walletBalance >= pricePerMinute) {
+        setWalletBalance(prev => prev - pricePerMinute);
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Insufficient Funds',
+          description: 'Your wallet balance is too low. The session will now end.',
+        });
+        hangUp();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionDuration, pricePerMinute]);
+
 
   useEffect(() => {
     if (jitsiApi) {
@@ -60,17 +96,18 @@ export default function SessionPage() {
       };
       jitsiApi.on('audioMuteStatusChanged', onAudioMuteStatusChanged);
 
-      const onScreenSharingStatusChanged = ({ on }: { on: boolean }) => {
-        setIsScreenSharing(on);
-      };
-      jitsiApi.on('screenSharingStatusChanged', onScreenSharingStatusChanged);
+      jitsiApi.on('screenSharingStatusChanged', ({ on }: { on: boolean }) => {
+        if (!isMobile) {
+            setIsScreenSharing(on);
+        }
+      });
 
       return () => {
         jitsiApi.removeListener('audioMuteStatusChanged', onAudioMuteStatusChanged);
-        jitsiApi.removeListener('screenSharingStatusChanged', onScreenSharingStatusChanged);
+        jitsiApi.removeListener('screenSharingStatusChanged', onAudioMuteStatusChanged);
       };
     }
-  }, [jitsiApi]);
+  }, [jitsiApi, isMobile]);
 
 
   const handleApiReady = (api: JitsiAPI) => {
@@ -88,6 +125,7 @@ export default function SessionPage() {
   };
 
   const toggleScreenShare = () => {
+     if (isMobile) return;
     jitsiApi?.executeCommand('toggleShareScreen');
   };
 
@@ -211,7 +249,7 @@ export default function SessionPage() {
                 startRecording();
             }
         } else {
-            setRecordingSupport('unsupported');
+            setRecordingSound(false);
         }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -306,6 +344,13 @@ export default function SessionPage() {
     }
   }, []);
 
+  const formatDuration = (seconds: number) => {
+    const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+    const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  };
+
   return (
     <div className="h-screen w-screen relative overflow-hidden bg-background">
       {!jitsiLoadFailed && (
@@ -338,10 +383,22 @@ export default function SessionPage() {
          </div>
       )}
 
-
       {isClient && <Whiteboard />}
 
       {isClient && <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />}
+      
+      <Card className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-black/20 text-white backdrop-blur-sm border-white/30">
+        <div className="p-2 flex items-center gap-4">
+            <div className="flex items-center gap-2">
+                <Timer className="h-5 w-5"/>
+                <span className="font-mono text-lg">{formatDuration(sessionDuration)}</span>
+            </div>
+            <div className="flex items-center gap-2">
+                <Wallet className="h-5 w-5" />
+                <span className="font-mono text-lg">₹{walletBalance.toFixed(2)}</span>
+            </div>
+        </div>
+      </Card>
 
 
       <TooltipProvider>
@@ -425,3 +482,5 @@ export default function SessionPage() {
     </div>
   );
 }
+
+    
