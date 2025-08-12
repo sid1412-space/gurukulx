@@ -21,8 +21,11 @@ export default function JitsiMeet({ roomName }: JitsiMeetProps) {
     }
 
     const domain = 'meet.jit.si';
+    // Ensure a unique room name for each session
+    const uniqueRoomName = `TutorConnect-Session-${roomName}`;
+    
     const options = {
-      roomName: `TutorConnect-${roomName}`,
+      roomName: uniqueRoomName,
       width: '100%',
       height: '100%',
       parentNode: jitsiContainerRef.current,
