@@ -18,7 +18,7 @@ export default function SessionLayout({
           rel="stylesheet"
         ></link>
       </head>
-      <body className={cn('font-body antialiased bg-background h-full')}>
+      <body className={cn('font-body antialiased bg-background h-full w-full overflow-hidden')}>
         {children}
         <Toaster />
       </body>
