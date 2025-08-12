@@ -33,6 +33,13 @@ export default function FinancialManagementPage() {
     form.reset();
   }
 
+  const handleProcessPayouts = () => {
+    toast({
+      title: 'Processing Payouts',
+      description: 'Pending payouts are being processed.',
+    });
+  };
+
   return (
     <div className="space-y-8 animate-fade-in">
       <header>
@@ -96,7 +103,7 @@ export default function FinancialManagementPage() {
                 <h4 className="font-semibold">Payouts This Month</h4>
                 <p className="text-2xl font-bold text-green-600">$45,210.00</p>
              </div>
-             <Button className="w-full">Process Pending Payouts</Button>
+             <Button className="w-full" onClick={handleProcessPayouts}>Process Pending Payouts</Button>
           </CardContent>
         </Card>
       </div>

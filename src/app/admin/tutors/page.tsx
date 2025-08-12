@@ -39,6 +39,13 @@ export default function TutorManagementPage() {
     });
   };
 
+  const handleViewApplication = (applicantName: string) => {
+    toast({
+      title: 'Viewing Application',
+      description: `Opening application for ${applicantName}.`,
+    });
+  };
+
   const getBadgeVariant = (status: ApplicantStatus) => {
     switch (status) {
       case 'Approved':
@@ -97,7 +104,7 @@ export default function TutorManagementPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem>View Application</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleViewApplication(applicant.name)}>View Application</DropdownMenuItem>
                           <DropdownMenuItem 
                             className="text-green-600 focus:text-green-600"
                             onClick={() => handleUpdateStatus(applicant.id, 'Approved')}
