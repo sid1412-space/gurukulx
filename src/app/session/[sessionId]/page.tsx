@@ -2,7 +2,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useState, useEffect, useRef, MouseEvent as ReactMouseEvent } from 'react';
+import { useState, useEffect, useRef, MouseEvent as ReactMouseEvent, TouchEvent as ReactTouchEvent } from 'react';
 import { Mic, MicOff, ScreenShare, ScreenShareOff, PhoneOff, GripVertical, MessageSquare, VideoOff, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -225,52 +225,77 @@ export default function SessionPage() {
     router.push('/dashboard');
   };
   
-  const handleMouseDown = (e: ReactMouseEvent<HTMLDivElement, MouseEvent>) => {
-    if ((e.target as HTMLElement).closest('[data-drag-handle]') === null) {
-      return;
-    }
-    
-    setIsDragging(true);
-    dragStartRef.current = {
-        x: e.clientX - position.x,
-        y: e.clientY - position.y,
+    const handleDragStart = (clientX: number, clientY: number, target: EventTarget) => {
+        if ((target as HTMLElement).closest('[data-drag-handle]') === null) {
+            return;
+        }
+
+        setIsDragging(true);
+        dragStartRef.current = {
+            x: clientX - position.x,
+            y: clientY - position.y,
+        };
+        if (controlsRef.current) {
+            controlsRef.current.style.cursor = 'grabbing';
+            document.body.style.cursor = 'grabbing';
+            document.body.style.userSelect = 'none';
+        }
     };
-     if (controlsRef.current) {
-      controlsRef.current.style.cursor = 'grabbing';
-      document.body.style.cursor = 'grabbing';
-      document.body.style.userSelect = 'none';
-    }
-  };
 
-  const handleMouseMove = (e: MouseEvent) => {
-    if (isDragging) {
-      const newX = e.clientX - dragStartRef.current.x;
-      const newY = e.clientY - dragStartRef.current.y;
-      setPosition({ x: newX, y: newY });
-    }
-  };
+    const handleDragMove = (clientX: number, clientY: number) => {
+        if (isDragging) {
+            const newX = clientX - dragStartRef.current.x;
+            const newY = clientY - dragStartRef.current.y;
+            setPosition({ x: newX, y: newY });
+        }
+    };
 
-  const handleMouseUp = () => {
-    setIsDragging(false);
-    if (controlsRef.current) {
-        controlsRef.current.style.cursor = 'default';
-        document.body.style.cursor = 'default';
-        document.body.style.userSelect = 'auto';
-    }
-  };
+    const handleDragEnd = () => {
+        setIsDragging(false);
+        if (controlsRef.current) {
+            controlsRef.current.style.cursor = 'default';
+            document.body.style.cursor = 'default';
+            document.body.style.userSelect = 'auto';
+        }
+    };
+
+    const handleMouseDown = (e: ReactMouseEvent<HTMLDivElement, MouseEvent>) => {
+        handleDragStart(e.clientX, e.clientY, e.target);
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+        handleDragMove(e.clientX, e.clientY);
+    };
+
+    const handleTouchStart = (e: ReactTouchEvent<HTMLDivElement>) => {
+        const touch = e.touches[0];
+        handleDragStart(touch.clientX, touch.clientY, e.target);
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+        const touch = e.touches[0];
+        handleDragMove(touch.clientX, touch.clientY);
+    };
+
 
   useEffect(() => {
     if (isDragging) {
       window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('mouseup', handleDragEnd);
+      window.addEventListener('touchmove', handleTouchMove);
+      window.addEventListener('touchend', handleDragEnd);
     } else {
       window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('mouseup', handleDragEnd);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleDragEnd);
     }
 
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('mouseup', handleDragEnd);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleDragEnd);
     };
   }, [isDragging]);
 
@@ -322,13 +347,15 @@ export default function SessionPage() {
       <TooltipProvider>
         <div
             ref={controlsRef}
-            className="absolute z-20"
+            className="absolute z-20 transition-transform duration-100"
             style={{ 
               left: `${position.x}px`, 
               bottom: `${position.y}px`,
+              transform: isDragging ? 'scale(1.05)' : 'scale(1)',
               touchAction: 'none'
              }}
             onMouseDown={handleMouseDown}
+            onTouchStart={handleTouchStart}
         >
             <div className="flex items-center gap-2 p-2 bg-background border rounded-full shadow-lg">
                 <div data-drag-handle className="cursor-grab p-1">
