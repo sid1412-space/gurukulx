@@ -19,12 +19,15 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from '@/components/ui/input';
 import { getExerciseSuggestions } from '@/lib/actions';
 import { Separator } from '@/components/ui/separator';
-import JitsiMeetComponent from '@/components/session/JitsiMeetComponent';
-
 
 const Whiteboard = dynamic(() => import('@/components/session/Whiteboard'), {
   ssr: false,
   loading: () => <div className="h-full w-full flex items-center justify-center bg-muted"><p>Loading Whiteboard...</p></div>,
+});
+
+const JitsiMeetComponent = dynamic(() => import('@/components/session/JitsiMeetComponent'), {
+    ssr: false,
+    loading: () => <div className="h-full w-full flex items-center justify-center bg-muted"><p>Loading Video...</p></div>,
 });
 
 type RecordingSupport = 'pending' | 'supported' | 'unsupported';
@@ -81,25 +84,25 @@ export default function SessionPage() {
   }, []);
 
   useEffect(() => {
+    if (!tutor) return;
+
     // Deduct funds every 60 seconds (1 minute)
     if (sessionDuration > 0 && sessionDuration % 60 === 0) {
-      setWalletBalance(prevBalance => {
-        const newBalance = prevBalance - pricePerMinute;
+      const newBalance = walletBalance - pricePerMinute;
+      if (newBalance < 0) {
+        toast({
+          variant: 'destructive',
+          title: 'Insufficient Funds',
+          description: 'Your wallet balance is empty. The session will now end.',
+        });
+        hangUp();
+      } else {
+        setWalletBalance(newBalance);
         toast({
           title: 'Charge Applied',
           description: `₹${pricePerMinute.toFixed(2)} deducted for the last minute. New balance: ₹${newBalance.toFixed(2)}`,
         });
-        if (newBalance <= 0) {
-          toast({
-            variant: 'destructive',
-            title: 'Insufficient Funds',
-            description: 'Your wallet balance is empty. The session will now end.',
-          });
-          hangUp();
-          return 0;
-        }
-        return newBalance;
-      });
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionDuration, pricePerMinute]);
@@ -463,3 +466,5 @@ export default function SessionPage() {
     </div>
   );
 }
+
+    
