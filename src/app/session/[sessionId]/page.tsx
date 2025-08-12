@@ -77,25 +77,28 @@ export default function SessionPage() {
 
     // Deduct funds every 60 seconds (1 minute)
     if (sessionDuration > 0 && sessionDuration % 60 === 0) {
-      const newBalance = walletBalance - pricePerMinute;
-
-      if (newBalance < 0) {
-        toast({
-          variant: 'destructive',
-          title: 'Insufficient Funds',
-          description: 'Your wallet balance is empty. The session will now end.',
+        setWalletBalance(currentBalance => {
+            const newBalance = currentBalance - pricePerMinute;
+            
+             if (newBalance < 0) {
+                toast({
+                  variant: 'destructive',
+                  title: 'Insufficient Funds',
+                  description: 'Your wallet balance is empty. The session will now end.',
+                });
+                hangUp();
+                return 0;
+            } else {
+                 toast({
+                    title: 'Charge Applied',
+                    description: `₹${pricePerMinute.toFixed(2)} deducted for the last minute. New balance: ₹${newBalance.toFixed(2)}`,
+                });
+                return newBalance;
+            }
         });
-        hangUp();
-      } else {
-        setWalletBalance(newBalance);
-        toast({
-          title: 'Charge Applied',
-          description: `₹${pricePerMinute.toFixed(2)} deducted for the last minute. New balance: ₹${newBalance.toFixed(2)}`,
-        });
-      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionDuration, pricePerMinute, walletBalance, tutor]);
+  }, [sessionDuration, pricePerMinute, tutor]);
 
 
   useEffect(() => {
@@ -300,7 +303,7 @@ export default function SessionPage() {
             
             <div className="absolute inset-0 z-10">
               <Whiteboard>
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] h-[240px]">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] h-[240px] z-0">
                     {!jitsiLoadFailed && (
                         <JitsiMeetComponent onApiReady={handleApiReady} onError={handleJitsiError} />
                     )}
@@ -313,5 +316,7 @@ export default function SessionPage() {
     </div>
   );
 }
+
+    
 
     
