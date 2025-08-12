@@ -19,7 +19,7 @@ export default function SessionPage() {
   const sessionId = pathname.split('/').pop() || 'default-session';
   
   return (
-    <div className="h-full flex flex-col md:flex-row bg-secondary/30 p-4 gap-4">
+    <div className="h-screen flex flex-col md:flex-row bg-secondary/30 p-4 gap-4">
       {/* Video Panel */}
       <div className="w-full h-[30vh] md:w-[30%] md:h-full flex-shrink-0">
         <Card className="h-full">
@@ -28,7 +28,7 @@ export default function SessionPage() {
       </div>
 
       {/* Whiteboard Panel */}
-      <div className="w-full h-[70vh] md:w-[70%] md:h-full flex-grow">
+      <div className="w-full h-[calc(70vh-2rem)] md:w-[70%] md:h-full flex-grow">
         <Card className="h-full">
           <Whiteboard />
         </Card>
