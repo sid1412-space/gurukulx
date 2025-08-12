@@ -1,66 +1,61 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import Liveboard from '@liveboard/sdk';
-import { useIsClient } from '@/hooks/use-is-client';
+import { usePathname } from 'next/navigation';
+import JitsiMeet, { type JitsiAPI } from '@jitsi/react-sdk';
 
-export default function LiveboardComponent() {
-  const isClient = useIsClient();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [error, setError] = useState<string | null>(null);
+interface JitsiMeetComponentProps {
+  onApiReady: (api: JitsiAPI) => void;
+}
 
-  useEffect(() => {
-    if (!isClient || !containerRef.current) {
-      return;
-    }
-    
-    // IMPORTANT: Replace with your actual LiveBoard App ID.
-    const appId = process.env.NEXT_PUBLIC_LIVEBOARD_APP_ID || 'YOUR_APP_ID';
+export default function JitsiMeetComponent({ onApiReady }: JitsiMeetComponentProps) {
+  const pathname = usePathname();
+  const sessionId = pathname.split('/').pop() || `tutorconnect-session-${Math.random().toString(36).substring(2, 15)}`;
 
-    if (appId === 'YOUR_APP_ID') {
-        console.error("LiveBoard App ID is not configured. Please set NEXT_PUBLIC_LIVEBOARD_APP_ID in your environment variables.");
-        setError("LiveBoard is not configured. Please contact the administrator.");
-        return;
-    }
-
-    const liveboard = new Liveboard({
-      appId,
-      user: {
-        // IMPORTANT: This JWT should be generated securely on your backend for the current user.
-        // It's a critical security measure to authenticate the user for the LiveBoard session.
-        // Never generate or expose the secret key on the client side.
-        jwt: 'YOUR_USER_JWT',
-      },
-    });
-
-    const session = liveboard.openSession({
-      container: containerRef.current,
-      // You can either create a new board or open an existing one by its ID
-      board: {
-        // id: 'EXISTING_BOARD_ID',
-        name: 'New Tutoring Session',
-      },
-      features: ['whiteboard', 'audio', 'screen-sharing'],
-      defaultTools: {
-        // Disabling video call as requested
-        video: { enabled: false }
-      }
-    });
-
-    session.on('error', (err: Error) => {
-      console.error('Liveboard Session Error:', err);
-      setError(`An error occurred: ${err.message}`);
-    });
-    
-    return () => {
-      // Clean up the session when the component unmounts
-      session.close();
-    };
-  }, [isClient]);
-
-  if (error) {
-    return <div className="h-full w-full flex items-center justify-center text-red-500">{error}</div>;
-  }
-
-  return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />;
+  return (
+    <div className="h-full w-full">
+      <JitsiMeet
+        roomName={sessionId}
+        configOverwrite={{
+          startWithAudioMuted: false,
+          startWithVideoMuted: true,
+          disableAP: true,
+          disableSelfView: true,
+          disableSelfViewSettings: true,
+          toolbarButtons: [
+              'camera', 'microphone', 'desktop', 'fullscreen', 'chat', 'raisehand', 'tileview'
+          ],
+          videoQuality: {
+            preferredCodec: 'H.264',
+            maxBitratesVideo: {
+              low: 200000,
+              standard: 500000,
+              high: 1500000,
+            },
+          },
+          // Disable video features
+          startVideoMuted: 0,
+          prejoinPageEnabled: false,
+          p2p: {
+            enabled: true,
+          },
+        }}
+        interfaceConfigOverwrite={{
+          DISABLE_VIDEO_BACKGROUND: true,
+          SHOW_JITSI_WATERMARK: false,
+          SHOW_WATERMARK_FOR_GUESTS: false,
+          TOOLBAR_BUTTONS: [
+             'microphone', 'desktop', 'fullscreen', 'chat', 'raisehand', 'tileview', 'hangup'
+          ],
+        }}
+        onApiReady={onApiReady}
+        getIFrameRef={(iframe) => {
+            if (iframe) {
+                iframe.style.height = '100%';
+                iframe.style.width = '100%';
+            }
+        }}
+      />
+    </div>
+  );
 }
