@@ -6,9 +6,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription as CardDesc, CardHeader, CardTitle } from '@/components/ui/card';
 import { useState } from 'react';
 import { Loader2, KeyRound, Landmark, User } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
@@ -116,7 +116,7 @@ export default function TutorSettingsPage() {
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><User /> Public Profile</CardTitle>
-                    <CardDescription>This information will be visible to students.</CardDescription>
+                    <CardDesc>This information will be visible to students.</CardDesc>
                 </CardHeader>
                 <CardContent>
                 <Form {...profileForm}>
@@ -130,7 +130,7 @@ export default function TutorSettingsPage() {
                     </div>
                     <FormField control={profileForm.control} name="name" render={({ field }) => ( <FormItem> <FormLabel>Full Name</FormLabel> <FormControl> <Input {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
                     <FormField control={profileForm.control} name="email" render={({ field }) => ( <FormItem> <FormLabel>Email Address</FormLabel> <FormControl> <Input type="email" {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
-                    <FormField control={profileForm.control} name="subjects" render={({ field }) => ( <FormItem> <FormLabel>Your Subjects</FormLabel> <FormControl> <Input placeholder="e.g., Physics, Calculus" {...field} /> </FormControl><p className="text-sm text-muted-foreground">Separate subjects with commas.</p> <FormMessage /> </FormItem> )}/>
+                    <FormField control={profileForm.control} name="subjects" render={({ field }) => ( <FormItem> <FormLabel>Your Subjects</FormLabel> <FormControl> <Input placeholder="e.g., Physics, Calculus" {...field} /> </FormControl><FormDescription>Separate subjects with commas.</FormDescription> <FormMessage /> </FormItem> )}/>
                     <FormField control={profileForm.control} name="bio" render={({ field }) => ( <FormItem> <FormLabel>Bio</FormLabel> <FormControl> <Textarea placeholder="Tell students about your teaching style and experience." className="resize-none" {...field}/> </FormControl> <FormMessage /> </FormItem> )}/>
                     <div className="flex justify-end">
                         <Button type="submit" disabled={isLoading}>
@@ -165,7 +165,7 @@ export default function TutorSettingsPage() {
              <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2"><Landmark/> Payout Details</CardTitle>
-                  <CardDescription>How you'll get paid.</CardDescription>
+                  <CardDesc>How you'll get paid.</CardDesc>
                 </CardHeader>
                 <CardContent>
                   <Form {...payoutForm}>
@@ -187,3 +187,5 @@ export default function TutorSettingsPage() {
     </div>
   );
 }
+
+    
