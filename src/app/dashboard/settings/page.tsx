@@ -10,7 +10,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { useState } from 'react';
 import { Loader2, Palette, Bell, KeyRound } from 'lucide-react';
 
@@ -19,13 +18,19 @@ const passwordSchema = z.object({
   newPassword: z.string().min(6, 'New password must be at least 6 characters.'),
 });
 
+const notificationSchema = z.object({}); // Empty schema for the form wrapper
+
 export default function SettingsPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
-  const form = useForm<z.infer<typeof passwordSchema>>({
+  const passwordForm = useForm<z.infer<typeof passwordSchema>>({
     resolver: zodResolver(passwordSchema),
     defaultValues: { currentPassword: '', newPassword: '' },
+  });
+
+  const notificationForm = useForm<z.infer<typeof notificationSchema>>({
+    defaultValues: {},
   });
 
   function onPasswordSubmit(values: z.infer<typeof passwordSchema>) {
@@ -37,7 +42,7 @@ export default function SettingsPage() {
         description: 'Your password has been changed successfully.',
       });
       setIsLoading(false);
-      form.reset();
+      passwordForm.reset();
     }, 1000);
   }
 
@@ -64,10 +69,10 @@ export default function SettingsPage() {
                   <CardDescription>For your security, we recommend using a strong password.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onPasswordSubmit)} className="space-y-6">
+                  <Form {...passwordForm}>
+                    <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-6">
                       <FormField
-                        control={form.control}
+                        control={passwordForm.control}
                         name="currentPassword"
                         render={({ field }) => (
                           <FormItem>
@@ -80,7 +85,7 @@ export default function SettingsPage() {
                         )}
                       />
                       <FormField
-                        control={form.control}
+                        control={passwordForm.control}
                         name="newPassword"
                         render={({ field }) => (
                           <FormItem>
@@ -108,15 +113,19 @@ export default function SettingsPage() {
                 <CardTitle className="flex items-center gap-2"><Bell/> Notifications</CardTitle>
                 <CardDescription>Choose how you want to be notified.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                    <FormLabel htmlFor="email-notifications">Email Notifications</FormLabel>
-                    <Switch id="email-notifications" defaultChecked onCheckedChange={(checked) => handleToggle('Email notifications', checked)}/>
+            <CardContent>
+              <Form {...notificationForm}>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                      <FormLabel htmlFor="email-notifications">Email Notifications</FormLabel>
+                      <Switch id="email-notifications" defaultChecked onCheckedChange={(checked) => handleToggle('Email notifications', checked)}/>
+                  </div>
+                  <div className="flex items-center justify-between">
+                      <FormLabel htmlFor="push-notifications">Session Reminders</FormLabel>
+                      <Switch id="push-notifications" onCheckedChange={(checked) => handleToggle('Session reminders', checked)}/>
+                  </div>
                 </div>
-                 <div className="flex items-center justify-between">
-                    <FormLabel htmlFor="push-notifications">Session Reminders</FormLabel>
-                    <Switch id="push-notifications" onCheckedChange={(checked) => handleToggle('Session reminders', checked)}/>
-                </div>
+              </Form>
             </CardContent>
             </Card>
 

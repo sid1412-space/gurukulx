@@ -17,16 +17,32 @@ const securitySchema = z.object({
   adminEmail: z.string().email(),
 });
 
+const paymentSchema = z.object({}); // Empty schema for the payment form wrapper
+const feeSchema = z.object({
+    commission: z.coerce.number().min(0).max(100),
+});
+
+
 export default function AdminSettingsPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
-  const form = useForm<z.infer<typeof securitySchema>>({
+  const securityForm = useForm<z.infer<typeof securitySchema>>({
     resolver: zodResolver(securitySchema),
     defaultValues: { adminEmail: 'quotesparkconnect@yahoo.com' },
   });
 
-  function onSubmit(values: z.infer<typeof securitySchema>) {
+  const paymentForm = useForm<z.infer<typeof paymentSchema>>({
+    defaultValues: {},
+  });
+  
+  const feeForm = useForm<z.infer<typeof feeSchema>>({
+    resolver: zodResolver(feeSchema),
+    defaultValues: { commission: 15 },
+  });
+
+
+  function onSecuritySubmit(values: z.infer<typeof securitySchema>) {
     setIsLoading(true);
     console.log(values);
     setTimeout(() => {
@@ -36,6 +52,14 @@ export default function AdminSettingsPage() {
       });
       setIsLoading(false);
     }, 1000);
+  }
+  
+   function onFeeSubmit(values: z.infer<typeof feeSchema>) {
+    console.log(values);
+    toast({
+      title: 'Commission Rate Updated',
+      description: `The new platform fee is ${values.commission}%.`,
+    });
   }
 
    const handleToggle = (feature: string, enabled: boolean) => {
@@ -59,10 +83,10 @@ export default function AdminSettingsPage() {
                 <CardDescription>Manage administrator access and security settings.</CardDescription>
             </CardHeader>
             <CardContent>
-                <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <Form {...securityForm}>
+                <form onSubmit={securityForm.handleSubmit(onSecuritySubmit)} className="space-y-6">
                     <FormField
-                    control={form.control}
+                    control={securityForm.control}
                     name="adminEmail"
                     render={({ field }) => (
                         <FormItem>
@@ -98,16 +122,20 @@ export default function AdminSettingsPage() {
                     <CardTitle className="flex items-center gap-2"><CreditCard /> Payment Gateway</CardTitle>
                     <CardDescription>Manage payment provider integrations.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                        <FormLabel>Enable Stripe</FormLabel>
-                        <Switch defaultChecked disabled />
-                    </div>
-                    <div className="flex items-center justify-between">
-                        <FormLabel>Enable Manual UPI</FormLabel>
-                        <Switch defaultChecked onCheckedChange={(checked) => handleToggle('Manual UPI', checked)}/>
-                    </div>
-                     <Button variant="outline" className="w-full">Configure Gateways</Button>
+                <CardContent>
+                  <Form {...paymentForm}>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <FormLabel>Enable Stripe</FormLabel>
+                            <Switch defaultChecked disabled />
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <FormLabel>Enable Manual UPI</FormLabel>
+                            <Switch defaultChecked onCheckedChange={(checked) => handleToggle('Manual UPI', checked)}/>
+                        </div>
+                        <Button variant="outline" className="w-full">Configure Gateways</Button>
+                      </div>
+                  </Form>
                 </CardContent>
                 </Card>
             
@@ -116,9 +144,24 @@ export default function AdminSettingsPage() {
                     <CardTitle className="flex items-center gap-2"><Percent /> Platform Fees</CardTitle>
                     <CardDescription>Set the commission rate for tutor sessions.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                    <Input type="number" defaultValue="15" />
-                    <Button className="w-full">Save Commission</Button>
+                <CardContent>
+                    <Form {...feeForm}>
+                        <form onSubmit={feeForm.handleSubmit(onFeeSubmit)} className="space-y-4">
+                             <FormField
+                                control={feeForm.control}
+                                name="commission"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormControl>
+                                        <Input type="number" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                                />
+                            <Button type="submit" className="w-full">Save Commission</Button>
+                        </form>
+                    </Form>
                 </CardContent>
                 </Card>
             </div>
