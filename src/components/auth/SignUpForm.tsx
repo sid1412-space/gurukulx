@@ -26,12 +26,12 @@ const formSchema = z.discriminatedUnion("accountType", [
         name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
         email: z.string().email({ message: 'Invalid email address.' }),
         password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
-        qualification: z.string().min(2, 'Qualification is required for tutors.'),
-        phoneNumber: z.string().min(10, 'A valid phone number is required for tutors.'),
+        qualification: z.string().min(2, 'Qualification is required.'),
+        phoneNumber: z.string().min(10, 'A valid phone number is required.'),
         college: z.string().optional(),
         location: z.string().optional(),
-        experience: z.enum(['fresher', '1-2', '3-4', '5+'], { required_error: 'Experience is required for tutors.'}),
-        expertise: z.string().min(10, 'Expertise must be at least 10 characters for tutors.'),
+        experience: z.enum(['fresher', '1-2', '3-4', '5+'], { required_error: 'Experience is required.'}),
+        expertise: z.string().min(10, 'Expertise must be at least 10 characters.'),
     })
 ]);
 
