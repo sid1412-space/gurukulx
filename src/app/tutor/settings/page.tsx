@@ -128,10 +128,59 @@ export default function TutorSettingsPage() {
                         </Avatar>
                         <Button type="button" variant="outline">Change Photo</Button>
                     </div>
-                    <FormField control={profileForm.control} name="name" render={({ field }) => ( <FormItem> <FormLabel>Full Name</FormLabel> <FormControl> <Input {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
-                    <FormField control={profileForm.control} name="email" render={({ field }) => ( <FormItem> <FormLabel>Email Address</FormLabel> <FormControl> <Input type="email" {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
-                    <FormField control={profileForm.control} name="subjects" render={({ field }) => ( <FormItem> <FormLabel>Your Subjects</FormLabel> <FormControl> <Input placeholder="e.g., Physics, Calculus" {...field} /> </FormControl><FormDescription>Separate subjects with commas.</FormDescription> <FormMessage /> </FormItem> )}/>
-                    <FormField control={profileForm.control} name="bio" render={({ field }) => ( <FormItem> <FormLabel>Bio</FormLabel> <FormControl> <Textarea placeholder="Tell students about your teaching style and experience." className="resize-none" {...field}/> </FormControl> <FormMessage /> </FormItem> )}/>
+                    <FormField
+                      control={profileForm.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Full Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                     <FormField
+                      control={profileForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email Address</FormLabel>
+                          <FormControl>
+                            <Input type="email" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={profileForm.control}
+                      name="subjects"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Your Subjects</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., Physics, Calculus" {...field} />
+                          </FormControl>
+                          <FormDescription>Separate subjects with commas.</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={profileForm.control}
+                      name="bio"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Bio</FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="Tell students about your teaching style and experience." className="resize-none" {...field}/>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                     <div className="flex justify-end">
                         <Button type="submit" disabled={isLoading}>
                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -152,8 +201,32 @@ export default function TutorSettingsPage() {
                 <CardContent>
                   <Form {...passwordForm}>
                     <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
-                      <FormField control={passwordForm.control} name="currentPassword" render={({ field }) => ( <FormItem> <FormLabel>Current Password</FormLabel> <FormControl> <Input type="password" {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
-                      <FormField control={passwordForm.control} name="newPassword" render={({ field }) => ( <FormItem> <FormLabel>New Password</FormLabel> <FormControl> <Input type="password" {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
+                      <FormField
+                        control={passwordForm.control}
+                        name="currentPassword"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Current Password</FormLabel>
+                            <FormControl>
+                              <Input type="password" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={passwordForm.control}
+                        name="newPassword"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>New Password</FormLabel>
+                            <FormControl>
+                              <Input type="password" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                       <Button type="submit" disabled={isLoading} className="w-full">
                         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Update Password
@@ -170,10 +243,58 @@ export default function TutorSettingsPage() {
                 <CardContent>
                   <Form {...payoutForm}>
                     <form onSubmit={payoutForm.handleSubmit(onPayoutSubmit)} className="space-y-4">
-                      <FormField control={payoutForm.control} name="accountHolderName" render={({ field }) => ( <FormItem> <FormLabel>Account Holder Name</FormLabel> <FormControl> <Input {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
-                      <FormField control={payoutForm.control} name="accountNumber" render={({ field }) => ( <FormItem> <FormLabel>Account Number</FormLabel> <FormControl> <Input {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
-                      <FormField control={payoutForm.control} name="ifscCode" render={({ field }) => ( <FormItem> <FormLabel>IFSC Code</FormLabel> <FormControl> <Input {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
-                       <FormField control={payoutForm.control} name="upiId" render={({ field }) => ( <FormItem> <FormLabel>UPI ID (Optional)</FormLabel> <FormControl> <Input {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
+                      <FormField
+                        control={payoutForm.control}
+                        name="accountHolderName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Account Holder Name</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={payoutForm.control}
+                        name="accountNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Account Number</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={payoutForm.control}
+                        name="ifscCode"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>IFSC Code</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                       <FormField
+                        control={payoutForm.control}
+                        name="upiId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>UPI ID (Optional)</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                       <Button type="submit" disabled={isLoading} className="w-full">
                         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Save Payout Info
@@ -187,5 +308,3 @@ export default function TutorSettingsPage() {
     </div>
   );
 }
-
-    
