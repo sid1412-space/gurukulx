@@ -24,14 +24,37 @@ const formSchema = z.object({
   location: z.string().optional(),
   experience: z.string().optional(),
   expertise: z.string().optional(),
-}).refine(data => {
+}).superRefine((data, ctx) => {
     if (data.accountType === 'tutor') {
-        return !!data.qualification && !!data.phoneNumber && !!data.experience && !!data.expertise;
+        if (!data.qualification) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['qualification'],
+                message: 'Qualification is required for tutors.',
+            });
+        }
+        if (!data.phoneNumber) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['phoneNumber'],
+                message: 'Phone number is required for tutors.',
+            });
+        }
+         if (!data.experience) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['experience'],
+                message: 'Experience is required for tutors.',
+            });
+        }
+        if (!data.expertise) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['expertise'],
+                message: 'Expertise is required for tutors.',
+            });
+        }
     }
-    return true;
-}, {
-    message: 'Please fill in all required tutor fields.',
-    // We can't specify the path here easily, so we'll handle field-specific errors below.
 });
 
 
@@ -139,7 +162,6 @@ export default function SignUpForm() {
               <FormField
                 control={form.control}
                 name="qualification"
-                rules={{ required: 'Qualification is required for tutors.' }}
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Highest Qualification</FormLabel>
@@ -153,7 +175,6 @@ export default function SignUpForm() {
               <FormField
                 control={form.control}
                 name="phoneNumber"
-                rules={{ required: 'Phone number is required for tutors.' }}
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Phone Number</FormLabel>
@@ -193,7 +214,6 @@ export default function SignUpForm() {
                <FormField
                   control={form.control}
                   name="experience"
-                  rules={{ required: 'Experience is required for tutors.' }}
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Teaching Experience</FormLabel>
@@ -217,7 +237,6 @@ export default function SignUpForm() {
                  <FormField
                     control={form.control}
                     name="expertise"
-                    rules={{ required: 'Expertise is required for tutors.' }}
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Expertise in Subjects</FormLabel>
