@@ -3,55 +3,45 @@
 
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
-
-// Mock authentication check
-const useAuth = () => {
-    // In a real app, this would be a hook that checks a JWT, a session, etc.
-    const [isAuthenticated, setIsAuthenticated] = useState(false); // Default to false to protect route
-
-    // This is just to simulate a check that might run on the client
-    useEffect(() => {
-        // In a real app, you would have logic here to verify a session or token.
-        // For this mock, we'll simulate a logged-out user by default.
-        // To test the logged-in state, you would set this to true after a successful login.
-        // For instance, you might check a value in localStorage.
-        const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
-        setIsAuthenticated(loggedIn);
-    }, []);
-    
-    return { isAuthenticated }; 
-};
+import { useIsClient } from '@/hooks/use-is-client';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 
 export default function TutorsLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { isAuthenticated } = useAuth();
   const router = useRouter();
-  const [isChecking, setIsChecking] = useState(true);
+  const isClient = useIsClient();
+  const [isAuthenticated, setIsAuthenticated] = useState(true); // Assume true to avoid flash
 
   useEffect(() => {
-    if (isChecking) return;
-    // Only redirect if authentication has been checked and is false
-    if (isAuthenticated === false) {
-      router.push('/login');
+    if (isClient) {
+      const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
+      if (!loggedIn) {
+        setIsAuthenticated(false);
+        router.push('/login');
+      } else {
+        setIsAuthenticated(true);
+      }
     }
-  }, [isAuthenticated, isChecking, router]);
+  }, [isClient, router]);
 
-  useEffect(() => {
-     // Finished checking auth status
-    setIsChecking(false);
-  }, []);
 
-  // Render a loading state while checking authentication to prevent flashing the page content.
-  if (isChecking || !isAuthenticated) {
+  if (!isClient || !isAuthenticated) {
     return (
-        <div className="flex items-center justify-center h-screen">
+        <div className="flex items-center justify-center h-screen bg-background">
             <p>Loading...</p>
         </div>
     );
   }
   
-  return <>{children}</>;
+  return (
+     <div className="flex flex-col min-h-screen">
+        <Header />
+        <main className="flex-grow">{children}</main>
+        <Footer />
+    </div>
+  );
 }

@@ -2,7 +2,6 @@
 'use client';
 
 import React from 'react';
-import { Toaster } from '@/components/ui/toaster';
 import '../globals.css';
 
 // This is a specific layout for the session page that does not include the main header and footer.
@@ -15,7 +14,6 @@ export default function SessionLayout({
   return (
        <>
           {children}
-          <Toaster />
       </>
   );
 }
