@@ -11,8 +11,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
+import { useIsClient } from '@/hooks/use-is-client';
 
 const profileSchema = z.object({
   name: z.string().min(2, 'Name is too short'),
@@ -25,13 +26,13 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isClient = useIsClient();
 
-  // Mock data for the form
   const [currentUser, setCurrentUser] = useState({
-    name: 'Jane Doe',
-    email: 'jane.doe@example.com',
-    bio: 'Passionate learner exploring the world of calculus and physics. Looking for a tutor to help me prepare for my final exams.',
-    subjects: 'Calculus, Physics, Linear Algebra',
+    name: '',
+    email: '',
+    bio: '',
+    subjects: '',
     avatar: 'https://placehold.co/128x128.png'
   });
   
@@ -40,13 +41,32 @@ export default function ProfilePage() {
 
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
-    defaultValues: {
-      name: currentUser.name,
-      email: currentUser.email,
-      bio: currentUser.bio,
-      subjects: currentUser.subjects,
-    },
+    defaultValues: currentUser,
   });
+
+  useEffect(() => {
+    if (isClient) {
+      const studentEmail = 'student@example.com';
+      const usersJSON = localStorage.getItem('userDatabase');
+      if (usersJSON) {
+        const users = JSON.parse(usersJSON);
+        const student = users.find((u: any) => u.email === studentEmail);
+        if (student) {
+          const studentProfile = {
+            name: student.name || '',
+            email: student.email,
+            bio: student.bio || '',
+            subjects: student.subjects || '',
+            avatar: student.avatar || 'https://placehold.co/128x128.png',
+          };
+          setCurrentUser(studentProfile);
+          setAvatarPreview(studentProfile.avatar);
+          form.reset(studentProfile);
+        }
+      }
+    }
+  }, [isClient, form]);
+
   
   const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
@@ -62,11 +82,24 @@ export default function ProfilePage() {
 
   function onSubmit(values: z.infer<typeof profileSchema>) {
     setIsLoading(true);
-    console.log({...values, avatar: avatarPreview});
+    
     setTimeout(() => {
-      // In a real app, you would upload the avatarPreview (if it's a new file) 
-      // and save the other form data.
-      setCurrentUser(prev => ({...prev, ...values, avatar: avatarPreview}));
+      if (isClient) {
+        const studentEmail = 'student@example.com';
+        const usersJSON = localStorage.getItem('userDatabase');
+        if (usersJSON) {
+          const users = JSON.parse(usersJSON);
+          const updatedUsers = users.map((u: any) => {
+            if (u.email === studentEmail) {
+              return { ...u, ...values, avatar: avatarPreview };
+            }
+            return u;
+          });
+          localStorage.setItem('userDatabase', JSON.stringify(updatedUsers));
+          setCurrentUser(prev => ({...prev, ...values, avatar: avatarPreview}));
+        }
+      }
+      
       toast({
         title: 'Profile Updated',
         description: 'Your information has been saved successfully.',
@@ -74,6 +107,40 @@ export default function ProfilePage() {
       setIsLoading(false);
     }, 1000);
   }
+
+  if (!isClient) {
+    return (
+      <div className="space-y-8 animate-fade-in">
+        <header>
+          <div className="h-9 w-1/2 bg-muted rounded animate-pulse"></div>
+          <div className="h-5 w-3/4 bg-muted rounded animate-pulse mt-2"></div>
+        </header>
+        <Card>
+          <CardHeader>
+            <div className="h-7 w-1/4 bg-muted rounded animate-pulse"></div>
+            <div className="h-5 w-1/2 bg-muted rounded animate-pulse mt-2"></div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-8">
+                <div className="flex items-center gap-4">
+                    <Skeleton className="h-20 w-20 rounded-full" />
+                    <Skeleton className="h-10 w-28 rounded-md" />
+                </div>
+                <div className="space-y-2">
+                    <Skeleton className="h-4 w-24 rounded-md" />
+                    <Skeleton className="h-10 w-full rounded-md" />
+                </div>
+                 <div className="space-y-2">
+                    <Skeleton className="h-4 w-24 rounded-md" />
+                    <Skeleton className="h-10 w-full rounded-md" />
+                </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -93,7 +160,7 @@ export default function ProfilePage() {
               <div className="flex items-center gap-4">
                 <Avatar className="h-20 w-20">
                   <AvatarImage src={avatarPreview} alt={currentUser.name} data-ai-hint="person avatar"/>
-                  <AvatarFallback>{currentUser.name.charAt(0)}</AvatarFallback>
+                  <AvatarFallback>{currentUser.name ? currentUser.name.charAt(0) : 'U'}</AvatarFallback>
                 </Avatar>
                 <Input type="file" ref={fileInputRef} onChange={handlePhotoChange} className="hidden" accept="image/*" />
                 <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>Change Photo</Button>
@@ -118,7 +185,7 @@ export default function ProfilePage() {
                   <FormItem>
                     <FormLabel>Email Address</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="your@email.com" {...field} />
+                      <Input type="email" placeholder="your@email.com" {...field} readOnly disabled/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
