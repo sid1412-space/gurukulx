@@ -45,19 +45,17 @@ export default function DashboardLayout({
       const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
       const isTutor = localStorage.getItem('isTutor') === 'true';
       const isAdmin = localStorage.getItem('isAdmin') === 'true';
-
+      
       if (loggedIn && !isTutor && !isAdmin) {
         setAuthStatus('authenticated');
-      } else if (loggedIn && isTutor) {
+      } else {
+        // If user is not a student, this layout should not be rendered.
+        // Other layouts (tutor/admin) will handle redirection if necessary.
+        // If no other layout handles it, they might be redirected to login.
         setAuthStatus('unauthorized');
-        router.push('/tutor/dashboard');
-      } else if (loggedIn && isAdmin) {
-        setAuthStatus('unauthorized');
-        router.push('/admin');
-      }
-      else {
-        setAuthStatus('unauthorized');
-        router.push('/login');
+        if (!loggedIn) {
+          router.push('/login');
+        }
       }
     }
   }, [isClient, router, pathname]);
