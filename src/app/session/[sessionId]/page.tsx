@@ -3,7 +3,7 @@
 
 import dynamic from 'next/dynamic';
 import { useState, useEffect, useRef, MouseEvent as ReactMouseEvent, TouchEvent as ReactTouchEvent } from 'react';
-import { Mic, MicOff, ScreenShare, ScreenShareOff, PhoneOff, GripVertical, MessageSquare, VideoOff, AlertTriangle, Timer, Wallet } from 'lucide-react';
+import { Mic, MicOff, ScreenShare, ScreenShareOff, PhoneOff, GripVertical, MessageSquare, VideoOff, AlertTriangle, Timer, Wallet, Wand2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useRouter, useSearchParams, useParams } from 'next/navigation';
@@ -16,6 +16,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card } from '@/components/ui/card';
 import { tutors } from '@/lib/mock-data';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Input } from '@/components/ui/input';
+import { getExerciseSuggestions } from '@/lib/actions';
 
 
 const JitsiMeetComponent = dynamic(() => import('@/components/session/JitsiMeetComponent'), {
@@ -42,6 +45,8 @@ export default function SessionPage() {
   const [isRecording, setIsRecording] = useState(false);
   const [jitsiLoadFailed, setJitsiLoadFailed] = useState(false);
   const [recordingSupport, setRecordingSupport] = useState<RecordingSupport>('pending');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const practiceTopicRef = useRef<HTMLInputElement>(null);
 
   // Session timer and wallet states
   const [sessionDuration, setSessionDuration] = useState(0); // in seconds
@@ -249,7 +254,7 @@ export default function SessionPage() {
                 startRecording();
             }
         } else {
-            setRecordingSound(false);
+            setRecordingSupport('unsupported');
         }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -350,6 +355,43 @@ export default function SessionPage() {
     const s = (seconds % 60).toString().padStart(2, '0');
     return `${h}:${m}:${s}`;
   };
+
+  const handleGenerateExercises = async () => {
+    const topic = practiceTopicRef.current?.value;
+    if (!topic) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Please enter a topic.' });
+        return;
+    }
+    setIsGenerating(true);
+
+    const result = await getExerciseSuggestions({ question: topic });
+
+    if (result.success && result.data && result.data.exercises.length > 0) {
+        const shapes = result.data.exercises.map((ex, i) => ({
+            type: 'text',
+            x: 100,
+            y: 500 + i * 150,
+            props: {
+                text: `${ex.title}\n\n${ex.description}`,
+                size: 'm',
+                w: 400
+            }
+        }));
+
+        // Dispatch a custom event to create shapes on the whiteboard
+        window.dispatchEvent(new CustomEvent('create-shapes', { detail: { shapes } }));
+
+        toast({ title: 'Exercises Added', description: 'Practice problems have been added to the whiteboard.' });
+    } else {
+        toast({
+            variant: 'destructive',
+            title: 'Error Generating Exercises',
+            description: result.error || 'Could not generate exercises. Please try again.',
+        });
+    }
+
+    setIsGenerating(false);
+  }
 
   return (
     <div className="h-screen w-screen relative overflow-hidden bg-background">
@@ -454,6 +496,40 @@ export default function SessionPage() {
                       </TooltipContent>
                   </Tooltip>
                 )}
+                
+                 <AlertDialog>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="outline" size="icon" className="rounded-full">
+                                    <Wand2 />
+                                </Button>
+                            </AlertDialogTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Generate Practice Problems</p>
+                        </TooltipContent>
+                    </Tooltip>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>AI Practice Generator</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Enter a topic, and the AI will generate practice problems and add them to the whiteboard.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <div className="py-4">
+                            <Input ref={practiceTopicRef} placeholder="e.g., Kinematics, Photosynthesis" />
+                        </div>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleGenerateExercises} disabled={isGenerating}>
+                                {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Generate
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+
 
                 <Tooltip>
                     <TooltipTrigger asChild>
@@ -482,5 +558,3 @@ export default function SessionPage() {
     </div>
   );
 }
-
-    

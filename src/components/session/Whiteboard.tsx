@@ -12,6 +12,16 @@ const EditorEvents = () => {
 	useEffect(() => {
 		if (!editor) return;
 
+		// See `src/app/session/[sessionId]/page.tsx` for how we use this event.
+		const handleCreateShapesEvent = (event: CustomEvent<{ shapes: any[] }>) => {
+			if (event.detail.shapes) {
+				editor.createShapes(event.detail.shapes);
+			}
+		};
+		
+		window.addEventListener('create-shapes', handleCreateShapesEvent as EventListener);
+
+
 		const handleMount = async () => {
 			if (isSetupComplete.current) return;
             isSetupComplete.current = true;
@@ -41,6 +51,7 @@ Use the image tool in the toolbar (7th icon from the top).
 		
 		return () => {
 			editor.off('mount', handleMount);
+			window.removeEventListener('create-shapes', handleCreateShapesEvent as EventListener);
 		};
 
 	}, [editor]);
