@@ -14,10 +14,34 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { sessionHistory } from '@/lib/mock-data';
-import { BookOpen, Download } from 'lucide-react';
+import { BookOpen, Download, Star } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
+import { useState } from 'react';
+import RatingDialog from '@/components/session/RatingDialog';
+
+type Session = typeof sessionHistory[0] & { rating?: number };
 
 export default function SessionHistoryPage() {
+  const [sessions, setSessions] = useState<Session[]>(sessionHistory);
+  const [ratingSession, setRatingSession] = useState<Session | null>(null);
+
+  const handleOpenRating = (session: Session) => {
+    setRatingSession(session);
+  };
+
+  const handleCloseRating = () => {
+    setRatingSession(null);
+  };
+
+  const handleRateSession = (sessionId: string, rating: number, feedback: string) => {
+    // In a real app, this would be an API call. Here we simulate it.
+    console.log(`Rating session ${sessionId} with ${rating} stars and feedback: ${feedback}`);
+    setSessions(prevSessions => 
+      prevSessions.map(s => s.id === sessionId ? { ...s, rating: rating } : s)
+    );
+    setRatingSession(null);
+  };
+
   return (
     <div className="space-y-8 animate-fade-in">
       <header>
@@ -47,7 +71,7 @@ export default function SessionHistoryPage() {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {sessionHistory.map((session) => (
+                    {sessions.map((session) => (
                     <TableRow key={session.id}>
                         <TableCell>
                             <div className="flex items-center gap-3">
@@ -74,11 +98,21 @@ export default function SessionHistoryPage() {
                                 {session.status}
                             </Badge>
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right space-x-1">
                            <Button variant="ghost" size="sm">
                                 <Download className="mr-2 h-4 w-4" />
                                 Transcript
                            </Button>
+                           {session.rating ? (
+                                <div className="inline-flex items-center gap-1 text-sm text-yellow-500">
+                                   <Star className="h-4 w-4 fill-current"/> {session.rating}
+                                </div>
+                            ) : (
+                                <Button variant="outline" size="sm" onClick={() => handleOpenRating(session)}>
+                                    <Star className="mr-2 h-4 w-4" />
+                                    Rate
+                                </Button>
+                           )}
                         </TableCell>
                     </TableRow>
                     ))}
@@ -86,6 +120,16 @@ export default function SessionHistoryPage() {
             </Table>
           </CardContent>
       </Card>
+       {ratingSession && (
+        <RatingDialog
+          isOpen={!!ratingSession}
+          onClose={handleCloseRating}
+          onSubmit={handleRateSession}
+          session={ratingSession}
+          userToRate={ratingSession.tutorName}
+          userRole="Tutor"
+        />
+      )}
     </div>
   );
 }
