@@ -92,7 +92,7 @@ export default function RechargePage() {
                     To complete your recharge, please submit the payment screenshot and UTR/Transaction ID in our Google Form.
                 </p>
                 <p className="text-sm text-destructive font-semibold">Your account will not be credited until you complete this step.</p>
-                <Link href="https://forms.gle/your-google-form-link" target="_blank" rel="noopener noreferrer">
+                <Link href="https://forms.gle/Hy5tR6SbseoRWX9S7" target="_blank" rel="noopener noreferrer">
                     <Button size="lg" className="w-full">Open Confirmation Form</Button>
                 </Link>
                 <Button variant="outline" onClick={() => setStep('pending')} className="w-full">I have submitted the form</Button>
