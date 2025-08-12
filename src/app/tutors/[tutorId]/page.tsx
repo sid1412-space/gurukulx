@@ -32,7 +32,7 @@ export default function TutorProfilePage() {
 
   const handleContinue = () => {
     if (tutor) {
-      router.push(`/session/${tutor.id}`);
+      router.push(`/session/${tutor.id}?start_recording=true`);
     }
   };
 
@@ -119,8 +119,7 @@ export default function TutorProfilePage() {
                                     <AlertDialogTitle>Start a new session?</AlertDialogTitle>
                                     <AlertDialogDescription>
                                         You are about to start a new tutoring session with {tutor.name}.
-                                        <br /><br />
-                                        Once you enter the whiteboard, please use the image upload tool to add a picture of your question.
+                                        Session recording will start automatically.
                                     </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>

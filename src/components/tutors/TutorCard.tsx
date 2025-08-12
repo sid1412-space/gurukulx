@@ -39,7 +39,7 @@ export default function TutorCard({ tutor }: TutorCardProps) {
   const router = useRouter();
 
   const handleContinue = () => {
-    router.push(`/session/${tutor.id}`);
+    router.push(`/session/${tutor.id}?start_recording=true`);
   };
 
   return (
@@ -82,8 +82,7 @@ export default function TutorCard({ tutor }: TutorCardProps) {
               <AlertDialogTitle>Start a new session?</AlertDialogTitle>
               <AlertDialogDescription>
                 You are about to start a new tutoring session.
-                <br /><br />
-                Once you enter the whiteboard, please use the image upload tool (7th icon from the top) to add a picture of your question.
+                 Session recording will start automatically.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

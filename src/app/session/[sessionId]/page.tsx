@@ -6,7 +6,7 @@ import { useState, useEffect, useRef, MouseEvent as ReactMouseEvent } from 'reac
 import { Mic, MicOff, ScreenShare, ScreenShareOff, PhoneOff, GripVertical, MessageSquare, VideoOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import type { JitsiAPI } from '@jitsi/react-sdk';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useIsClient } from '@/hooks/use-is-client';
@@ -25,6 +25,7 @@ const Whiteboard = dynamic(() => import('@/components/session/Whiteboard'), {
 
 export default function SessionPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const [jitsiApi, setJitsiApi] = useState<JitsiAPI | null>(null);
   const [isMuted, setIsMuted] = useState(false);
@@ -68,7 +69,6 @@ export default function SessionPage() {
 
   const handleApiReady = (api: JitsiAPI) => {
     setJitsiApi(api);
-    // Video is now off by default based on Jitsi config
   };
 
   const toggleMute = () => {
@@ -120,15 +120,15 @@ export default function SessionPage() {
     if (isRecording) return;
     try {
         const displayStream = await navigator.mediaDevices.getDisplayMedia({
-            video: { mediaSource: 'tab' } as any, // Prioritize current tab
-            audio: true // Capture system audio
+            video: { mediaSource: 'tab' } as any,
+            audio: true,
         });
         
-        screenStreamRef.current = displayStream; // Store stream to stop it later
+        screenStreamRef.current = displayStream;
 
         const audioStream = displayStream.getAudioTracks().length > 0 
             ? new MediaStream(displayStream.getAudioTracks())
-            : new MediaStream(); // empty stream if no audio
+            : new MediaStream();
 
         const combinedStream = new MediaStream([
             ...displayStream.getVideoTracks(),
@@ -137,7 +137,7 @@ export default function SessionPage() {
 
         mediaRecorderRef.current = new MediaRecorder(combinedStream, { mimeType: 'video/webm' });
         
-        recordedChunksRef.current = []; // Clear previous recordings
+        recordedChunksRef.current = [];
         
         mediaRecorderRef.current.ondataavailable = (event) => {
             if (event.data.size > 0) {
@@ -154,7 +154,6 @@ export default function SessionPage() {
             description: 'Your session is now being recorded.',
         });
 
-        // Stop recording if the user stops sharing from the browser's native UI
         displayStream.getVideoTracks()[0].onended = () => {
             if(mediaRecorderRef.current?.state === 'recording'){
                 stopRecording();
@@ -167,9 +166,9 @@ export default function SessionPage() {
         
     } catch (error) {
         console.error("Error starting recording:", error);
-        let description = 'Could not start recording. Please ensure you have given permission.';
+        let description = 'Could not start recording. Please try again.';
         if (error instanceof DOMException && error.name === 'NotAllowedError') {
-            description = 'Screen recording permission was denied. Please try again and allow access.';
+            description = 'Screen recording permission was denied. Recording is required for this session. Please refresh and allow access to continue.';
         }
         toast({
             variant: 'destructive',
@@ -181,12 +180,11 @@ export default function SessionPage() {
   };
 
   useEffect(() => {
-    // Start recording automatically when the component mounts
-    if (isClient && !isMobile) {
+    if (isClient && !isMobile && searchParams.get('start_recording') === 'true') {
       startRecording();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClient, isMobile]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isClient, isMobile, searchParams]);
 
   const hangUp = () => {
     if (isRecording) {
@@ -197,7 +195,6 @@ export default function SessionPage() {
   };
   
   const handleMouseDown = (e: ReactMouseEvent<HTMLDivElement, MouseEvent>) => {
-    // Only allow dragging from the handle
     if ((e.target as HTMLElement).closest('[data-drag-handle]') === null) {
       return;
     }
@@ -247,7 +244,6 @@ export default function SessionPage() {
   }, [isDragging]);
 
   useEffect(() => {
-    // Center the controls horizontally on initial render
      if (controlsRef.current) {
       const { offsetWidth } = controlsRef.current;
       setPosition(pos => ({ ...pos, x: (window.innerWidth - offsetWidth) / 2 }));
@@ -256,7 +252,7 @@ export default function SessionPage() {
 
   return (
     <div className="h-screen w-screen relative overflow-hidden bg-background">
-       <div className="absolute top-0 left-0 w-full h-full -z-10 opacity-0">
+      <div className="absolute top-0 left-0 w-full h-full z-0 opacity-100">
         <JitsiMeetComponent onApiReady={handleApiReady} />
       </div>
 
