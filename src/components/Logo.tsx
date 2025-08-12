@@ -12,17 +12,21 @@ const RishiIcon = ({ className }: { className?: string }) => (
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
-    strokeWidth="2"
+    strokeWidth="1.5"
     strokeLinecap="round"
     strokeLinejoin="round"
     className={className}
   >
-    <path d="M5.5 14.5c.6-1.3 1.6-2.4 3-3 .9-.4 1.9-.6 3-1.5.7-.6 1.1-1.4 1.5-2.2" />
-    <path d="M12 12c-2 0-3-1-4.5-2S6 8.5 6 7.5s1-2 3-2 4.5 1 6 2c.8.5 1.4 1.2 1.8 2.1.5 1.1.8 2.3.8 3.4 0 1.9-.6 3.8-1.7 5.2-.4.5-.8 1-1.3 1.4" />
-    <path d="M12 12c1.5 0 2.5.5 4 1.5s2.5 1.5 4 1.5" />
-    <path d="M8.5 14.5c0 1.5.5 2.5 1.5 3.5s2 1.5 3 1.5 2-1 3.5-1.5c1-.3 1.5-.8 1.5-1.5" />
-    <path d="M2 18c2 1 4 1 6 1s4-1 6-2" />
-    <path d="M20.5 17.5c-2.5.5-5.5.5-8 0" />
+    <path d="M12,2 C6.48,2 2,6.48 2,12 C2,17.52 6.48,22 12,22 C17.52,22 22,17.52 22,12 C22,6.48 17.52,2 12,2 Z" stroke="none" fill="hsl(var(--primary) / 0.1)" />
+    <path d="M12 12m-2 0a2 2 0 104 0 2 2 0 10-4 0" />
+    <path d="M12 2v2" />
+    <path d="M12 20v2" />
+    <path d="M5.64 5.64l1.41 1.41" />
+    <path d="M16.95 16.95l1.41 1.41" />
+    <path d="M2 12h2" />
+    <path d="M20 12h2" />
+    <path d="M5.64 18.36l1.41-1.41" />
+    <path d="M16.95 7.05l1.41-1.41" />
   </svg>
 );
 
