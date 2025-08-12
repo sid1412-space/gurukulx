@@ -93,7 +93,7 @@ export default function SessionPage() {
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionDuration, hasAgreedToTerms, tutor, userRole, pricePerMinute]);
+  }, [sessionDuration]);
 
 
   useEffect(() => {
@@ -295,5 +295,3 @@ export default function SessionPage() {
     </div>
   );
 }
-
-    
