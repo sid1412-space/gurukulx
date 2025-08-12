@@ -20,41 +20,40 @@ const JitsiMeet = dynamic(() => import('@/components/session/JitsiMeet'), {
 export default function SessionPage({ params }: { params: { sessionId: string } }) {
   const { sessionId } = params;
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-row bg-secondary/30">
-      {/* Video Panel */}
-      <div className="w-[350px] flex-shrink-0 border-r p-4">
-        <Card className="h-full">
-            <JitsiMeet roomName={sessionId} />
-        </Card>
-      </div>
-      
-      {/* Whiteboard Panel */}
-      <div className="flex-grow h-full p-4">
-        <Card className="h-full">
-            <Whiteboard />
-        </Card>
+    <div className="h-screen flex flex-col bg-secondary/30">
+      {/* Main Content: Video and Whiteboard */}
+      <div className="flex-grow flex flex-row min-h-0">
+        {/* Video Panel */}
+        <div className="w-[350px] flex-shrink-0 p-4">
+          <Card className="h-full">
+              <JitsiMeet roomName={sessionId} />
+          </Card>
+        </div>
+        
+        {/* Whiteboard Panel */}
+        <div className="flex-grow h-full p-4 pl-0">
+          <Card className="h-full">
+              <Whiteboard />
+          </Card>
+        </div>
       </div>
 
       {/* Chat Panel */}
-      <div className="w-[350px] flex-shrink-0 border-l p-4">
-        <Card className="h-full flex flex-col">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <MessageSquare className="h-6 w-6 text-primary" />
-                    Session Chat
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="flex-grow flex flex-col gap-4">
-                <ScrollArea className="flex-grow h-full border rounded-md p-4">
-                    {/* Chat messages will go here */}
-                    <p className="text-sm text-muted-foreground">Welcome to the session chat!</p>
-                </ScrollArea>
-                <div className="flex gap-2">
-                    <Textarea placeholder="Type your message..." className="resize-none" />
-                    <Button>Send</Button>
-                </div>
-            </CardContent>
-        </Card>
+      <div className="h-[200px] flex-shrink-0 border-t p-4 flex flex-col">
+        <h2 className="text-lg font-semibold flex items-center gap-2 mb-2">
+            <MessageSquare className="h-6 w-6 text-primary" />
+            Session Chat
+        </h2>
+        <div className="flex-grow flex flex-row gap-4 min-h-0">
+            <ScrollArea className="flex-grow h-full border rounded-md p-4">
+                {/* Chat messages will go here */}
+                <p className="text-sm text-muted-foreground">Welcome to the session chat!</p>
+            </ScrollArea>
+            <div className="flex flex-col gap-2 w-[300px]">
+                <Textarea placeholder="Type your message..." className="resize-none flex-grow" />
+                <Button>Send</Button>
+            </div>
+        </div>
       </div>
     </div>
   );
