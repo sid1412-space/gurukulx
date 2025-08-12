@@ -140,28 +140,64 @@ export default function SignUpForm() {
     
     try {
         const { user } = await createUserWithEmailAndPassword(auth, values.email, values.password);
+        const userDocRef = doc(db, "users", user.uid);
 
         if (values.accountType === 'student') {
-            await setDoc(doc(db, "users", user.uid), {
+            await setDoc(userDocRef, {
+                uid: user.uid,
                 name: values.name,
                 email: values.email,
                 role: 'student'
             });
+            // Also update localStorage userDatabase
+             const usersJSON = localStorage.getItem('userDatabase') || '[]';
+            const users = JSON.parse(usersJSON);
+            users.push({name: values.name, email: values.email, role: 'student'});
+            localStorage.setItem('userDatabase', JSON.stringify(users));
+            window.dispatchEvent(new Event('storage'));
+
             handleSuccessfulSignup('Welcome to GurukulX. Please log in.');
+
         } else if (values.accountType === 'tutor') {
             const applicantData = {
                 uid: user.uid,
-                status: 'Pending',
-                ...values
-            };
-            await setDoc(doc(db, "tutorApplicants", user.uid), applicantData);
-            
-            // Also create a user doc with student role for now
-            await setDoc(doc(db, "users", user.uid), {
                 name: values.name,
                 email: values.email,
-                role: 'student' // Tutors start as students until approved
+                role: 'student', // Tutors start as students until approved
+                applicationStatus: 'Pending',
+                applicationDetails: {
+                  qualification: values.qualification,
+                  phoneNumber: values.phoneNumber,
+                  experience: values.experience,
+                  exam: values.exam,
+                  expertise: values.expertise,
+                  college: values.college,
+                  location: values.location,
+                }
+            };
+            await setDoc(userDocRef, applicantData);
+
+            // Also create a tutor applicant in localStorage for admin view
+            const applicantsJSON = localStorage.getItem('tutorApplicants') || '[]';
+            const applicants = JSON.parse(applicantsJSON);
+            applicants.push({
+                id: user.uid,
+                name: values.name,
+                email: values.email,
+                subject: values.expertise,
+                status: 'Pending',
+                ...applicantData.applicationDetails
             });
+            localStorage.setItem('tutorApplicants', JSON.stringify(applicants));
+            
+            const usersJSON = localStorage.getItem('userDatabase') || '[]';
+            const users = JSON.parse(usersJSON);
+            users.push({name: values.name, email: values.email, role: 'student'});
+            localStorage.setItem('userDatabase', JSON.stringify(users));
+
+            window.dispatchEvent(new Event('storage'));
+
+
             handleSuccessfulSignup('Your application is submitted! Please log in to continue.');
         }
 
@@ -186,10 +222,17 @@ export default function SignUpForm() {
 
         if (!userDoc.exists()) {
              await setDoc(userDocRef, {
+                uid: user.uid,
                 email: user.email,
                 name: user.displayName,
                 role: 'student' // All social signups are students by default
             });
+
+             const usersJSON = localStorage.getItem('userDatabase') || '[]';
+            const users = JSON.parse(usersJSON);
+            users.push({name: user.displayName, email: user.email, role: 'student'});
+            localStorage.setItem('userDatabase', JSON.stringify(users));
+            window.dispatchEvent(new Event('storage'));
         }
         handleSuccessfulSignup('Welcome to GurukulX. Please log in.');
     } catch (error: any) {
@@ -203,11 +246,16 @@ export default function SignUpForm() {
   }
   
   const setupRecaptcha = () => {
-    if (!window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container-signup', {
-        'size': 'invisible',
-        'callback': (response: any) => {},
-      });
+    // Check if the verifier has already been rendered.
+    if (!window.recaptchaVerifier?.auth) {
+        const container = document.getElementById('recaptcha-container-signup');
+        if (container) {
+            container.innerHTML = ''; // Clear previous instance if any
+            window.recaptchaVerifier = new RecaptchaVerifier(auth, container, {
+                'size': 'invisible',
+                'callback': (response: any) => {},
+            });
+        }
     }
   }
 
@@ -238,10 +286,17 @@ export default function SignUpForm() {
 
         if (!userDoc.exists()) {
             await setDoc(userDocRef, {
+                uid: user.uid,
                 phoneNumber: user.phoneNumber,
                 name: 'New User',
                 role: 'student'
             });
+
+            const usersJSON = localStorage.getItem('userDatabase') || '[]';
+            const users = JSON.parse(usersJSON);
+            users.push({name: 'New User', email: `phone-${user.uid}`, role: 'student'}); // Create a mock email for phone users
+            localStorage.setItem('userDatabase', JSON.stringify(users));
+            window.dispatchEvent(new Event('storage'));
         }
         setShowPhoneDialog(false);
         handleSuccessfulSignup('Welcome to GurukulX. Please log in.');
