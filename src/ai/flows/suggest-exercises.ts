@@ -8,7 +8,7 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit/zod';
+import {z} from 'zod';
 
 export const SuggestExercisesInputSchema = z.object({
   question: z.string().describe("The student's question or the topic they need help with."),
