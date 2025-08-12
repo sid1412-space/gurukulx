@@ -131,7 +131,6 @@ export default function SessionPage() {
   const startRecording = async () => {
     if (isRecording) return;
     
-    // This check is now redundant due to the useEffect check, but kept for safety.
     if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
         setRecordingSupport('unsupported');
         console.error("getDisplayMedia is not supported in this browser.");
@@ -204,7 +203,7 @@ export default function SessionPage() {
         const supportsRecording = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
         if (supportsRecording) {
             setRecordingSupport('supported');
-             if (searchParams.get('start_recording') === 'true' && !isRecording) {
+             if (searchParams.get('start_recording') === 'true' && !isRecording && !isMobile) {
                 startRecording();
             }
         } else {
@@ -280,7 +279,7 @@ export default function SessionPage() {
 
   return (
     <div className="h-screen w-screen relative overflow-hidden bg-background">
-      {!jitsiLoadFailed && (
+      {recordingSupport === 'supported' && !jitsiLoadFailed && (
         <div className="absolute top-0 left-0 w-full h-full z-0 opacity-100">
           <JitsiMeetComponent onApiReady={handleApiReady} onError={handleJitsiError} />
         </div>
@@ -395,5 +394,3 @@ export default function SessionPage() {
     </div>
   );
 }
-
-    
