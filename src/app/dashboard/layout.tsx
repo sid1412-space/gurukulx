@@ -38,31 +38,38 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
   const isClient = useIsClient();
-  const [isAuthenticated, setIsAuthenticated] = useState(true); // Assume true initially to avoid flicker
+  const [authStatus, setAuthStatus] = useState<'loading' | 'authenticated' | 'unauthorized'>('loading');
 
   useEffect(() => {
     if (isClient) {
       const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
-      if (!loggedIn) {
-        setIsAuthenticated(false);
+      const isTutor = localStorage.getItem('isTutor') === 'true';
+      const isAdmin = localStorage.getItem('isAdmin') === 'true';
+
+      if (loggedIn && !isTutor && !isAdmin) {
+        setAuthStatus('authenticated');
+      } else if (!loggedIn) {
+        setAuthStatus('unauthorized');
         router.push('/login');
       } else {
-        setIsAuthenticated(true);
+        // This case handles logged-in tutors/admins who might land here.
+        // We set them as unauthorized for this layout to prevent rendering.
+        // Their own layouts will handle their respective dashboards.
+        setAuthStatus('unauthorized');
       }
     }
-  }, [isClient, router, pathname]); // Rerun on path change to protect all dashboard routes
+  }, [isClient, router, pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('isAdmin');
-    setIsAuthenticated(false);
-    // Dispatch a storage event to notify other tabs/windows (like the header)
+    localStorage.removeItem('isTutor');
+    setAuthStatus('unauthorized');
     window.dispatchEvent(new Event("storage"));
     router.push('/');
   }
 
-  // Render a loading state or nothing while waiting for client-side check
-  if (!isClient || !isAuthenticated) {
+  if (authStatus !== 'authenticated') {
      return (
         <div className="flex items-center justify-center h-screen bg-background">
             <div className="flex flex-col items-center gap-2">
