@@ -18,6 +18,9 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  devServer: {
+    allowedDevOrigins: "https://*.googleusercontent.com",
+  },
 };
 
 export default nextConfig;
