@@ -42,7 +42,7 @@ export default function TutorManagementPage() {
   const handleViewApplication = (applicantName: string) => {
     toast({
       title: 'Viewing Application',
-      description: `Opening application for ${applicantName}.`,
+      description: `Opening application for ${applicantName}. (This is a placeholder action).`,
     });
   };
 
