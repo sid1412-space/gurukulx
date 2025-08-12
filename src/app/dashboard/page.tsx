@@ -1,10 +1,55 @@
 
+'use client';
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Activity, Calendar, MessageSquare, PlusCircle, Wallet } from 'lucide-react';
+import { Activity, PlusCircle, Wallet, Users } from 'lucide-react';
 import Link from 'next/link';
+import { useIsClient } from '@/hooks/use-is-client';
+import { useEffect, useState, useMemo } from 'react';
+import TutorCard from '@/components/tutors/TutorCard';
+
+// Mock student data - in a real app, this would come from a user context or API
+const studentData = {
+  subjects: ['Physics', 'Calculus'],
+};
 
 export default function DashboardPage() {
+    const isClient = useIsClient();
+    const [allTutors, setAllTutors] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (isClient) {
+            const usersJSON = localStorage.getItem('userDatabase');
+            if (usersJSON) {
+                const users = JSON.parse(usersJSON);
+                const tutors = users.filter((u: any) => u.role === 'tutor');
+                
+                // The 'price' was stored on approval, but let's add mock data for others for display
+                const tutorsWithFullData = tutors.map((t: any) => ({
+                    ...t, // Contains name, email, role, subjects from signup
+                    id: t.email, // Use email as a unique ID
+                    avatar: 'https://placehold.co/100x100.png',
+                    bio: t.qualification || 'A passionate and experienced tutor.',
+                    rating: 4.8 + Math.random() * 0.2, // Randomize rating slightly
+                    price: t.price || 50 + Math.floor(Math.random() * 50), // Use saved price or mock one
+                    subjects: t.expertise ? [t.expertise] : ['Subject'], // Use saved subject
+                }));
+                setAllTutors(tutorsWithFullData);
+            }
+        }
+    }, [isClient]);
+
+    const recommendedTutors = useMemo(() => {
+        if (!allTutors.length) return [];
+        return allTutors.filter(tutor => 
+            studentData.subjects.some(studentSubject => 
+                tutor.subjects.includes(studentSubject)
+            )
+        ).slice(0, 3); // Show top 3 recommendations
+    }, [allTutors]);
+
+
   return (
     <div className="space-y-8 animate-fade-in">
       <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -38,6 +83,30 @@ export default function DashboardPage() {
             </CardContent>
         </Card>
       </div>
+
+    {isClient && recommendedTutors.length > 0 && (
+        <section className="space-y-4">
+            <h2 className="text-2xl font-bold font-headline flex items-center gap-2">
+                <Users className="h-6 w-6 text-primary" />
+                Recommended Tutors For You
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {recommendedTutors.map((tutor, index) => (
+                    <div
+                        key={tutor.id}
+                        className="animate-slide-in-from-bottom"
+                        style={{
+                        animationDelay: `${index * 100}ms`,
+                        animationFillMode: 'backwards',
+                        }}
+                    >
+                        <TutorCard tutor={tutor} />
+                    </div>
+                ))}
+            </div>
+        </section>
+    )}
+
 
        <Card>
           <CardHeader>
