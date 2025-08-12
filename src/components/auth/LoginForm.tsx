@@ -42,20 +42,26 @@ export default function LoginForm() {
     
     // Mock API call
     setTimeout(() => {
-      const user = users.find(u => u.email.toLowerCase() === values.email.toLowerCase()) || { role: 'student' }; // Default to student
+      // Check for pre-defined users first
+      let user = users.find(u => u.email.toLowerCase() === values.email.toLowerCase());
       
+      // If not a pre-defined user, check for a role from signup, otherwise default to student
+      const signupRole = localStorage.getItem('signupRole');
+      const role = user ? user.role : signupRole || 'student';
+
       localStorage.setItem('isLoggedIn', 'true');
       localStorage.removeItem('isAdmin');
       localStorage.removeItem('isTutor');
+      localStorage.removeItem('signupRole'); // Clean up temporary role
 
       let destination = '/dashboard';
       let userRole = 'dashboard';
 
-      if (user.role === 'admin') {
+      if (role === 'admin') {
           localStorage.setItem('isAdmin', 'true');
           destination = '/admin';
           userRole = 'admin panel';
-      } else if (user.role === 'tutor') {
+      } else if (role === 'tutor') {
           localStorage.setItem('isTutor', 'true');
           destination = '/tutor/dashboard';
           userRole = 'tutor dashboard';

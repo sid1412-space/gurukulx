@@ -65,6 +65,11 @@ export default function SignUpForm() {
   function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     console.log(values);
+    
+    // Store the selected role so the login form can use it.
+    // In a real app, this would be handled by your backend.
+    localStorage.setItem('signupRole', values.accountType);
+
     // Mock API call
     setTimeout(() => {
       toast({
