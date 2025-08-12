@@ -17,7 +17,7 @@ export default function Whiteboard() {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0 }}>
+    <div className="w-full h-full">
       <Tldraw />
     </div>
   );
