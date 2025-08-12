@@ -13,6 +13,9 @@ import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useState, useEffect } from 'react';
 import { useIsClient } from '@/hooks/use-is-client';
+import { db } from '@/lib/firebase';
+import { collection, doc, getDocs, query, where, updateDoc, increment, getDoc, deleteDoc, onSnapshot, Unsubscribe } from 'firebase/firestore';
+
 
 const addFundsSchema = z.object({
   studentEmail: z.string().email(),
@@ -27,6 +30,7 @@ const updateEarningsSchema = z.object({
 type RechargeRequest = {
   id: string;
   studentEmail: string;
+  studentUid: string;
   amount: number;
   status: 'pending';
 };
@@ -38,10 +42,15 @@ export default function FinancialManagementPage() {
   const [rechargeRequests, setRechargeRequests] = useState<RechargeRequest[]>([]);
 
   useEffect(() => {
-    if(isClient) {
-      const storedRequests = localStorage.getItem('rechargeRequests') || '[]';
-      setRechargeRequests(JSON.parse(storedRequests));
-    }
+    if (!isClient) return;
+
+    const q = query(collection(db, "rechargeRequests"), where("status", "==", "pending"));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const requests = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as RechargeRequest));
+        setRechargeRequests(requests);
+    });
+
+    return () => unsubscribe();
   }, [isClient]);
 
   const addFundsForm = useForm<z.infer<typeof addFundsSchema>>({
@@ -55,14 +64,23 @@ export default function FinancialManagementPage() {
   });
 
 
-  function onAddFunds(values: z.infer<typeof addFundsSchema>) {
-    const studentWalletKey = `student-wallet-${values.studentEmail}`;
-    const currentBalance = parseFloat(localStorage.getItem(studentWalletKey) || '0');
-    const newBalance = currentBalance + values.amount;
-    localStorage.setItem(studentWalletKey, newBalance.toString());
+  async function onAddFunds(values: z.infer<typeof addFundsSchema>) {
+    const q = query(collection(db, "users"), where("email", "==", values.studentEmail));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Student not found.' });
+        return;
+    }
+
+    const studentDoc = querySnapshot.docs[0];
+    const studentRef = doc(db, "users", studentDoc.id);
+
+    await updateDoc(studentRef, {
+        walletBalance: increment(values.amount)
+    });
     
-    // This event notifies other tabs that storage has changed.
-    window.dispatchEvent(new Event('storage'));
+    const newBalance = (studentDoc.data().walletBalance || 0) + values.amount;
 
     toast({
       title: 'Funds Added',
@@ -87,35 +105,39 @@ export default function FinancialManagementPage() {
     });
   };
   
-  const updateRechargeRequests = (updatedRequests: RechargeRequest[]) => {
-      setRechargeRequests(updatedRequests);
-      localStorage.setItem('rechargeRequests', JSON.stringify(updatedRequests));
-      window.dispatchEvent(new Event('storage'));
-  };
-
-  const handleApproveRecharge = (requestId: string) => {
+  const handleApproveRecharge = async (requestId: string) => {
     const request = rechargeRequests.find(r => r.id === requestId);
     if (!request) return;
 
-    const studentWalletKey = `student-wallet-${request.studentEmail}`;
-    const currentBalance = parseFloat(localStorage.getItem(studentWalletKey) || '0');
-    const newBalance = currentBalance + request.amount;
-    localStorage.setItem(studentWalletKey, newBalance.toString());
+    try {
+        const studentRef = doc(db, "users", request.studentUid);
+        await updateDoc(studentRef, {
+            walletBalance: increment(request.amount)
+        });
 
-    const updatedRequests = rechargeRequests.filter(r => r.id !== requestId);
-    updateRechargeRequests(updatedRequests);
-    toast({
-        title: 'Recharge Approved',
-        description: `₹${request.amount} has been added to ${request.studentEmail}'s wallet. New balance: ₹${newBalance.toFixed(2)}`
-    });
+        const requestRef = doc(db, "rechargeRequests", requestId);
+        await deleteDoc(requestRef); // Or update status to 'approved'
+        
+        const studentDoc = await getDoc(studentRef);
+        const newBalance = studentDoc.data()?.walletBalance || request.amount;
+
+        toast({
+            title: 'Recharge Approved',
+            description: `₹${request.amount} has been added to ${request.studentEmail}'s wallet. New balance: ₹${newBalance.toFixed(2)}`
+        });
+    } catch (error) {
+        console.error("Error approving recharge: ", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not approve recharge.' });
+    }
   };
   
-  const handleRejectRecharge = (requestId: string) => {
+  const handleRejectRecharge = async (requestId: string) => {
       const request = rechargeRequests.find(r => r.id === requestId);
       if (!request) return;
 
-      const updatedRequests = rechargeRequests.filter(r => r.id !== requestId);
-      updateRechargeRequests(updatedRequests);
+      const requestRef = doc(db, "rechargeRequests", requestId);
+      await deleteDoc(requestRef); // Or update status to 'rejected'
+
       toast({
           variant: 'destructive',
           title: 'Recharge Rejected',
@@ -274,3 +296,5 @@ export default function FinancialManagementPage() {
     </div>
   );
 }
+
+    

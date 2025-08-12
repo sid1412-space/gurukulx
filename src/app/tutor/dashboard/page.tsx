@@ -9,67 +9,59 @@ import { useToast } from '@/hooks/use-toast';
 import { useIsClient } from '@/hooks/use-is-client';
 import TutorNotification from '@/components/tutors/TutorNotification';
 import { DollarSign, CalendarCheck } from 'lucide-react';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth, db } from '@/lib/firebase';
+import { doc, onSnapshot, updateDoc, Unsubscribe } from 'firebase/firestore';
 
-const TUTOR_ID = 'tutor@example.com'; // Using email as a unique ID
 
 export default function TutorDashboardPage() {
   const { toast } = useToast();
+  const [user, loading] = useAuthState(auth);
+  const isClient = useIsClient();
+  
   const [isOnline, setIsOnline] = useState(true);
   const [isBusy, setIsBusy] = useState(false);
-  const isClient = useIsClient();
   const [tutorName, setTutorName] = useState('Tutor');
+  const [todaySessions, setTodaySessions] = useState(0);
+  const [todayEarnings, setTodayEarnings] = useState(0);
 
-  // Load status and tutor info from localStorage on mount
+  // Listen for real-time updates on the tutor's document
   useEffect(() => {
-    if (isClient) {
-      const loggedInUserEmail = localStorage.getItem('loggedInUser');
-
-      const checkStatus = () => {
-        const storedStatus = localStorage.getItem(`tutor-status-${loggedInUserEmail}`);
-        if (storedStatus) {
-          setIsOnline(storedStatus === 'online');
-        } else {
-          localStorage.setItem(`tutor-status-${loggedInUserEmail}`, 'online');
+    if (!user) return;
+    
+    const tutorDocRef = doc(db, "users", user.uid);
+    const unsubscribe = onSnapshot(tutorDocRef, (doc) => {
+        if (doc.exists()) {
+            const data = doc.data();
+            setTutorName(data.name || 'Tutor');
+            setIsOnline(data.isOnline !== false); // Default to online if not set
+            setIsBusy(data.isBusy === true);
+            setTodayEarnings(data.todayEarnings || 0); // Placeholder for now
+            setTodaySessions(data.todaySessions || 0); // Placeholder for now
         }
-
-        const busyStatus = localStorage.getItem(`tutor-busy-${loggedInUserEmail}`) === 'true';
-        setIsBusy(busyStatus);
-      };
-      
-      const fetchTutorInfo = () => {
-        if(loggedInUserEmail) {
-            const usersJSON = localStorage.getItem('userDatabase') || '[]';
-            const users = JSON.parse(usersJSON);
-            const currentUser = users.find((u:any) => u.email === loggedInUserEmail);
-            if(currentUser) {
-                setTutorName(currentUser.name);
-            }
-        }
-      };
-      
-      checkStatus();
-      fetchTutorInfo();
-
-      window.addEventListener('storage', checkStatus);
-
-      return () => {
-        window.removeEventListener('storage', checkStatus);
-      };
-    }
-  }, [isClient]);
-
-  const handleStatusChange = (online: boolean) => {
-    const loggedInUserEmail = localStorage.getItem('loggedInUser');
-    if (!loggedInUserEmail) return;
-
-    setIsOnline(online);
-    const newStatus = online ? 'online' : 'offline';
-    localStorage.setItem(`tutor-status-${loggedInUserEmail}`, newStatus);
-    window.dispatchEvent(new Event('storage')); // Notify other tabs/pages like the search page
-    toast({
-      title: `You are now ${online ? 'Online' : 'Offline'}`,
-      description: online ? 'You will now appear in student search results.' : 'You will be hidden from students.',
     });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  const handleStatusChange = async (online: boolean) => {
+    if(!user) return;
+    
+    const tutorDocRef = doc(db, "users", user.uid);
+    try {
+        await updateDoc(tutorDocRef, { isOnline: online });
+        setIsOnline(online);
+        toast({
+          title: `You are now ${online ? 'Online' : 'Offline'}`,
+          description: online ? 'You will now appear in student search results.' : 'You will be hidden from students.',
+        });
+    } catch (error) {
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Could not update your status.'
+        });
+    }
   };
 
   return (
@@ -96,7 +88,7 @@ export default function TutorDashboardPage() {
               <CalendarCheck className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-4xl font-bold text-primary">0</div>
+              <div className="text-4xl font-bold text-primary">{todaySessions}</div>
             </CardContent>
         </Card>
         <Card className="hover:shadow-md transition-shadow">
@@ -105,7 +97,7 @@ export default function TutorDashboardPage() {
               <DollarSign className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-4xl font-bold text-primary">₹0.00</div>
+              <div className="text-4xl font-bold text-primary">₹{todayEarnings.toFixed(2)}</div>
             </CardContent>
         </Card>
       </div>
@@ -113,3 +105,5 @@ export default function TutorDashboardPage() {
     </div>
   );
 }
+
+    

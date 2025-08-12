@@ -13,17 +13,48 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { sessionHistory } from '@/lib/mock-data'; // Using same mock for demo
 import { BookCopy, Download, Users, Star } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import RatingDialog from '@/components/session/RatingDialog';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth, db } from '@/lib/firebase';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
-type Session = typeof sessionHistory[0] & { rating?: number };
+
+type Session = { 
+  id: string; 
+  rating?: number;
+  studentName: string;
+  studentAvatar: string;
+  subject: string;
+  date: string;
+  duration: number;
+  cost: number;
+  status: 'Completed' | 'Upcoming';
+};
 
 export default function TutorSessionHistoryPage() {
-  const [sessions, setSessions] = useState<Session[]>(sessionHistory);
+  const [sessions, setSessions] = useState<Session[]>([]);
   const [ratingSession, setRatingSession] = useState<Session | null>(null);
+  const [user] = useAuthState(auth);
+
+  useEffect(() => {
+    if(!user) return;
+
+    const q = query(collection(db, "sessions"), where("tutorUid", "==", user.uid));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const sessionList = snapshot.docs.map(doc => ({
+            id: doc.id,
+            studentName: 'Student', // Placeholder
+            studentAvatar: 'https://placehold.co/100x100.png',
+            ...doc.data() 
+        } as Session));
+        setSessions(sessionList);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
 
   const handleOpenRating = (session: Session) => {
     setRatingSession(session);
@@ -81,10 +112,10 @@ export default function TutorSessionHistoryPage() {
                             <TableCell>
                                 <div className="flex items-center gap-3">
                                     <Avatar className="h-10 w-10">
-                                        <AvatarImage src={`https://placehold.co/100x100.png`} alt="Student Avatar" data-ai-hint="person avatar"/>
+                                        <AvatarImage src={session.studentAvatar} alt="Student Avatar" data-ai-hint="person avatar"/>
                                         <AvatarFallback>S</AvatarFallback>
                                     </Avatar>
-                                    <span className="font-medium">Student Name</span>
+                                    <span className="font-medium">{session.studentName}</span>
                                 </div>
                             </TableCell>
                             <TableCell>{session.subject}</TableCell>
@@ -134,3 +165,5 @@ export default function TutorSessionHistoryPage() {
     </div>
   );
 }
+
+    

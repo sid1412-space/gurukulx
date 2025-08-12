@@ -8,80 +8,62 @@ import Link from 'next/link';
 import { useIsClient } from '@/hooks/use-is-client';
 import { useEffect, useState, useMemo } from 'react';
 import TutorCard from '@/components/tutors/TutorCard';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth, db } from '@/lib/firebase';
+import { collection, doc, getDoc, getDocs, onSnapshot, query, where } from 'firebase/firestore';
+
 
 export default function DashboardPage() {
     const isClient = useIsClient();
+    const [user] = useAuthState(auth);
     const [allTutors, setAllTutors] = useState<any[]>([]);
     const [walletBalance, setWalletBalance] = useState(0);
     const [studentName, setStudentName] = useState('User');
-    const [studentWalletKey, setStudentWalletKey] = useState('');
 
-
+    // Fetch Tutors
     useEffect(() => {
         if (isClient) {
-            const fetchTutorAndStudentData = () => {
-                const loggedInUserEmail = localStorage.getItem('loggedInUser');
-                if (!loggedInUserEmail) return;
-
-                const usersJSON = localStorage.getItem('userDatabase');
-                if (usersJSON) {
-                    const users = JSON.parse(usersJSON);
-                    const tutors = users.filter((u: any) => u.role === 'tutor');
-                    
-                    const applicantsJSON = localStorage.getItem('tutorApplicants') || '[]';
-                    const applicants = JSON.parse(applicantsJSON);
-
-                    const tutorsWithFullData = tutors.map((t: any) => {
-                        const applicantData = applicants.find((a:any) => a.email === t.email) || {};
-                        return {
-                            ...t,
-                            id: t.email,
-                            name: applicantData.name || t.name,
-                            avatar: 'https://placehold.co/100x100.png',
-                            bio: applicantData.qualification || 'A passionate and experienced tutor.',
-                            rating: 4.8 + Math.random() * 0.2,
-                            subjects: applicantData.expertise ? [applicantData.expertise] : ['Subject'],
-                        }
-                    });
-                    setAllTutors(tutorsWithFullData);
-
-                    const currentUser = users.find((u:any) => u.email === loggedInUserEmail);
-                    if (currentUser && currentUser.name) {
-                        setStudentName(currentUser.name);
-                    }
-                }
-                setStudentWalletKey(`student-wallet-${loggedInUserEmail}`);
+            const fetchTutors = async () => {
+                const q = query(collection(db, "users"), where("role", "==", "tutor"));
+                const querySnapshot = await getDocs(q);
+                const tutorsData = querySnapshot.docs.map(doc => ({
+                    ...doc.data(),
+                    id: doc.id,
+                    avatar: 'https://placehold.co/100x100.png',
+                    bio: doc.data().applicationDetails?.qualification || 'A passionate and experienced tutor.',
+                    rating: 4.8 + Math.random() * 0.2, // Keep random rating for demo
+                    subjects: doc.data().applicationDetails?.expertise ? [doc.data().applicationDetails.expertise] : ['Subject'],
+                }));
+                setAllTutors(tutorsData);
             };
-            fetchTutorAndStudentData();
-            window.addEventListener('storage', fetchTutorAndStudentData);
-            return () => {
-                window.removeEventListener('storage', fetchTutorAndStudentData);
-            };
+            fetchTutors();
         }
     }, [isClient]);
 
-    // Dedicated effect for wallet balance to ensure it updates correctly
+    // Fetch Student data and listen for wallet changes
     useEffect(() => {
-        if(isClient && studentWalletKey) {
-            const updateBalance = () => {
-                const storedBalance = localStorage.getItem(studentWalletKey) || '0';
-                setWalletBalance(parseFloat(storedBalance));
-            };
-
-            updateBalance(); // Initial fetch
-            
-            // Listen for changes specifically for the wallet
-            window.addEventListener('storage', updateBalance);
-
-            return () => {
-                window.removeEventListener('storage', updateBalance);
-            }
+        if (user) {
+            const userDocRef = doc(db, "users", user.uid);
+            const unsubscribe = onSnapshot(userDocRef, (doc) => {
+                if (doc.exists()) {
+                    const userData = doc.data();
+                    setStudentName(userData.name || 'User');
+                    setWalletBalance(userData.walletBalance || 0);
+                }
+            });
+            return () => unsubscribe();
         }
-    }, [isClient, studentWalletKey]);
+    }, [user]);
+
 
     const recommendedTutors = useMemo(() => {
         if (!allTutors.length) return [];
-        return allTutors.slice(0, 3); // Show top 3 tutors
+        // A simple recommendation logic: filter out non-available tutors and take top 3
+         return allTutors.filter(tutor => {
+            const isOnline = localStorage.getItem(`tutor-status-${tutor.id}`) !== 'offline';
+            const isBusy = localStorage.getItem(`tutor-busy-${tutor.id}`) === 'true';
+            return isOnline && !isBusy;
+        }).slice(0, 3);
     }, [allTutors]);
 
 
@@ -156,3 +138,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    

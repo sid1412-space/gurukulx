@@ -13,7 +13,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useIsClient } from '@/hooks/use-is-client';
-
+import { db } from '@/lib/firebase';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
 const exams = {
   JEE: ['Physics', 'Chemistry', 'Mathematics'],
@@ -25,44 +26,25 @@ export default function TutorsPage() {
   const [selectedExam, setSelectedExam] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
   const [allTutors, setAllTutors] = useState<any[]>([]);
-  const [updateTrigger, setUpdateTrigger] = useState(0);
   const isClient = useIsClient();
 
    useEffect(() => {
         if (isClient) {
-            const usersJSON = localStorage.getItem('userDatabase');
-            if (usersJSON) {
-                const users = JSON.parse(usersJSON);
-                const tutors = users.filter((u: any) => u.role === 'tutor');
-                
-                const applicantsJSON = localStorage.getItem('tutorApplicants') || '[]';
-                const applicants = JSON.parse(applicantsJSON);
-
-                const tutorsWithFullData = tutors.map((t: any) => {
-                    const applicantData = applicants.find((a:any) => a.email === t.email) || {};
-                    return {
-                        ...t,
-                        id: t.email,
-                        avatar: 'https://placehold.co/100x100.png',
-                        bio: applicantData.qualification || 'A passionate and experienced tutor.',
-                        rating: 4.8 + Math.random() * 0.2,
-                        subjects: applicantData.expertise ? [applicantData.expertise] : ['Subject'],
-                    }
-                });
-                setAllTutors(tutorsWithFullData);
-            }
+            const q = query(collection(db, "users"), where("role", "==", "tutor"));
+            const unsubscribe = onSnapshot(q, (querySnapshot) => {
+                const tutorsData = querySnapshot.docs.map(doc => ({
+                    ...doc.data(),
+                    id: doc.id,
+                    avatar: doc.data().avatar || 'https://placehold.co/100x100.png',
+                    bio: doc.data().applicationDetails?.qualification || 'A passionate and experienced tutor.',
+                    rating: 4.8 + Math.random() * 0.2, // Keep random rating for demo
+                    subjects: doc.data().applicationDetails?.expertise ? [doc.data().applicationDetails.expertise] : ['Subject'],
+                }));
+                setAllTutors(tutorsData);
+            });
+            return () => unsubscribe();
         }
     }, [isClient]);
-
-  useEffect(() => {
-    const handleStorageChange = () => {
-      setUpdateTrigger(Math.random());
-    };
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []);
 
   const handleExamChange = (value: string) => {
     setSelectedExam(value);
@@ -72,11 +54,7 @@ export default function TutorsPage() {
   const filteredTutors = useMemo(() => {
     if (!isClient) return [];
 
-    let availableTutors = allTutors.filter(tutor => {
-      const isOnline = localStorage.getItem(`tutor-status-${tutor.id}`) !== 'offline';
-      const isBusy = localStorage.getItem(`tutor-busy-${tutor.id}`) === 'true';
-      return isOnline && !isBusy;
-    });
+    let availableTutors = allTutors.filter(tutor => tutor.isOnline && !tutor.isBusy);
 
     let filtered = availableTutors;
 
@@ -97,7 +75,7 @@ export default function TutorsPage() {
     }
 
     return filtered;
-  }, [searchQuery, selectedSubject, selectedExam, updateTrigger, isClient, allTutors]);
+  }, [searchQuery, selectedSubject, selectedExam, isClient, allTutors]);
 
   const subjectsForSelectedExam = selectedExam ? exams[selectedExam as keyof typeof exams] : [];
 
@@ -175,3 +153,5 @@ export default function TutorsPage() {
     </div>
   );
 }
+
+    

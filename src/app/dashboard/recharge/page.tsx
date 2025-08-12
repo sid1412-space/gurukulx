@@ -15,6 +15,10 @@ import Link from 'next/link';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth, db } from '@/lib/firebase';
+import { collection, addDoc } from 'firebase/firestore';
+
 
 const amountSchema = z.object({
   amount: z.coerce.number().min(10, 'Minimum recharge amount is ₹10.'),
@@ -37,6 +41,7 @@ export default function RechargePage() {
   const [step, setStep] = useState<Step>('amount');
   const [rechargeAmount, setRechargeAmount] = useState(0);
   const { toast } = useToast();
+  const [user, loading] = useAuthState(auth);
 
   const form = useForm<z.infer<typeof amountSchema>>({
     resolver: zodResolver(amountSchema),
@@ -57,25 +62,21 @@ export default function RechargePage() {
     return qrCodeMapping[rechargeAmount] || qrCodeMapping.default;
   }
 
-  const handleFormSubmitted = () => {
-    try {
-        const studentEmail = localStorage.getItem('loggedInUser');
-        if (!studentEmail) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Could not identify user. Please log in again.' });
-            return;
-        }
+  const handleFormSubmitted = async () => {
+    if (!user) {
+        toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to make a request.' });
+        return;
+    }
 
-        const storedRequests = localStorage.getItem('rechargeRequests') || '[]';
-        const requests = JSON.parse(storedRequests);
-        const newRequest = {
-            id: `recharge-${Date.now()}`,
-            studentEmail,
+    try {
+        await addDoc(collection(db, "rechargeRequests"), {
+            studentUid: user.uid,
+            studentEmail: user.email,
             amount: rechargeAmount,
-            status: 'pending'
-        };
-        requests.push(newRequest);
-        localStorage.setItem('rechargeRequests', JSON.stringify(requests));
-        window.dispatchEvent(new Event('storage'));
+            status: 'pending',
+            createdAt: new Date(),
+        });
+
         toast({
             title: 'Request Submitted',
             description: 'Your recharge request has been sent for admin approval.'
@@ -236,3 +237,5 @@ export default function RechargePage() {
     </div>
   );
 }
+
+    

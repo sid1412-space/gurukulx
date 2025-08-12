@@ -17,6 +17,10 @@ import { Input } from '@/components/ui/input';
 import { getExerciseSuggestions } from '@/lib/actions';
 import { Separator } from '@/components/ui/separator';
 import Lobby from '@/components/session/Lobby';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth, db } from '@/lib/firebase';
+import { doc, getDoc, onSnapshot, Unsubscribe, updateDoc, increment, addDoc, collection } from 'firebase/firestore';
+
 
 const Whiteboard = dynamic(() => import('@/components/session/Whiteboard'), { ssr: false });
 const JitsiMeetComponent = dynamic(() => import('@/components/session/JitsiMeetComponent'), { ssr: false });
@@ -26,8 +30,10 @@ export default function SessionPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const params = useParams();
+  const [user] = useAuthState(auth);
   const tutorId = searchParams.get('tutorId');
   const userRole = searchParams.get('role'); // 'student' or 'tutor'
+  const sessionId = params.sessionId as string;
   const { toast } = useToast();
 
   const [jitsiApi, setJitsiApi] = useState<JitsiAPI | null>(null);
@@ -42,41 +48,41 @@ export default function SessionPage() {
   const [sessionDuration, setSessionDuration] = useState(0); // in seconds
   const [walletBalance, setWalletBalance] = useState(0); 
   const [pricePerMinute, setPricePerMinute] = useState(1);
+  const [tutorData, setTutorData] = useState<any>(null);
 
   const isClient = useIsClient();
 
-   // Set tutor as busy when session starts
+   // Set tutor as busy when session starts and fetch tutor data
   useEffect(() => {
     if (hasAgreedToTerms && tutorId) {
-      localStorage.setItem(`tutor-busy-${tutorId}`, 'true');
-      window.dispatchEvent(new Event('storage'));
+      const tutorDocRef = doc(db, "users", tutorId);
+      updateDoc(tutorDocRef, { isBusy: true });
+      
+      getDoc(tutorDocRef).then(docSnap => {
+        if(docSnap.exists()){
+            const data = docSnap.data();
+            setTutorData(data);
+            setPricePerMinute(data.price || 1);
+        }
+      });
     }
   }, [hasAgreedToTerms, tutorId]);
 
-  // Fetch tutor price and student balance from localStorage
+  // Wallet and student data listener
    useEffect(() => {
-        if (isClient) {
-            const usersJSON = localStorage.getItem('userDatabase');
-            if (usersJSON && tutorId) {
-                const users = JSON.parse(usersJSON);
-                const tutor = users.find((u: any) => u.email === tutorId);
-                if(tutor && tutor.price) {
-                    setPricePerMinute(tutor.price);
+        if (isClient && userRole === 'student' && user) {
+            const userDocRef = doc(db, "users", user.uid);
+            const unsubscribe = onSnapshot(userDocRef, (doc) => {
+                if(doc.exists()){
+                    setWalletBalance(doc.data().walletBalance || 0);
                 }
-            }
-
-            if (userRole === 'student') {
-                const studentEmail = localStorage.getItem('loggedInUser');
-                if (studentEmail) {
-                    const storedBalance = localStorage.getItem(`student-wallet-${studentEmail}`) || '0';
-                    setWalletBalance(parseFloat(storedBalance));
-                }
-            } else {
-                // Tutors don't need to see student balance
-                setWalletBalance(Infinity);
-            }
+            });
+            return () => unsubscribe();
+        } else {
+            // Tutors don't need to see student balance
+            setWalletBalance(Infinity);
         }
-    }, [isClient, tutorId, userRole]);
+    }, [isClient, user, userRole]);
 
   // Timer and wallet deduction logic
   useEffect(() => {
@@ -90,35 +96,40 @@ export default function SessionPage() {
   }, [hasAgreedToTerms]);
 
   useEffect(() => {
-    if (!hasAgreedToTerms || !pricePerMinute || userRole !== 'student' || sessionDuration === 0) return;
+    if (!hasAgreedToTerms || !pricePerMinute || userRole !== 'student' || sessionDuration === 0 || !user) return;
 
     // Deduct funds every 60 seconds (1 minute)
     if (sessionDuration > 0 && sessionDuration % 60 === 0) {
-      setWalletBalance(prevBalance => {
-          const newBalance = prevBalance - pricePerMinute;
-          
-          if (newBalance < 0) {
-              toast({
-                variant: 'destructive',
-                title: 'Insufficient Funds',
-                description: 'Your wallet balance is empty. The session will now end.',
-              });
-              hangUp();
-              return 0;
-          } else {
-            const studentEmail = localStorage.getItem('loggedInUser');
-            if (studentEmail) {
-              localStorage.setItem(`student-wallet-${studentEmail}`, newBalance.toString());
-            }
+        const newBalance = walletBalance - pricePerMinute;
+        
+        if (newBalance < 0) {
             toast({
-                title: 'Charge Applied',
-                description: `₹${pricePerMinute.toFixed(2)} deducted. New balance: ₹${newBalance.toFixed(2)}`,
+              variant: 'destructive',
+              title: 'Insufficient Funds',
+              description: 'Your wallet balance is empty. The session will now end.',
             });
-            return newBalance;
-          }
-      });
+            hangUp();
+        } else {
+            const studentRef = doc(db, "users", user.uid);
+            const tutorRef = tutorId ? doc(db, "users", tutorId) : null;
+
+            updateDoc(studentRef, {
+                walletBalance: increment(-pricePerMinute)
+            });
+            // Credit tutor's pending earnings (assuming 85% commission)
+            if(tutorRef) {
+                updateDoc(tutorRef, {
+                    pendingEarnings: increment(pricePerMinute * 0.85)
+                });
+            }
+          
+          toast({
+              title: 'Charge Applied',
+              description: `₹${pricePerMinute.toFixed(2)} deducted. New balance: ₹${newBalance.toFixed(2)}`,
+          });
+        }
     }
-  }, [sessionDuration, hasAgreedToTerms, pricePerMinute, userRole, toast]);
+  }, [sessionDuration, hasAgreedToTerms, pricePerMinute, userRole, toast, user, walletBalance]);
 
 
   useEffect(() => {
@@ -149,12 +160,28 @@ export default function SessionPage() {
     jitsiApi?.executeCommand('toggleAudio');
   };
 
-  const hangUp = () => {
+  const hangUp = async () => {
     if (tutorId) {
-        localStorage.removeItem(`tutor-busy-${tutorId}`);
-        window.dispatchEvent(new Event('storage'));
+        const tutorDocRef = doc(db, "users", tutorId);
+        await updateDoc(tutorDocRef, { isBusy: false });
     }
     jitsiApi?.executeCommand('hangup');
+
+    // Create session record in Firestore
+    if(user && tutorData) {
+        await addDoc(collection(db, "sessions"), {
+            sessionId,
+            studentUid: user.uid,
+            tutorUid: tutorId,
+            tutorName: tutorData.name,
+            tutorAvatar: tutorData.avatar || 'https://placehold.co/100x100.png',
+            subject: tutorData.applicationDetails?.expertise || 'General',
+            date: new Date().toISOString(),
+            duration: Math.floor(sessionDuration / 60), // in minutes
+            cost: Math.floor(sessionDuration / 60) * pricePerMinute,
+            status: 'Completed',
+        });
+    }
     
     const destination = userRole === 'tutor' ? '/tutor/sessions' : '/dashboard/sessions';
     router.push(destination);
@@ -319,3 +346,5 @@ export default function SessionPage() {
     </div>
   );
 }
+
+    

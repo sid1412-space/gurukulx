@@ -11,8 +11,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, Users, Wallet } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Users, Wallet } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   AlertDialog,
@@ -28,8 +27,12 @@ import { useToast } from '@/hooks/use-toast';
 import { useIsClient } from '@/hooks/use-is-client';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
+
 
 type Student = {
+  uid: string;
   email: string;
   name: string;
   walletBalance: number;
@@ -42,22 +45,19 @@ export default function StudentManagementPage() {
   const [managingStudent, setManagingStudent] = useState<Student | null>(null);
   const [walletAmount, setWalletAmount] = useState<number | string>('');
 
-  const fetchAllData = () => {
+  const fetchAllData = async () => {
     if (isClient) {
-      const usersJSON = localStorage.getItem('userDatabase') || '[]';
       try {
-        const allUsers = JSON.parse(usersJSON);
-        const studentUsers = allUsers.filter((user: any) => user.role === 'student');
-
-        const enrichedStudents = studentUsers.map((student: any) => {
-          const walletKey = `student-wallet-${student.email}`;
-          const walletBalance = parseFloat(localStorage.getItem(walletKey) || '0');
-          return { ...student, walletBalance };
-        });
-
-        setStudents(enrichedStudents);
+        const q = query(collection(db, "users"), where("role", "==", "student"));
+        const querySnapshot = await getDocs(q);
+        const studentList = querySnapshot.docs.map(doc => ({
+            uid: doc.id,
+            walletBalance: 0, // Default value
+            ...doc.data()
+        })) as Student[];
+        setStudents(studentList);
       } catch (error) {
-        console.error("Failed to parse user database", error);
+        console.error("Failed to fetch students from Firestore", error);
         setStudents([]);
       }
     }
@@ -65,13 +65,9 @@ export default function StudentManagementPage() {
 
   useEffect(() => {
     fetchAllData();
-    window.addEventListener('storage', fetchAllData);
-    return () => {
-      window.removeEventListener('storage', fetchAllData);
-    };
   }, [isClient]);
 
-  const handleUpdateBalance = () => {
+  const handleUpdateBalance = async () => {
     if (!managingStudent || walletAmount === '') {
       toast({
         variant: 'destructive',
@@ -82,19 +78,31 @@ export default function StudentManagementPage() {
     }
 
     const newBalance = parseFloat(walletAmount as string);
-    const studentWalletKey = `student-wallet-${managingStudent.email}`;
-    localStorage.setItem(studentWalletKey, newBalance.toString());
+    
+    try {
+        const studentDocRef = doc(db, "users", managingStudent.uid);
+        await updateDoc(studentDocRef, {
+            walletBalance: newBalance
+        });
 
-    window.dispatchEvent(new Event('storage'));
+        toast({
+        title: 'Wallet Updated',
+        description: `${managingStudent.name}'s wallet balance has been updated to ₹${newBalance.toFixed(2)}.`,
+        });
 
-    toast({
-      title: 'Wallet Updated',
-      description: `${managingStudent.name}'s wallet balance has been updated to ₹${newBalance.toFixed(2)}.`,
-    });
+        setManagingStudent(null);
+        setWalletAmount('');
+        fetchAllData();
 
-    setManagingStudent(null);
-    setWalletAmount('');
-    fetchAllData();
+    } catch (error) {
+        console.error("Error updating wallet: ", error);
+        toast({
+            variant: 'destructive',
+            title: 'Update Failed',
+            description: 'Could not update the wallet balance.',
+        });
+    }
+
   };
   
   const handleOpenWalletManager = (student: Student) => {
@@ -185,3 +193,4 @@ export default function StudentManagementPage() {
   );
 }
 
+    

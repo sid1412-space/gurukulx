@@ -14,6 +14,9 @@ import { Loader2, KeyRound, Landmark, User } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useIsClient } from '@/hooks/use-is-client';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth, db } from '@/lib/firebase';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
 
 const profileSchema = z.object({
@@ -40,7 +43,7 @@ export default function TutorSettingsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isClient = useIsClient();
-  const [loggedInUser, setLoggedInUser] = useState<string | null>(null);
+  const [user, loading] = useAuthState(auth);
 
   const [currentUser, setCurrentUser] = useState({
     name: '',
@@ -72,41 +75,33 @@ export default function TutorSettingsPage() {
     }
   });
 
-  useEffect(() => {
-    if(isClient) {
-      const email = localStorage.getItem('loggedInUser');
-      setLoggedInUser(email);
-    }
-  }, [isClient]);
 
    useEffect(() => {
-    if (isClient && loggedInUser) {
-      // Load Profile Info
-      const usersJSON = localStorage.getItem('userDatabase') || '[]';
-      const users = JSON.parse(usersJSON);
-      const tutor = users.find((u: any) => u.email === loggedInUser);
-      if (tutor) {
-        const tutorProfile = {
-          name: tutor.name || '',
-          email: tutor.email,
-          bio: tutor.bio || 'PhD in Physics with 10+ years of teaching experience...',
-          subjects: tutor.subjects || 'Physics, Calculus',
-          avatar: tutor.avatar || 'https://placehold.co/128x128.png',
-        };
-        setCurrentUser(tutorProfile);
-        setAvatarPreview(tutorProfile.avatar);
-        profileForm.reset(tutorProfile);
-      }
+    if (isClient && user) {
+      const userDocRef = doc(db, "users", user.uid);
+      getDoc(userDocRef).then(docSnap => {
+          if (docSnap.exists()) {
+              const userData = docSnap.data();
+              // Profile Info
+              const tutorProfile = {
+                name: userData.name || '',
+                email: userData.email,
+                bio: userData.applicationDetails?.qualification || 'PhD in Physics with 10+ years of teaching experience...',
+                subjects: userData.applicationDetails?.expertise || 'Physics, Calculus',
+                avatar: userData.avatar || 'https://placehold.co/128x128.png',
+              };
+              setCurrentUser(tutorProfile);
+              setAvatarPreview(tutorProfile.avatar);
+              profileForm.reset(tutorProfile);
 
-      // Load Payout Info
-      const payoutDetailsJSON = localStorage.getItem('tutorPayoutDetails') || '{}';
-      const allPayouts = JSON.parse(payoutDetailsJSON);
-      const tutorPayouts = allPayouts[loggedInUser];
-      if (tutorPayouts) {
-        payoutForm.reset(tutorPayouts);
-      }
+              // Payout Info
+              if (userData.payoutDetails) {
+                payoutForm.reset(userData.payoutDetails);
+              }
+          }
+      });
     }
-  }, [isClient, loggedInUser, profileForm, payoutForm]);
+  }, [isClient, user, profileForm, payoutForm]);
 
   
   const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -121,17 +116,33 @@ export default function TutorSettingsPage() {
   };
 
 
-  function onProfileSubmit(values: z.infer<typeof profileSchema>) {
+  async function onProfileSubmit(values: z.infer<typeof profileSchema>) {
+    if(!user) return;
     setIsLoading(true);
-    console.log({...values, avatar: avatarPreview});
-    setTimeout(() => {
-      setCurrentUser(prev => ({...prev, ...values, avatar: avatarPreview}));
-      toast({
-        title: 'Profile Updated',
-        description: 'Your information has been saved successfully.',
-      });
-      setIsLoading(false);
-    }, 1000);
+    
+    // We need to merge this with the nested applicationDetails in Firestore
+    const { subjects, bio, ...restOfValues } = values;
+    const updateData = {
+        ...restOfValues,
+        avatar: avatarPreview,
+        'applicationDetails.expertise': subjects,
+        'applicationDetails.qualification': bio,
+    };
+
+    try {
+        const userDocRef = doc(db, "users", user.uid);
+        await updateDoc(userDocRef, updateData);
+        setCurrentUser(prev => ({...prev, ...values, avatar: avatarPreview}));
+        toast({
+            title: 'Profile Updated',
+            description: 'Your information has been saved successfully.',
+        });
+    } catch(e) {
+        console.error(e);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not update profile.' });
+    } finally {
+        setIsLoading(false);
+    }
   }
 
   function onPasswordSubmit(values: z.infer<typeof passwordSchema>) {
@@ -147,18 +158,13 @@ export default function TutorSettingsPage() {
     }, 1000);
   }
   
-  function onPayoutSubmit(values: z.infer<typeof payoutSchema>) {
-    if (!loggedInUser) return;
+  async function onPayoutSubmit(values: z.infer<typeof payoutSchema>) {
+    if (!user) return;
     setIsLoading(true);
 
     try {
-        const payoutDetailsJSON = localStorage.getItem('tutorPayoutDetails') || '{}';
-        const allPayouts = JSON.parse(payoutDetailsJSON);
-        allPayouts[loggedInUser] = values;
-        localStorage.setItem('tutorPayoutDetails', JSON.stringify(allPayouts));
-        
-        window.dispatchEvent(new Event('storage'));
-
+        const userDocRef = doc(db, "users", user.uid);
+        await updateDoc(userDocRef, { payoutDetails: values });
         toast({
             title: 'Payout Details Updated',
             description: 'Your bank information has been saved.',
@@ -248,6 +254,7 @@ export default function TutorSettingsPage() {
                           <FormControl>
                             <Textarea placeholder="Tell students about your teaching style and experience." className="resize-none" {...field}/>
                           </FormControl>
+                           <FormDescription>This is your qualification that students will see.</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -379,3 +386,5 @@ export default function TutorSettingsPage() {
     </div>
   );
 }
+
+    

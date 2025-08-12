@@ -13,17 +13,44 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { sessionHistory } from '@/lib/mock-data';
 import { BookOpen, Download, Star } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import RatingDialog from '@/components/session/RatingDialog';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth, db } from '@/lib/firebase';
+import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 
-type Session = typeof sessionHistory[0] & { rating?: number };
+
+type Session = { 
+  id: string; 
+  rating?: number;
+  tutorName: string;
+  tutorAvatar: string;
+  subject: string;
+  date: string;
+  duration: number;
+  cost: number;
+  status: 'Completed' | 'Upcoming';
+};
 
 export default function SessionHistoryPage() {
-  const [sessions, setSessions] = useState<Session[]>(sessionHistory);
+  const [sessions, setSessions] = useState<Session[]>([]);
   const [ratingSession, setRatingSession] = useState<Session | null>(null);
+  const [user] = useAuthState(auth);
+
+  useEffect(() => {
+    if(!user) return;
+    const q = query(collection(db, "sessions"), where("studentUid", "==", user.uid));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const sessionList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Session));
+        setSessions(sessionList);
+    });
+
+    return () => unsubscribe();
+
+  }, [user]);
 
   const handleOpenRating = (session: Session) => {
     setRatingSession(session);
@@ -35,6 +62,7 @@ export default function SessionHistoryPage() {
 
   const handleRateSession = (sessionId: string, rating: number, feedback: string) => {
     console.log(`Rating session ${sessionId} with ${rating} stars and feedback: ${feedback}`);
+    // Here you would update the session document in Firestore with the rating
     setSessions(prevSessions => 
       prevSessions.map(s => s.id === sessionId ? { ...s, rating: rating } : s)
     );
@@ -140,3 +168,5 @@ export default function SessionHistoryPage() {
     </div>
   );
 }
+
+    

@@ -9,9 +9,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Bell } from 'lucide-react';
 import { useIsClient } from '@/hooks/use-is-client';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth, db } from '@/lib/firebase';
+import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+
 
 interface SessionRequest {
-  requestId: string;
+  id: string;
   tutorId: string;
   studentName: string;
   status: 'pending' | 'accepted' | 'rejected';
@@ -22,60 +26,56 @@ export default function TutorNotification() {
   const { toast } = useToast();
   const router = useRouter();
   const isClient = useIsClient();
+  const [user, loading] = useAuthState(auth);
   const [activeRequest, setActiveRequest] = useState<SessionRequest | null>(null);
 
   useEffect(() => {
-    if (!isClient) return;
+    if (!isClient || !user) return;
 
-    const tutorEmail = localStorage.getItem('loggedInUser');
-    if (!tutorEmail) return;
+    // Query for pending requests for this tutor
+    const q = query(
+        collection(db, "sessionRequests"), 
+        where("tutorId", "==", user.uid), 
+        where("status", "==", "pending")
+    );
 
-    const findAndNotifyRequests = () => {
-      // Don't look for new requests if one is already active
-      if (activeRequest) return;
-
-      Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('session-request-')) {
-          try {
-            const request: SessionRequest = JSON.parse(localStorage.getItem(key)!);
-            
-            if (request.tutorId === tutorEmail && request.status === 'pending') {
-              setActiveRequest(request);
-            }
-          } catch (error) {
-            console.error('Error parsing session request from localStorage', error);
-          }
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        if (!snapshot.empty) {
+            // Get the first pending request
+            const requestDoc = snapshot.docs[0];
+            setActiveRequest({ id: requestDoc.id, ...requestDoc.data() } as SessionRequest);
+        } else {
+            setActiveRequest(null);
         }
-      });
-    };
-    
-    const interval = setInterval(findAndNotifyRequests, 3000); // Check every 3 seconds
-    return () => clearInterval(interval);
-  }, [isClient, activeRequest]);
+    });
 
-  const handleAccept = () => {
-    if (!activeRequest) return;
+    return () => unsubscribe();
+  }, [isClient, user]);
 
-    const tutorEmail = localStorage.getItem('loggedInUser');
-    if (!tutorEmail) return;
+  const handleAccept = async () => {
+    if (!activeRequest || !user) return;
 
     const sessionId = `sess_${Math.random().toString(36).substring(2, 11)}`;
-    const updatedRequest: SessionRequest = { ...activeRequest, status: 'accepted', sessionId };
-    localStorage.setItem(`session-request-${activeRequest.requestId}`, JSON.stringify(updatedRequest));
+    const requestDocRef = doc(db, "sessionRequests", activeRequest.id);
+    
+    await updateDoc(requestDocRef, { 
+        status: 'accepted',
+        sessionId: sessionId 
+    });
     
     // Set tutor as busy
-    localStorage.setItem(`tutor-busy-${tutorEmail}`, 'true');
-    window.dispatchEvent(new Event('storage'));
+    const tutorDocRef = doc(db, "users", user.uid);
+    await updateDoc(tutorDocRef, { isBusy: true });
 
     setActiveRequest(null);
-    router.push(`/session/${sessionId}?tutorId=${tutorEmail}&role=tutor`);
+    router.push(`/session/${sessionId}?tutorId=${user.uid}&role=tutor`);
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
     if (!activeRequest) return;
-
-    const updatedRequest: SessionRequest = { ...activeRequest, status: 'rejected' };
-    localStorage.setItem(`session-request-${activeRequest.requestId}`, JSON.stringify(updatedRequest));
+    
+    const requestDocRef = doc(db, "sessionRequests", activeRequest.id);
+    await updateDoc(requestDocRef, { status: 'rejected' });
     
     setActiveRequest(null);
 
@@ -128,3 +128,5 @@ export default function TutorNotification() {
     </Card>
   );
 }
+
+    

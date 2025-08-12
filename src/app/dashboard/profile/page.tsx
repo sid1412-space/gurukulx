@@ -15,6 +15,10 @@ import { useState, useRef, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useIsClient } from '@/hooks/use-is-client';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth, db } from '@/lib/firebase';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+
 
 const profileSchema = z.object({
   name: z.string().min(2, 'Name is too short'),
@@ -28,6 +32,7 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isClient = useIsClient();
+  const [user, loading] = useAuthState(auth);
 
   const [currentUser, setCurrentUser] = useState({
     name: '',
@@ -46,29 +51,25 @@ export default function ProfilePage() {
   });
 
   useEffect(() => {
-    if (isClient) {
-      const loggedInUserEmail = localStorage.getItem('loggedInUser');
-      if (!loggedInUserEmail) return;
-
-      const usersJSON = localStorage.getItem('userDatabase');
-      if (usersJSON) {
-        const users = JSON.parse(usersJSON);
-        const student = users.find((u: any) => u.email === loggedInUserEmail);
-        if (student) {
-          const studentProfile = {
-            name: student.name || '',
-            email: student.email,
-            bio: student.bio || '',
-            subjects: student.subjects || '',
-            avatar: student.avatar || 'https://placehold.co/128x128.png',
-          };
-          setCurrentUser(studentProfile);
-          setAvatarPreview(studentProfile.avatar);
-          form.reset(studentProfile);
-        }
-      }
+    if (user) {
+        const userDocRef = doc(db, "users", user.uid);
+        getDoc(userDocRef).then(docSnap => {
+            if (docSnap.exists()) {
+                const userData = docSnap.data();
+                const studentProfile = {
+                    name: userData.name || '',
+                    email: userData.email,
+                    bio: userData.bio || '',
+                    subjects: userData.subjects || '',
+                    avatar: userData.avatar || 'https://placehold.co/128x128.png',
+                };
+                setCurrentUser(studentProfile);
+                setAvatarPreview(studentProfile.avatar);
+                form.reset(studentProfile);
+            }
+        });
     }
-  }, [isClient, form]);
+  }, [user, form]);
 
   
   const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -83,38 +84,33 @@ export default function ProfilePage() {
   };
 
 
-  function onSubmit(values: z.infer<typeof profileSchema>) {
+  async function onSubmit(values: z.infer<typeof profileSchema>) {
+    if(!user) return;
     setIsLoading(true);
-    
-    setTimeout(() => {
-      if (isClient) {
-        const loggedInUserEmail = localStorage.getItem('loggedInUser');
-        if (!loggedInUserEmail) return;
 
-        const usersJSON = localStorage.getItem('userDatabase');
-        if (usersJSON) {
-          const users = JSON.parse(usersJSON);
-          const updatedUsers = users.map((u: any) => {
-            if (u.email === loggedInUserEmail) {
-              return { ...u, ...values, avatar: avatarPreview };
-            }
-            return u;
-          });
-          localStorage.setItem('userDatabase', JSON.stringify(updatedUsers));
-          setCurrentUser(prev => ({...prev, ...values, avatar: avatarPreview}));
-          window.dispatchEvent(new Event('storage')); // Notify header of name change
-        }
-      }
-      
-      toast({
-        title: 'Profile Updated',
-        description: 'Your information has been saved successfully.',
-      });
-      setIsLoading(false);
-    }, 1000);
+    try {
+        const userDocRef = doc(db, "users", user.uid);
+        await updateDoc(userDocRef, {
+            ...values,
+            avatar: avatarPreview,
+        });
+        setCurrentUser(prev => ({...prev, ...values, avatar: avatarPreview}));
+        toast({
+            title: 'Profile Updated',
+            description: 'Your information has been saved successfully.',
+        });
+    } catch(error) {
+        toast({
+            variant: 'destructive',
+            title: 'Update Failed',
+            description: 'There was an error updating your profile.',
+        });
+    } finally {
+        setIsLoading(false);
+    }
   }
 
-  if (!isClient || !currentUser.email) {
+  if (loading || (!user && isClient)) {
     return (
       <div className="space-y-8 animate-fade-in">
         <header>
@@ -241,3 +237,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    

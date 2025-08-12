@@ -25,6 +25,10 @@ import { useEffect, useState, useRef } from 'react';
 import { useIsClient } from '@/hooks/use-is-client';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth, db } from '@/lib/firebase';
+import { doc, getDoc, updateDoc, setDoc, onSnapshot } from 'firebase/firestore';
+
 
 export default function TutorProfilePage() {
   const params = useParams();
@@ -32,6 +36,8 @@ export default function TutorProfilePage() {
   const { toast } = useToast();
   const { tutorId } = params;
   const isClient = useIsClient();
+  const [user, loading] = useAuthState(auth);
+  
   const [tutor, setTutor] = useState<any>(null);
 
   const [isOnline, setIsOnline] = useState(false);
@@ -40,69 +46,43 @@ export default function TutorProfilePage() {
   const [sessionRequestId, setSessionRequestId] = useState<string | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [walletBalance, setWalletBalance] = useState(0);
-  const [studentWalletKey, setStudentWalletKey] = useState('');
 
-  useEffect(() => {
-    if (isClient) {
-      const studentEmail = localStorage.getItem('loggedInUser');
-      if (studentEmail) {
-        setStudentWalletKey(`student-wallet-${studentEmail}`);
-      }
-    }
-  }, [isClient]);
-
-  useEffect(() => {
+   useEffect(() => {
      if (isClient && tutorId) {
-            const usersJSON = localStorage.getItem('userDatabase');
-            if (usersJSON) {
-                const users = JSON.parse(usersJSON);
-                const currentTutor = users.find((u: any) => u.email === tutorId);
-
-                if (currentTutor) {
-                     const applicantsJSON = localStorage.getItem('tutorApplicants') || '[]';
-                     const applicants = JSON.parse(applicantsJSON);
-                     const applicantData = applicants.find((a:any) => a.email === currentTutor.email) || {};
-
-                     setTutor({
-                         ...currentTutor,
-                         id: currentTutor.email,
-                         name: applicantData.name || currentTutor.name,
-                         avatar: 'https://placehold.co/128x128.png',
-                         bio: applicantData.qualification || 'A passionate and experienced tutor.',
-                         rating: 4.8 + Math.random() * 0.2, // Randomize rating slightly
-                         subjects: applicantData.expertise ? [applicantData.expertise] : ['Subject'],
-                         qualification: applicantData.qualification,
-                     });
-                }
+        const tutorDocRef = doc(db, "users", tutorId as string);
+        const unsubscribe = onSnapshot(tutorDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const tutorData = docSnap.data();
+                 setTutor({
+                     ...tutorData,
+                     id: docSnap.id,
+                     avatar: tutorData.avatar || 'https://placehold.co/128x128.png',
+                     bio: tutorData.applicationDetails?.qualification || 'A passionate and experienced tutor.',
+                     rating: 4.8 + Math.random() * 0.2, // Randomize rating slightly
+                     subjects: tutorData.applicationDetails?.expertise ? [tutorData.applicationDetails.expertise] : ['Subject'],
+                     qualification: tutorData.applicationDetails?.qualification || 'N/A',
+                 });
+                 setIsOnline(tutorData.isOnline !== false);
+                 setIsBusy(tutorData.isBusy === true);
             }
-        }
+        });
+        return () => unsubscribe();
+     }
   }, [isClient, tutorId])
 
   useEffect(() => {
-    if (isClient && studentWalletKey) {
-        const storedBalance = localStorage.getItem(studentWalletKey) || '0';
-        setWalletBalance(parseFloat(storedBalance));
+    if (isClient && user) {
+        const userDocRef = doc(db, "users", user.uid);
+        const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                setWalletBalance(docSnap.data().walletBalance || 0);
+            }
+        });
+        return () => unsubscribe();
     }
-  }, [isClient, studentWalletKey]);
+  }, [isClient, user]);
 
-  useEffect(() => {
-    if (isClient && tutorId) {
-      const checkStatus = () => {
-        const onlineStatus = localStorage.getItem(`tutor-status-${tutorId}`) !== 'offline';
-        const busyStatus = localStorage.getItem(`tutor-busy-${tutorId}`) === 'true';
-        setIsOnline(onlineStatus);
-        setIsBusy(busyStatus);
-      };
-
-      checkStatus();
-      
-      window.addEventListener('storage', checkStatus);
-      return () => {
-        window.removeEventListener('storage', checkStatus);
-      };
-    }
-  }, [isClient, tutorId]);
-
+  
   useEffect(() => {
     if (!isWaiting || !sessionRequestId) {
         if (timeoutRef.current) {
@@ -116,18 +96,17 @@ export default function TutorProfilePage() {
         handleCancelRequest(true);
     }, 120000);
 
-    const interval = setInterval(() => {
-        const requestJSON = localStorage.getItem(`session-request-${sessionRequestId}`);
-        if(requestJSON) {
-            const request = JSON.parse(requestJSON);
+    const requestDocRef = doc(db, 'sessionRequests', sessionRequestId);
+    const unsubscribe = onSnapshot(requestDocRef, (docSnap) => {
+        if(docSnap.exists()) {
+            const request = docSnap.data();
             if(request.status === 'accepted') {
-                clearInterval(interval);
-                 if (timeoutRef.current) clearTimeout(timeoutRef.current);
+                if (timeoutRef.current) clearTimeout(timeoutRef.current);
                 setIsWaiting(false);
                 router.push(`/session/${request.sessionId}?tutorId=${tutorId}&role=student`);
+                unsubscribe();
             } else if (request.status === 'rejected') {
-                clearInterval(interval);
-                 if (timeoutRef.current) clearTimeout(timeoutRef.current);
+                if (timeoutRef.current) clearTimeout(timeoutRef.current);
                 setIsWaiting(false);
                 setSessionRequestId(null);
                 toast({
@@ -135,40 +114,37 @@ export default function TutorProfilePage() {
                     title: 'Session Rejected',
                     description: `${tutor?.name} is unable to take your session right now.`,
                 });
+                unsubscribe();
             }
         }
-    }, 2000);
+    });
 
     return () => {
-        clearInterval(interval)
+        unsubscribe();
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, [isWaiting, sessionRequestId, router, tutorId, tutor?.name, toast]);
 
 
-  const handleRequestSession = () => {
-    if (tutor) {
+  const handleRequestSession = async () => {
+    if (tutor && user) {
       const requestId = `req_${Math.random().toString(36).substring(2, 11)}`;
-      const sessionRequest = {
-        requestId,
+      const requestDocRef = doc(db, 'sessionRequests', requestId);
+      await setDoc(requestDocRef, {
         tutorId,
-        studentName: 'A Student', 
+        studentUid: user.uid,
+        studentName: user.displayName || 'A Student', 
         status: 'pending',
-      };
-      localStorage.setItem(`session-request-${requestId}`, JSON.stringify(sessionRequest));
+      });
       setSessionRequestId(requestId);
       setIsWaiting(true);
     }
   };
   
-  const handleCancelRequest = (isTimeout = false) => {
+  const handleCancelRequest = async (isTimeout = false) => {
     if(sessionRequestId) {
-        const requestJSON = localStorage.getItem(`session-request-${sessionRequestId}`);
-         if(requestJSON) {
-            const request = JSON.parse(requestJSON);
-            request.status = 'rejected';
-            localStorage.setItem(`session-request-${sessionRequestId}`, JSON.stringify(request));
-         }
+        const requestDocRef = doc(db, "sessionRequests", sessionRequestId);
+        await updateDoc(requestDocRef, { status: 'rejected' });
     }
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setIsWaiting(false);
@@ -245,7 +221,7 @@ export default function TutorProfilePage() {
                             </div>
                             <div className="flex items-center gap-2">
                                 <Briefcase className="h-5 w-5 text-primary" />
-                                <span className="text-muted-foreground"><span className="font-semibold text-foreground">Experience:</span> 10+ years</span>
+                                <span className="text-muted-foreground"><span className="font-semibold text-foreground">Experience:</span> {tutor.applicationDetails?.experience || 'N/A'} years</span>
                             </div>
                              <div className="flex items-center gap-2">
                                 <BookOpen className="h-5 w-5 text-primary" />
@@ -317,3 +293,5 @@ export default function TutorProfilePage() {
     </div>
   );
 }
+
+    
