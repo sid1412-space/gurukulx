@@ -19,11 +19,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from '@/components/ui/input';
 import { getExerciseSuggestions } from '@/lib/actions';
 import { Separator } from '@/components/ui/separator';
+import JitsiMeetComponent from '@/components/session/JitsiMeetComponent';
 
 
-const JitsiMeetComponent = dynamic(() => import('@/components/session/JitsiMeetComponent'), {
-  ssr: false,
-});
 const Whiteboard = dynamic(() => import('@/components/session/Whiteboard'), {
   ssr: false,
   loading: () => <div className="h-full w-full flex items-center justify-center bg-muted"><p>Loading Whiteboard...</p></div>,
@@ -433,24 +431,24 @@ export default function SessionPage() {
             </Whiteboard>
 
             {recordingSupport === 'unsupported' && !isMobile && (
-                <div className="absolute inset-0 flex items-center justify-center z-20 p-4 bg-background/50 pointer-events-none">
+                 <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 p-4 pointer-events-none">
                     <Alert variant="destructive" className="max-w-lg">
                         <AlertTriangle className="h-4 w-4" />
                         <AlertTitle>Screen Recording Not Supported</AlertTitle>
                         <AlertDescription>
-                        This session requires screen recording, but your browser does not support this feature. Please switch to a modern desktop browser like Chrome or Firefox to continue.
+                         Your browser does not support screen recording, which is required. Please use a modern desktop browser like Chrome or Firefox.
                         </AlertDescription>
                     </Alert>
                 </div>
             )}
 
             {jitsiLoadFailed && (
-                <div className="absolute inset-0 flex items-center justify-center z-20 p-4 bg-background/50 pointer-events-none">
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 p-4 pointer-events-none">
                     <Alert variant="destructive" className="max-w-lg">
                         <AlertTriangle className="h-4 w-4" />
                         <AlertTitle>Video Connection Error</AlertTitle>
                         <AlertDescription>
-                            The video conferencing service failed to load. This might be due to a network issue or browser incompatibility. Please check your connection and try again, or use a different browser.
+                            The video service failed to load. Please check your network and try again, or use a different browser.
                         </AlertDescription>
                     </Alert>
                 </div>

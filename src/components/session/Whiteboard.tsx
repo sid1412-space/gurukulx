@@ -1,7 +1,7 @@
 
 'use client'
 
-import { Tldraw, useEditor } from '@tldraw/tldraw'
+import { Tldraw, TldrawUi, useEditor } from '@tldraw/tldraw'
 import '@tldraw/tldraw/tldraw.css'
 import { useEffect, useRef, type ReactNode } from 'react'
 
@@ -65,8 +65,10 @@ type WhiteboardProps = {
 export default function Whiteboard({ children }: WhiteboardProps) {
 	return (
 		<div style={{ position: 'relative', width: '100%', height: '100%' }}>
-			<Tldraw>
-                {children}
+			<Tldraw persistenceKey="tutorconnect-whiteboard">
+                <TldrawUi.Canvas>
+                     {children}
+                </TldrawUi.Canvas>
                 <EditorEvents />
             </Tldraw>
 		</div>
