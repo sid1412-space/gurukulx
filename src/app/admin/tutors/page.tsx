@@ -65,7 +65,7 @@ export default function TutorManagementPage() {
       toast({
         variant: 'destructive',
         title: 'Invalid Rate',
-        description: 'Please enter a valid positive number for the hourly rate.',
+        description: 'Please enter a valid positive number for the per-minute rate.',
       });
       return;
     }
@@ -88,7 +88,7 @@ export default function TutorManagementPage() {
           email: approvingApplicant.email,
           role: 'tutor',
           name: approvingApplicant.name,
-          price: +tutorRate // Save the hourly rate
+          price: +tutorRate // Save the per-minute rate
         });
         localStorage.setItem('userDatabase', JSON.stringify(users));
       }
@@ -104,7 +104,7 @@ export default function TutorManagementPage() {
 
     toast({
       title: `Applicant Approved`,
-      description: `${approvingApplicant.name} has been approved with an hourly rate of ₹${tutorRate}.`,
+      description: `${approvingApplicant.name} has been approved with a rate of ₹${tutorRate}/minute.`,
     });
     
     // Reset states
@@ -225,15 +225,15 @@ export default function TutorManagementPage() {
                 <AlertDialogHeader>
                 <AlertDialogTitle>Approve Tutor & Set Rate</AlertDialogTitle>
                 <AlertDialogDescription>
-                    Set the hourly rate for <span className="font-bold">{approvingApplicant.name}</span>. This will be used for billing students.
+                    Set the per-minute rate for <span className="font-bold">{approvingApplicant.name}</span>. This will be used for billing students.
                 </AlertDialogDescription>
                 </AlertDialogHeader>
                 <div className="grid gap-2">
-                    <Label htmlFor="tutor-rate">Hourly Rate (₹)</Label>
+                    <Label htmlFor="tutor-rate">Rate per minute (₹)</Label>
                     <Input 
                         id="tutor-rate" 
                         type="number" 
-                        placeholder="e.g., 5000"
+                        placeholder="e.g., 80"
                         value={tutorRate}
                         onChange={(e) => setTutorRate(e.target.value)}
                     />

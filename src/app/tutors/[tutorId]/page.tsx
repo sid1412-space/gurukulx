@@ -107,7 +107,7 @@ export default function TutorProfilePage() {
                 <div className="md:col-span-1">
                     <Card className="bg-secondary/50 p-4 sticky top-24">
                         <CardHeader className="p-2 text-center">
-                            <CardTitle className="text-4xl font-bold text-primary">₹{tutor.price}<span className="text-xl font-normal text-muted-foreground">/hr</span></CardTitle>
+                            <CardTitle className="text-4xl font-bold text-primary">₹{tutor.price}<span className="text-xl font-normal text-muted-foreground">/min</span></CardTitle>
                              <CardDescription>All taxes and fees included</CardDescription>
                         </CardHeader>
                         <CardContent className="p-2">
@@ -142,5 +142,3 @@ export default function TutorProfilePage() {
     </div>
   );
 }
-
-    
