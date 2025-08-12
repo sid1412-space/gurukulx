@@ -3,7 +3,7 @@
 
 import { Tldraw, useEditor } from '@tldraw/tldraw'
 import '@tldraw/tldraw/tldraw.css'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, ReactNode } from 'react'
 
 const EditorEvents = () => {
 	const editor = useEditor();
@@ -58,10 +58,25 @@ Use the image tool in the toolbar (7th icon from the top).
 	return null;
 }
 
+type WhiteboardProps = {
+    children: ReactNode;
+}
 
-export default function Whiteboard() {
+export default function Whiteboard({ children }: WhiteboardProps) {
 	return (
 		<div style={{ position: 'relative', width: '100%', height: '100%' }}>
+            <div
+                style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    zIndex: 0, // Behind the whiteboard
+                }}
+            >
+                {children}
+            </div>
 			<Tldraw persistenceKey="tutorconnect-whiteboard">
                 <EditorEvents />
             </Tldraw>

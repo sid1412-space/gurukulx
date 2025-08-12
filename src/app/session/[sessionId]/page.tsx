@@ -54,7 +54,7 @@ export default function SessionPage() {
   const [sessionDuration, setSessionDuration] = useState(0); // in seconds
   const [walletBalance, setWalletBalance] = useState(12550); // mock initial balance
   const tutor = tutors.find(t => t.id === tutorId);
-  const pricePerMinute = tutor ? tutor.price : 1; // Default to 1 to avoid division by zero
+  const pricePerMinute = tutor ? tutor.price : 1; 
 
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -148,140 +148,11 @@ export default function SessionPage() {
     jitsiApi?.executeCommand('toggleShareScreen');
   };
 
-  const downloadRecording = () => {
-      if (recordedChunksRef.current.length === 0) {
-        toast({
-            variant: 'destructive',
-            title: 'Recording Error',
-            description: 'No video was recorded.',
-        });
-        return;
-      }
-      const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = `tutorconnect-session-${new Date().toISOString()}.webm`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      recordedChunksRef.current = [];
-      toast({
-          title: 'Download Started',
-          description: 'Your session recording is downloading.',
-      });
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-        mediaRecorderRef.current.stop();
-    }
-     if (screenStreamRef.current) {
-        screenStreamRef.current.getTracks().forEach(track => track.stop());
-        screenStreamRef.current = null;
-    }
-    setIsRecording(false);
-  };
-
-  const startRecording = async () => {
-    if (isRecording || isMobile) return;
-    
-    if (!navigator.mediaDevices || typeof navigator.mediaDevices.getDisplayMedia !== 'function') {
-        setRecordingSupport('unsupported');
-        console.error("getDisplayMedia is not supported in this browser.");
-        return;
-    }
-
-    try {
-        const displayStream = await navigator.mediaDevices.getDisplayMedia({
-            video: { mediaSource: 'tab' } as any,
-            audio: true,
-        });
-        
-        screenStreamRef.current = displayStream;
-
-        const audioStream = displayStream.getAudioTracks().length > 0 
-            ? new MediaStream(displayStream.getAudioTracks())
-            : new MediaStream();
-
-        const combinedStream = new MediaStream([
-            ...displayStream.getVideoTracks(),
-            ...audioStream.getAudioTracks(),
-        ]);
-
-        mediaRecorderRef.current = new MediaRecorder(combinedStream, { mimeType: 'video/webm' });
-        
-        recordedChunksRef.current = [];
-        
-        mediaRecorderRef.current.ondataavailable = (event) => {
-            if (event.data.size > 0) {
-                recordedChunksRef.current.push(event.data);
-            }
-        };
-
-        mediaRecorderRef.current.onstop = downloadRecording;
-
-        mediaRecorderRef.current.start();
-        setIsRecording(true);
-        toast({
-            title: 'Recording Started',
-            description: 'Your session is now being recorded.',
-        });
-
-        displayStream.getVideoTracks()[0].onended = () => {
-            if(mediaRecorderRef.current?.state === 'recording'){
-                stopRecording();
-                toast({
-                    title: 'Recording Stopped',
-                    description: 'Sharing has ended.',
-                });
-            }
-        };
-        
-    } catch (error) {
-        console.error("Error starting recording:", error);
-        let description = 'Could not start recording. Please try again.';
-        if (error instanceof DOMException && error.name === 'NotAllowedError') {
-            description = 'Screen recording permission was denied. Please refresh and allow access to continue.';
-        }
-        toast({
-            variant: 'destructive',
-            title: 'Recording Failed',
-            description,
-        });
-        setIsRecording(false);
-    }
-  };
-
-  useEffect(() => {
-    if (isClient) {
-        if (isMobile) {
-            setRecordingSupport('unsupported');
-            return;
-        }
-        const supportsRecording = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
-        if (supportsRecording) {
-            setRecordingSupport('supported');
-             if (searchParams.get('start_recording') === 'true' && !isRecording && userRole !== 'tutor') {
-                startRecording();
-            }
-        } else {
-            setRecordingSupport('unsupported');
-        }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClient, isMobile, searchParams]);
-
   const hangUp = () => {
     if (tutorId) {
         localStorage.removeItem(`tutor-busy-${tutorId}`);
         // Notify other tabs that tutor status has changed
         window.dispatchEvent(new Event('storage'));
-    }
-    if (isRecording) {
-      stopRecording();
     }
     jitsiApi?.executeCommand('hangup');
     
@@ -427,27 +298,11 @@ export default function SessionPage() {
          </div>
        </header>
        <main className="flex-grow relative bg-muted/20">
-            <div className="absolute inset-0 z-10">
-                <Whiteboard />
-            </div>
-
-            <div className="absolute inset-0 z-0">
+            <Whiteboard>
                  {!jitsiLoadFailed && (
                     <JitsiMeetComponent onApiReady={handleApiReady} onError={handleJitsiError} isMobile={isMobile} />
                 )}
-            </div>
-
-            {recordingSupport === 'unsupported' && !isMobile && (
-                 <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50">
-                    <Alert variant="destructive" className="max-w-lg">
-                        <AlertTriangle className="h-4 w-4" />
-                        <AlertTitle>Screen Recording Not Supported</AlertTitle>
-                        <AlertDescription>
-                         Your browser does not support screen recording, which is required. Please use a modern desktop browser like Chrome or Firefox.
-                        </AlertDescription>
-                    </Alert>
-                </div>
-            )}
+            </Whiteboard>
 
             {jitsiLoadFailed && (
                 <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50">
@@ -466,5 +321,3 @@ export default function SessionPage() {
     </div>
   );
 }
-
-    
