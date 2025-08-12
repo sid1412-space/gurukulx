@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation';
 
 const navLinks = [
   { href: '/tutors', label: 'Find a Tutor' },
+  { href: '/become-a-tutor', label: 'Become a Tutor' },
   { href: '/#features', label: 'Features' },
 ];
 
@@ -77,12 +78,6 @@ export default function Header() {
               {link.label}
             </Link>
           ))}
-           <Link
-              href="/signup?role=tutor"
-              className="transition-colors hover:text-foreground/80 text-foreground/60"
-            >
-              Become a Tutor
-            </Link>
         </nav>
         <div className="hidden md:flex items-center gap-2">
           {isClient && isAuthenticated ? (
@@ -124,13 +119,6 @@ export default function Header() {
                 {link.label}
               </Link>
             ))}
-             <Link
-                href="/signup?role=tutor"
-                className="w-full text-center py-2 transition-colors hover:text-foreground/80 text-foreground/60"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Become a Tutor
-              </Link>
             <div className="flex flex-col w-full gap-2 pt-2 border-t">
                {isClient && isAuthenticated ? (
                   <>

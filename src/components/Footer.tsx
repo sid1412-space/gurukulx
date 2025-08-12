@@ -18,7 +18,7 @@ export default function Footer() {
             <h3 className="font-semibold mb-4">Quick Links</h3>
             <ul className="space-y-2">
               <li><Link href="/tutors" className="text-muted-foreground hover:text-primary transition">Find a Tutor</Link></li>
-              <li><Link href="/signup?role=tutor" className="text-muted-foreground hover:text-primary transition">Become a Tutor</Link></li>
+              <li><Link href="/become-a-tutor" className="text-muted-foreground hover:text-primary transition">Become a Tutor</Link></li>
               <li><Link href="/#features" className="text-muted-foreground hover:text-primary transition">Features</Link></li>
               <li><Link href="/about" className="text-muted-foreground hover:text-primary transition">About Us</Link></li>
             </ul>
