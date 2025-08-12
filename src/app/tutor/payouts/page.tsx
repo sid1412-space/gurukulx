@@ -15,26 +15,84 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Banknote, Wallet, Calendar, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import { useEffect, useState } from 'react';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth, db } from '@/lib/firebase';
+import { collection, addDoc, doc, onSnapshot, query, where, serverTimestamp } from 'firebase/firestore';
 
-// This is now empty as we are removing fake data
-const payoutHistory: any[] = [];
+
+type Payout = {
+    id: string;
+    date: string;
+    amount: number;
+    status: 'Pending' | 'Paid';
+};
 
 export default function PayoutsPage() {
     const { toast } = useToast();
+    const [user] = useAuthState(auth);
+    const [tutorData, setTutorData] = useState({ totalEarnings: 0, pendingEarnings: 0 });
+    const [payoutHistory, setPayoutHistory] = useState<Payout[]>([]);
 
-    const handleRequestPayout = () => {
-        // In a real app, this would trigger a backend process.
-        // Here, we simulate it by notifying the admin via localStorage.
-        const currentRequests = parseInt(localStorage.getItem('pendingPayoutRequests') || '0');
-        localStorage.setItem('pendingPayoutRequests', (currentRequests + 1).toString());
-        
-        // This event ensures the admin dashboard updates in real-time if open in another tab.
-        window.dispatchEvent(new Event('storage'));
+    useEffect(() => {
+        if (!user) return;
 
-        toast({
-            title: 'Payout Requested',
-            description: 'Your request has been submitted. The admin has been notified.'
+        // Listen to tutor's earnings data
+        const tutorDocRef = doc(db, "users", user.uid);
+        const unsubTutor = onSnapshot(tutorDocRef, (doc) => {
+            if (doc.exists()) {
+                const data = doc.data();
+                setTutorData({
+                    totalEarnings: data.totalEarnings || 0,
+                    pendingEarnings: data.pendingEarnings || 0,
+                });
+            }
         });
+
+        // Listen to payout history
+        const q = query(collection(db, "payoutRequests"), where("tutorUid", "==", user.uid));
+        const unsubPayouts = onSnapshot(q, (snapshot) => {
+            const history = snapshot.docs.map(doc => ({
+                id: doc.id,
+                date: new Date(doc.data().createdAt.seconds * 1000).toISOString(),
+                ...doc.data()
+            })) as Payout[];
+            setPayoutHistory(history);
+        });
+
+        return () => {
+            unsubTutor();
+            unsubPayouts();
+        };
+    }, [user]);
+
+    const handleRequestPayout = async () => {
+        if (!user || tutorData.pendingEarnings <= 0) {
+            toast({
+                variant: 'destructive',
+                title: 'No Pending Earnings',
+                description: 'You do not have any earnings to withdraw.'
+            });
+            return;
+        }
+
+        try {
+            await addDoc(collection(db, "payoutRequests"), {
+                tutorUid: user.uid,
+                tutorEmail: user.email,
+                amount: tutorData.pendingEarnings,
+                status: 'pending',
+                createdAt: serverTimestamp(),
+            });
+
+            toast({
+                title: 'Payout Requested',
+                description: 'Your request has been submitted and the admin has been notified.'
+            });
+        } catch (error) {
+            console.error(error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not submit your request.' });
+        }
     }
 
   return (
@@ -54,7 +112,7 @@ export default function PayoutsPage() {
                 <Wallet className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-                <p className="text-2xl font-bold">₹0.00</p>
+                <p className="text-2xl font-bold">₹{tutorData.totalEarnings.toFixed(2)}</p>
                 <p className="text-xs text-muted-foreground">All time earnings</p>
             </CardContent>
         </Card>
@@ -64,7 +122,7 @@ export default function PayoutsPage() {
                 <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-                <p className="text-2xl font-bold">₹0.00</p>
+                <p className="text-2xl font-bold">₹{tutorData.pendingEarnings.toFixed(2)}</p>
                 <p className="text-xs text-muted-foreground">Earnings this cycle</p>
             </CardContent>
         </Card>
@@ -72,7 +130,7 @@ export default function PayoutsPage() {
             <CardContent className="py-6 text-center">
                  <h3 className="text-lg font-semibold">Ready to get paid?</h3>
                 <p className="text-sm text-muted-foreground mb-4">Request your pending balance now.</p>
-                <Button onClick={handleRequestPayout}>Request Payout</Button>
+                <Button onClick={handleRequestPayout} disabled={tutorData.pendingEarnings <= 0}>Request Payout</Button>
             </CardContent>
         </Card>
       </div>

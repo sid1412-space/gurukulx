@@ -7,6 +7,9 @@ import { Users, DollarSign, BookOpen, UserPlus, Hourglass, Banknote } from 'luci
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useIsClient } from '@/hooks/use-is-client';
+import { db } from '@/lib/firebase';
+import { collection, query, where, onSnapshot, getCountFromServer } from 'firebase/firestore';
+
 
 export default function AdminOverviewPage() {
   const [stats, setStats] = useState({
@@ -24,45 +27,36 @@ export default function AdminOverviewPage() {
   const isClient = useIsClient();
 
   useEffect(() => {
-    if (!isClient) {
-      return;
+    if (!isClient) return;
+
+    // --- Main Stats ---
+    const countUsers = async (role: 'tutor' | 'student') => {
+      const q = query(collection(db, "users"), where("role", "==", role));
+      const snapshot = await getCountFromServer(q);
+      return snapshot.data().count;
     }
+    
+    countUsers('tutor').then(count => setStats(prev => ({ ...prev, totalTutors: count })));
+    countUsers('student').then(count => setStats(prev => ({ ...prev, activeStudents: count })));
 
-    const updateAllCounts = () => {
-      // Main Stats
-      const usersJSON = localStorage.getItem('userDatabase') || '[]';
-      const users = JSON.parse(usersJSON);
-      const tutors = users.filter((u: any) => u.role === 'tutor').length;
-      const students = users.filter((u: any) => u.role === 'student').length;
-      
-      setStats(prev => ({
-          ...prev,
-          totalTutors: tutors,
-          activeStudents: students
-      }));
+    // --- Action Items (Real-time) ---
+    const unsubscribers: (() => void)[] = [];
 
-      // Action Items
-      const storedPayouts = localStorage.getItem('pendingPayoutRequests') || '0';
-      const storedRecharges = localStorage.getItem('rechargeRequests') || '[]';
-      const storedApplicants = localStorage.getItem('tutorApplicants') || '[]';
-      
-      const pendingApplicants = JSON.parse(storedApplicants).filter((app: any) => app.status === 'Pending').length;
+    // Pending Applicants
+    const qApplicants = query(collection(db, "users"), where("applicationStatus", "==", "Pending"));
+    unsubscribers.push(onSnapshot(qApplicants, (snapshot) => setActionItemsData(prev => ({ ...prev, newApplicants: snapshot.size }))));
 
-      setActionItemsData({
-          pendingPayouts: parseInt(storedPayouts || '0'),
-          pendingRecharges: JSON.parse(storedRecharges).length,
-          newApplicants: pendingApplicants,
-      });
-    };
+    // Pending Recharges
+    const qRecharges = query(collection(db, "rechargeRequests"), where("status", "==", "pending"));
+     unsubscribers.push(onSnapshot(qRecharges, (snapshot) => setActionItemsData(prev => ({ ...prev, pendingRecharges: snapshot.size }))));
 
-    updateAllCounts();
-
-    // Listen for changes from other tabs
-    window.addEventListener('storage', updateAllCounts);
+    // Pending Payouts
+    const qPayouts = query(collection(db, "payoutRequests"), where("status", "==", "pending"));
+    unsubscribers.push(onSnapshot(qPayouts, (snapshot) => setActionItemsData(prev => ({ ...prev, pendingPayouts: snapshot.size }))));
 
     // Cleanup
     return () => {
-      window.removeEventListener('storage', updateAllCounts);
+      unsubscribers.forEach(unsub => unsub());
     };
   }, [isClient]);
 

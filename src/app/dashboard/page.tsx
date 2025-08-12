@@ -23,20 +23,19 @@ export default function DashboardPage() {
     // Fetch Tutors
     useEffect(() => {
         if (isClient) {
-            const fetchTutors = async () => {
-                const q = query(collection(db, "users"), where("role", "==", "tutor"));
-                const querySnapshot = await getDocs(q);
+            const q = query(collection(db, "users"), where("role", "==", "tutor"));
+            const unsubscribe = onSnapshot(q, (querySnapshot) => {
                 const tutorsData = querySnapshot.docs.map(doc => ({
                     ...doc.data(),
                     id: doc.id,
-                    avatar: 'https://placehold.co/100x100.png',
+                    avatar: doc.data().avatar || 'https://placehold.co/100x100.png',
                     bio: doc.data().applicationDetails?.qualification || 'A passionate and experienced tutor.',
                     rating: 4.8 + Math.random() * 0.2, // Keep random rating for demo
                     subjects: doc.data().applicationDetails?.expertise ? [doc.data().applicationDetails.expertise] : ['Subject'],
                 }));
                 setAllTutors(tutorsData);
-            };
-            fetchTutors();
+            });
+            return () => unsubscribe();
         }
     }, [isClient]);
 
@@ -59,11 +58,7 @@ export default function DashboardPage() {
     const recommendedTutors = useMemo(() => {
         if (!allTutors.length) return [];
         // A simple recommendation logic: filter out non-available tutors and take top 3
-         return allTutors.filter(tutor => {
-            const isOnline = localStorage.getItem(`tutor-status-${tutor.id}`) !== 'offline';
-            const isBusy = localStorage.getItem(`tutor-busy-${tutor.id}`) === 'true';
-            return isOnline && !isBusy;
-        }).slice(0, 3);
+        return allTutors.filter(tutor => tutor.isOnline && !tutor.isBusy).slice(0, 3);
     }, [allTutors]);
 
 
@@ -138,5 +133,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
