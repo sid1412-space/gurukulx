@@ -14,15 +14,15 @@ export default function DashboardPage() {
     const [allTutors, setAllTutors] = useState<any[]>([]);
     const [walletBalance, setWalletBalance] = useState(0);
     const [studentName, setStudentName] = useState('User');
-    
-    // In a real app, get current user from session/context.
-    const studentEmail = 'student@example.com';
-    const studentWalletKey = `student-wallet-${studentEmail}`;
+    const [studentWalletKey, setStudentWalletKey] = useState('');
 
 
     useEffect(() => {
         if (isClient) {
             const fetchTutorAndStudentData = () => {
+                const loggedInUserEmail = localStorage.getItem('loggedInUser');
+                if (!loggedInUserEmail) return;
+
                 const usersJSON = localStorage.getItem('userDatabase');
                 if (usersJSON) {
                     const users = JSON.parse(usersJSON);
@@ -36,7 +36,7 @@ export default function DashboardPage() {
                         return {
                             ...t,
                             id: t.email,
-                            name: applicantData.name,
+                            name: applicantData.name || t.name,
                             avatar: 'https://placehold.co/100x100.png',
                             bio: applicantData.qualification || 'A passionate and experienced tutor.',
                             rating: 4.8 + Math.random() * 0.2,
@@ -45,11 +45,12 @@ export default function DashboardPage() {
                     });
                     setAllTutors(tutorsWithFullData);
 
-                    const currentUser = users.find((u:any) => u.email === studentEmail);
+                    const currentUser = users.find((u:any) => u.email === loggedInUserEmail);
                     if (currentUser && currentUser.name) {
                         setStudentName(currentUser.name);
                     }
                 }
+                setStudentWalletKey(`student-wallet-${loggedInUserEmail}`);
             };
             fetchTutorAndStudentData();
             window.addEventListener('storage', fetchTutorAndStudentData);
@@ -61,7 +62,7 @@ export default function DashboardPage() {
 
     // Dedicated effect for wallet balance to ensure it updates correctly
     useEffect(() => {
-        if(isClient) {
+        if(isClient && studentWalletKey) {
             const updateBalance = () => {
                 const storedBalance = localStorage.getItem(studentWalletKey) || '0';
                 setWalletBalance(parseFloat(storedBalance));

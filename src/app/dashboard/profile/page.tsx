@@ -47,12 +47,13 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (isClient) {
-      // In a real app, get email from session/context. Using a default for demo purposes.
-      const studentEmail = 'student@example.com';
+      const loggedInUserEmail = localStorage.getItem('loggedInUser');
+      if (!loggedInUserEmail) return;
+
       const usersJSON = localStorage.getItem('userDatabase');
       if (usersJSON) {
         const users = JSON.parse(usersJSON);
-        const student = users.find((u: any) => u.email === studentEmail);
+        const student = users.find((u: any) => u.email === loggedInUserEmail);
         if (student) {
           const studentProfile = {
             name: student.name || '',
@@ -87,18 +88,21 @@ export default function ProfilePage() {
     
     setTimeout(() => {
       if (isClient) {
-        const studentEmail = 'student@example.com';
+        const loggedInUserEmail = localStorage.getItem('loggedInUser');
+        if (!loggedInUserEmail) return;
+
         const usersJSON = localStorage.getItem('userDatabase');
         if (usersJSON) {
           const users = JSON.parse(usersJSON);
           const updatedUsers = users.map((u: any) => {
-            if (u.email === studentEmail) {
+            if (u.email === loggedInUserEmail) {
               return { ...u, ...values, avatar: avatarPreview };
             }
             return u;
           });
           localStorage.setItem('userDatabase', JSON.stringify(updatedUsers));
           setCurrentUser(prev => ({...prev, ...values, avatar: avatarPreview}));
+          window.dispatchEvent(new Event('storage')); // Notify header of name change
         }
       }
       
@@ -162,7 +166,7 @@ export default function ProfilePage() {
               <div className="flex items-center gap-4">
                 <Avatar className="h-20 w-20">
                   <AvatarImage src={avatarPreview} alt={currentUser.name} data-ai-hint="person avatar"/>
-                  <AvatarFallback>{currentUser.name ? currentUser.name.charAt(0) : 'U'}</AvatarFallback>
+                  <AvatarFallback>{currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
                 </Avatar>
                 <Input type="file" ref={fileInputRef} onChange={handlePhotoChange} className="hidden" accept="image/*" />
                 <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>Change Photo</Button>

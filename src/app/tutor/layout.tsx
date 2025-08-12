@@ -40,22 +40,21 @@ export default function TutorLayout({
   useEffect(() => {
     const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
     const isTutor = localStorage.getItem('isTutor') === 'true';
-    const usersJSON = localStorage.getItem('userDatabase') || '[]';
-    const users = JSON.parse(usersJSON);
-    const currentUserEmail = users.find((u:any) => u.role === 'tutor' || u.role === 'banned')?.email; // This is a mock, in real app get from session
-    const currentUser = users.find((u:any) => u.email === currentUserEmail);
+    const currentUserEmail = localStorage.getItem('loggedInUser');
 
-
-    if (loggedIn && isTutor) {
-      if(currentUser && currentUser.role === 'banned') {
-        setIsBanned(true);
-        setIsAuthorized(false);
-      } else {
-        setIsBanned(false);
-        setIsAuthorized(true);
-      }
+    if (loggedIn && isTutor && currentUserEmail) {
+        const usersJSON = localStorage.getItem('userDatabase') || '[]';
+        const users = JSON.parse(usersJSON);
+        const currentUser = users.find((u:any) => u.email === currentUserEmail);
+        
+        if(currentUser && currentUser.role === 'banned') {
+            setIsBanned(true);
+            setIsAuthorized(false);
+        } else {
+            setIsBanned(false);
+            setIsAuthorized(true);
+        }
     } else {
-      // If they are not a logged-in tutor, send them to the login page.
       router.push('/login');
     }
   }, [router, pathname]);
@@ -64,6 +63,7 @@ export default function TutorLayout({
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('isAdmin');
     localStorage.removeItem('isTutor');
+    localStorage.removeItem('loggedInUser');
     setIsAuthorized(false);
     setIsBanned(false);
     window.dispatchEvent(new Event("storage"));

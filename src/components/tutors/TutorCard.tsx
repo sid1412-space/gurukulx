@@ -48,11 +48,16 @@ export default function TutorCard({ tutor }: TutorCardProps) {
   const [sessionRequestId, setSessionRequestId] = useState<string | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [walletBalance, setWalletBalance] = useState(0);
+  const [studentWalletKey, setStudentWalletKey] = useState('');
 
-  // In a real app, get current user from session/context.
-  const studentEmail = 'student@example.com';
-  const studentWalletKey = `student-wallet-${studentEmail}`;
-
+  useEffect(() => {
+    if (isClient) {
+      const studentEmail = localStorage.getItem('loggedInUser');
+      if (studentEmail) {
+        setStudentWalletKey(`student-wallet-${studentEmail}`);
+      }
+    }
+  }, [isClient]);
 
   useEffect(() => {
     if (isClient) {
@@ -64,8 +69,10 @@ export default function TutorCard({ tutor }: TutorCardProps) {
         setIsBusy(busyStatus);
         
         // Check Student Balance
-        const storedBalance = localStorage.getItem(studentWalletKey) || '0';
-        setWalletBalance(parseFloat(storedBalance));
+        if (studentWalletKey) {
+            const storedBalance = localStorage.getItem(studentWalletKey) || '0';
+            setWalletBalance(parseFloat(storedBalance));
+        }
       };
 
       checkStatusAndBalance();
@@ -168,7 +175,7 @@ export default function TutorCard({ tutor }: TutorCardProps) {
           <Link href={`/tutors/${tutor.id}`}>
             <Avatar className="h-16 w-16">
               <AvatarImage src={tutor.avatar} alt={tutor.name} data-ai-hint="person portrait" />
-              <AvatarFallback>{tutor.name ? tutor.name.charAt(0) : 'T'}</AvatarFallback>
+              <AvatarFallback>{tutor.name ? tutor.name.charAt(0).toUpperCase() : 'T'}</AvatarFallback>
             </Avatar>
           </Link>
           <div className="flex-1">

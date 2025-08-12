@@ -38,12 +38,17 @@ export default function RechargePage() {
 
   const handleFormSubmitted = () => {
     try {
+        const studentEmail = localStorage.getItem('loggedInUser');
+        if (!studentEmail) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not identify user. Please log in again.' });
+            return;
+        }
+
         const storedRequests = localStorage.getItem('rechargeRequests') || '[]';
         const requests = JSON.parse(storedRequests);
         const newRequest = {
             id: `recharge-${Date.now()}`,
-            // In a real app, get email from user session/context
-            studentEmail: 'student@example.com',
+            studentEmail,
             amount: rechargeAmount,
             status: 'pending'
         };

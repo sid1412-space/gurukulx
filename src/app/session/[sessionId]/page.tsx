@@ -66,10 +66,11 @@ export default function SessionPage() {
             }
 
             if (userRole === 'student') {
-                 // In a real app, you'd get the current logged-in user's email
-                const studentEmail = 'student@example.com';
-                const storedBalance = localStorage.getItem(`student-wallet-${studentEmail}`) || '0';
-                setWalletBalance(parseFloat(storedBalance));
+                const studentEmail = localStorage.getItem('loggedInUser');
+                if (studentEmail) {
+                    const storedBalance = localStorage.getItem(`student-wallet-${studentEmail}`) || '0';
+                    setWalletBalance(parseFloat(storedBalance));
+                }
             } else {
                 // Tutors don't need to see student balance
                 setWalletBalance(Infinity);
@@ -93,27 +94,31 @@ export default function SessionPage() {
 
     // Deduct funds every 60 seconds (1 minute)
     if (sessionDuration > 0 && sessionDuration % 60 === 0) {
-      const newBalance = walletBalance - pricePerMinute;
-      
-      if (newBalance < 0) {
-          toast({
-            variant: 'destructive',
-            title: 'Insufficient Funds',
-            description: 'Your wallet balance is empty. The session will now end.',
-          });
-          hangUp();
-          setWalletBalance(0);
-      } else {
-        setWalletBalance(newBalance);
-        const studentEmail = 'student@example.com';
-        localStorage.setItem(`student-wallet-${studentEmail}`, newBalance.toString());
-        toast({
-            title: 'Charge Applied',
-            description: `₹${pricePerMinute.toFixed(2)} deducted. New balance: ₹${newBalance.toFixed(2)}`,
-        });
-      }
+      setWalletBalance(prevBalance => {
+          const newBalance = prevBalance - pricePerMinute;
+          
+          if (newBalance < 0) {
+              toast({
+                variant: 'destructive',
+                title: 'Insufficient Funds',
+                description: 'Your wallet balance is empty. The session will now end.',
+              });
+              hangUp();
+              return 0;
+          } else {
+            const studentEmail = localStorage.getItem('loggedInUser');
+            if (studentEmail) {
+              localStorage.setItem(`student-wallet-${studentEmail}`, newBalance.toString());
+            }
+            toast({
+                title: 'Charge Applied',
+                description: `₹${pricePerMinute.toFixed(2)} deducted. New balance: ₹${newBalance.toFixed(2)}`,
+            });
+            return newBalance;
+          }
+      });
     }
-  }, [sessionDuration, hasAgreedToTerms, pricePerMinute, userRole, walletBalance, toast]);
+  }, [sessionDuration, hasAgreedToTerms, pricePerMinute, userRole, toast]);
 
 
   useEffect(() => {

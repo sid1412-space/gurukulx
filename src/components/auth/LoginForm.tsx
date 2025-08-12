@@ -29,7 +29,6 @@ export default function LoginForm() {
         if (!usersJSON) {
              const initialUsers = [
                 { email: 'quotesparkconnect@yahoo.com', role: 'admin', name: 'Admin User' },
-                // Approved tutor - for demonstration
                 { email: 'tutor@example.com', role: 'tutor', name: 'Dr. Evelyn Reed' }, 
                 { email: 'student@example.com', role: 'student', name: 'Jane Doe' }
             ];
@@ -85,6 +84,7 @@ export default function LoginForm() {
       
       if (foundUser) {
         localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('loggedInUser', values.email);
         
         localStorage.removeItem('isAdmin');
         localStorage.removeItem('isTutor');

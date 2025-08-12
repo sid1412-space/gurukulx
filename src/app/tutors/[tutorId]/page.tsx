@@ -40,11 +40,16 @@ export default function TutorProfilePage() {
   const [sessionRequestId, setSessionRequestId] = useState<string | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [walletBalance, setWalletBalance] = useState(0);
+  const [studentWalletKey, setStudentWalletKey] = useState('');
 
-  // In a real app, get current user from session/context.
-  const studentEmail = 'student@example.com';
-  const studentWalletKey = `student-wallet-${studentEmail}`;
-
+  useEffect(() => {
+    if (isClient) {
+      const studentEmail = localStorage.getItem('loggedInUser');
+      if (studentEmail) {
+        setStudentWalletKey(`student-wallet-${studentEmail}`);
+      }
+    }
+  }, [isClient]);
 
   useEffect(() => {
      if (isClient && tutorId) {
@@ -61,7 +66,7 @@ export default function TutorProfilePage() {
                      setTutor({
                          ...currentTutor,
                          id: currentTutor.email,
-                         name: applicantData.name,
+                         name: applicantData.name || currentTutor.name,
                          avatar: 'https://placehold.co/128x128.png',
                          bio: applicantData.qualification || 'A passionate and experienced tutor.',
                          rating: 4.8 + Math.random() * 0.2, // Randomize rating slightly
@@ -70,11 +75,15 @@ export default function TutorProfilePage() {
                      });
                 }
             }
-
-            const storedBalance = localStorage.getItem(studentWalletKey) || '0';
-            setWalletBalance(parseFloat(storedBalance));
         }
-  }, [isClient, tutorId, studentWalletKey])
+  }, [isClient, tutorId])
+
+  useEffect(() => {
+    if (isClient && studentWalletKey) {
+        const storedBalance = localStorage.getItem(studentWalletKey) || '0';
+        setWalletBalance(parseFloat(storedBalance));
+    }
+  }, [isClient, studentWalletKey]);
 
   useEffect(() => {
     if (isClient && tutorId) {
@@ -194,7 +203,7 @@ export default function TutorProfilePage() {
             <CardContent className="p-4 sm:p-6 text-center -mt-16">
             <Avatar className="h-32 w-32 mx-auto border-4 border-background shadow-lg">
                 <AvatarImage src={tutor.avatar} alt={tutor.name} data-ai-hint="person portrait"/>
-                <AvatarFallback className="text-4xl">{tutor.name ? tutor.name.charAt(0) : 'T'}</AvatarFallback>
+                <AvatarFallback className="text-4xl">{tutor.name ? tutor.name.charAt(0).toUpperCase() : 'T'}</AvatarFallback>
             </Avatar>
             <h1 className="text-3xl font-bold mt-4 font-headline">{tutor.name}</h1>
             

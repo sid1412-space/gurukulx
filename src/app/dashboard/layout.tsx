@@ -38,6 +38,7 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [isAuthorized, setIsAuthorized] = useState(false);
+  const [userInitial, setUserInitial] = useState('U');
   const isClient = useIsClient();
 
   useEffect(() => {
@@ -46,12 +47,20 @@ export default function DashboardLayout({
         const isTutor = localStorage.getItem('isTutor') === 'true';
         const isAdmin = localStorage.getItem('isAdmin') === 'true';
 
-        // A student is someone who is logged in but is NOT a tutor and NOT an admin.
         if (loggedIn && !isTutor && !isAdmin) {
             setIsAuthorized(true);
+            const loggedInUserEmail = localStorage.getItem('loggedInUser');
+            if (loggedInUserEmail) {
+              const usersJSON = localStorage.getItem('userDatabase');
+              if (usersJSON) {
+                const users = JSON.parse(usersJSON);
+                const currentUser = users.find((u: any) => u.email === loggedInUserEmail);
+                if (currentUser && currentUser.name) {
+                  setUserInitial(currentUser.name.charAt(0).toUpperCase());
+                }
+              }
+            }
         } else {
-            // If the user is not a valid student, redirect to login.
-            // This prevents tutors/admins from seeing the student dashboard.
             router.push('/login');
         }
     }
@@ -61,6 +70,7 @@ export default function DashboardLayout({
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('isAdmin');
     localStorage.removeItem('isTutor');
+    localStorage.removeItem('loggedInUser');
     setIsAuthorized(false);
     window.dispatchEvent(new Event("storage"));
     router.push('/');
@@ -106,7 +116,7 @@ export default function DashboardLayout({
             <div className="flex items-center gap-4">
                 <Avatar>
                     <AvatarImage src="https://placehold.co/100x100.png" alt="User Avatar" data-ai-hint="person avatar" />
-                    <AvatarFallback>U</AvatarFallback>
+                    <AvatarFallback>{userInitial}</AvatarFallback>
                 </Avatar>
                 <Button variant="ghost" onClick={handleLogout}>Logout</Button>
             </div>

@@ -54,6 +54,7 @@ export default function Header() {
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('isAdmin');
     localStorage.removeItem('isTutor');
+    localStorage.removeItem('loggedInUser');
     setIsAuthenticated(false);
     setIsTutor(false);
     setIsAdmin(false);
