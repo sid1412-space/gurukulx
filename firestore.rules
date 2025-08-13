@@ -5,77 +5,69 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     function isAdmin() {
-      return request.auth != null && request.auth.token.email == 'gurukulxconnect@yahoo.com';
+      return request.auth.token.email == 'gurukulxconnect@yahoo.com';
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
     }
 
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+    function isTutor() {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'tutor';
     }
 
     match /users/{userId} {
-      // Admins can do anything
-      allow read, write: if isAdmin();
-      
-      // Any authenticated user can list/read user profiles (for tutor search, etc.)
-      allow list, get: if isAuthenticated();
-
-      // Users can only update their own document
-      allow update: if isOwner(userId);
-    }
-
-    match /sessionRequests/{requestId} {
-      // Admins can do anything
-      allow read, write: if isAdmin();
-
-      // Students can create their own requests
-      allow create: if isOwner(request.resource.data.studentId);
-      
-      // Tutors can update (accept) requests assigned to them
-      allow update: if isOwner(resource.data.tutorId);
-
-      // Students (who created it) or Tutors (assigned to it) can read or delete
-      allow get, delete: if isOwner(resource.data.studentId) || isOwner(resource.data.tutorId);
+      // Admins can do anything. Authenticated users can read any profile.
+      allow read: if isAdmin() || isAuthenticated();
+      // Users can update their own profile. Admins can update any.
+      allow update: if isAdmin() || isOwner(userId);
+      // Users can create their own doc. Admins can create any (for seeding/testing).
+      allow create: if isAdmin() || isOwner(userId);
+      // Users can delete their own account. Admins can delete any.
+      allow delete: if isAdmin() || isOwner(userId);
     }
 
     match /sessions/{sessionId} {
-        // Admins can do anything
-        allow read, write: if isAdmin();
-    
-        // Students and Tutors involved in the session can read it
-        allow list, get: if isAuthenticated() && (resource.data.studentId == request.auth.uid || resource.data.tutorId == request.auth.uid);
-        
-        // Students can update their own sessions (for ratings)
-        allow update: if isOwner(resource.data.studentId);
-        
-        // Students can create sessions (this is done server-side logic in-app)
-        allow create: if isOwner(request.resource.data.studentId);
+        // Admins can read all sessions. Tutors and Students can read their own sessions.
+        allow read: if isAdmin() || resource.data.tutorId == request.auth.uid || resource.data.studentId == request.auth.uid;
+        // Students can create sessions.
+        allow create: if resource.data.studentId == request.auth.uid;
+        // Students can update sessions to add ratings.
+        allow update: if resource.data.studentId == request.auth.uid;
     }
 
     match /rechargeRequests/{rechargeId} {
-        // Admins can do anything
-        allow read, write: if isAdmin();
-
-        // Students can create their own recharge requests
-        allow create: if isOwner(request.resource.data.studentId);
+        // Admins can manage all requests. Students can create and read their own.
+        allow read: if isAdmin() || resource.data.studentId == request.auth.uid;
+        allow create: if resource.data.studentId == request.auth.uid;
+        allow update, delete: if isAdmin();
     }
-
+    
     match /payoutRequests/{payoutRequestId} {
-        // Admins can do anything
-        allow read, write: if isAdmin();
-
-        // Tutors can create their own payout requests
-        allow create: if isOwner(request.resource.data.tutorId);
+        // Admins can manage all requests. Tutors can create and read their own.
+        allow read, create: if isAdmin() || isTutor();
+        allow update, delete: if isAdmin();
     }
-     match /payouts/{payoutId} {
-        // Admins can do anything
-        allow read, write: if isAdmin();
+    
+    match /payouts/{payoutId} {
+      // Admins can manage all payouts. Tutors can read their own.
+      allow read: if isAdmin() || resource.data.tutorId == request.auth.uid;
+      allow create, update, delete: if isAdmin();
+    }
 
-        // Tutors can read their own payout history
-        allow get, list: if isOwner(resource.data.tutorId);
+    match /sessionRequests/{requestId} {
+      // Admins can manage all requests.
+      allow read, write: if isAdmin();
+      // Students can create requests.
+      allow create: if request.resource.data.studentId == request.auth.uid;
+      // Tutors can listen for requests made to them.
+      allow read: if isTutor() && get(/databases/$(database)/documents/sessionRequests/$(requestId)).data.tutorId == request.auth.uid;
+      // Tutors can update (accept) or delete (reject) requests.
+      allow update, delete: if isTutor() && get(/databases/$(database)/documents/sessionRequests/$(requestId)).data.tutorId == request.auth.uid;
     }
   }
 }
