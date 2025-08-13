@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useState, useEffect } from 'react';
 import { useIsClient } from '@/hooks/use-is-client';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, doc, updateDoc, writeBatch, documentId, getDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, writeBatch, documentId, getDoc, Timestamp, serverTimestamp, increment } from 'firebase/firestore';
 
 
 const addFundsSchema = z.object({
@@ -105,13 +105,30 @@ export default function FinancialManagementPage() {
     addFundsForm.reset();
   }
   
-  function onUpdateEarnings(values: z.infer<typeof updateEarningsSchema>) {
-    console.log(values);
-    toast({
-      title: 'Earnings Updated',
-      description: `Today's earnings for ${values.tutorEmail} updated to ₹${values.earnings}.`,
-    });
-    updateEarningsForm.reset();
+  async function onUpdateEarnings(values: z.infer<typeof updateEarningsSchema>) {
+    const q = query(collection(db, 'users'), where('email', '==', values.tutorEmail), where('role', '==', 'tutor'));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Tutor not found.' });
+      return;
+    }
+
+    const tutorDoc = querySnapshot.docs[0];
+    const tutorRef = doc(db, 'users', tutorDoc.id);
+
+    try {
+      await updateDoc(tutorRef, {
+        pendingEarnings: increment(values.earnings),
+      });
+      toast({
+        title: 'Earnings Updated',
+        description: `Added ₹${values.earnings.toFixed(2)} to ${values.tutorEmail}'s pending earnings.`,
+      });
+      updateEarningsForm.reset();
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not update tutor earnings.' });
+    }
   }
 
   const handleProcessPayouts = async () => {
@@ -307,7 +324,7 @@ export default function FinancialManagementPage() {
              <Card>
               <CardHeader>
                 <CardTitle>Update Tutor Daily Earnings</CardTitle>
-                <CardDescription>Manually set the earnings for a tutor for today.</CardDescription>
+                <CardDescription>Manually add earnings to a tutor's pending balance.</CardDescription>
               </CardHeader>
               <CardContent>
                 <Form {...updateEarningsForm}>
@@ -330,7 +347,7 @@ export default function FinancialManagementPage() {
                       name="earnings"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Today's Earnings (₹)</FormLabel>
+                          <FormLabel>Earnings to Add (₹)</FormLabel>
                           <FormControl>
                             <Input type="number" placeholder="12500" {...field} />
                           </FormControl>
