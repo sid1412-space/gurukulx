@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useState, useEffect } from 'react';
 import { useIsClient } from '@/hooks/use-is-client';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, doc, updateDoc, writeBatch, documentId, getDoc, Timestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, writeBatch, documentId, getDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
 
 
 const addFundsSchema = z.object({
@@ -114,11 +114,64 @@ export default function FinancialManagementPage() {
     updateEarningsForm.reset();
   }
 
-  const handleProcessPayouts = () => {
-    toast({
-      title: 'Processing Payouts',
-      description: 'Pending payouts are being processed.',
-    });
+  const handleProcessPayouts = async () => {
+    const payoutRequestsQuery = query(collection(db, "payoutRequests"), where("status", "==", "pending"));
+    const snapshot = await getDocs(payoutRequestsQuery);
+
+    if (snapshot.empty) {
+        toast({ title: 'No Pending Payouts', description: 'There are no payouts to process.'});
+        return;
+    }
+
+    const batch = writeBatch(db);
+    let totalProcessedAmount = 0;
+
+    for (const requestDoc of snapshot.docs) {
+        const requestData = requestDoc.data();
+        const tutorId = requestData.tutorId;
+        const amount = requestData.amount;
+        
+        // 1. Create a new document in 'payouts' collection
+        const newPayoutRef = doc(collection(db, "payouts"));
+        batch.set(newPayoutRef, {
+            tutorId: tutorId,
+            tutorEmail: requestData.tutorEmail,
+            amount: amount,
+            status: "Paid",
+            date: serverTimestamp(),
+            processedBy: "admin",
+            requestId: requestDoc.id
+        });
+
+        // 2. Update the tutor's earnings
+        const tutorRef = doc(db, "users", tutorId);
+        const tutorSnap = await getDoc(tutorRef);
+        if (tutorSnap.exists()) {
+            const tutorData = tutorSnap.data();
+            const newPendingEarnings = (tutorData.pendingEarnings || 0) - amount;
+            const newTotalEarnings = (tutorData.totalEarnings || 0) + amount;
+            batch.update(tutorRef, {
+                pendingEarnings: newPendingEarnings < 0 ? 0 : newPendingEarnings,
+                totalEarnings: newTotalEarnings
+            });
+        }
+
+        // 3. Delete the original payout request
+        batch.delete(requestDoc.ref);
+
+        totalProcessedAmount += amount;
+    }
+
+    try {
+        await batch.commit();
+        toast({
+            title: 'Payouts Processed',
+            description: `Successfully processed ${snapshot.size} payouts totalling ₹${totalProcessedAmount.toFixed(2)}.`,
+        });
+        fetchFinancialData(); // Refresh the data on the page
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to process payouts.' });
+    }
   };
   
   const handleApproveRecharge = async (request: RechargeRequest) => {
