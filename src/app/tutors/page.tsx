@@ -32,7 +32,7 @@ export default function TutorsPage() {
   useEffect(() => {
     const fetchTutors = async () => {
         if (isClient) {
-            const q = query(collection(db, "users"), where("role", "==", "tutor"));
+            const q = query(collection(db, "users"), where("role", "==", "tutor"), where("applicationStatus", "==", "Approved"));
             const querySnapshot = await getDocs(q);
             const tutorsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setAllTutors(tutorsData);
@@ -47,12 +47,7 @@ export default function TutorsPage() {
   };
 
   const filteredTutors = useMemo(() => {
-    if (!isClient) return [];
-
-    // Filter for users with the 'tutor' role.
-    let availableTutors = allTutors.filter(tutor => tutor.role === 'tutor');
-
-    let filtered = availableTutors;
+    let filtered = allTutors;
 
     if (selectedSubject) {
       filtered = filtered.filter((tutor) =>
@@ -71,7 +66,7 @@ export default function TutorsPage() {
     }
 
     return filtered;
-  }, [searchQuery, selectedSubject, selectedExam, isClient, allTutors]);
+  }, [searchQuery, selectedSubject, allTutors]);
 
   const subjectsForSelectedExam = selectedExam ? exams[selectedExam as keyof typeof exams] : [];
 
