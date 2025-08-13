@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useState, useEffect } from 'react';
 import { useIsClient } from '@/hooks/use-is-client';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, doc, updateDoc, writeBatch, documentId, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, writeBatch, documentId, getDoc, Timestamp } from 'firebase/firestore';
 
 
 const addFundsSchema = z.object({
@@ -40,18 +40,36 @@ export default function FinancialManagementPage() {
   const { toast } = useToast();
   const isClient = useIsClient();
   const [rechargeRequests, setRechargeRequests] = useState<RechargeRequest[]>([]);
+  const [pendingPayoutsTotal, setPendingPayoutsTotal] = useState(0);
+  const [monthlyPayoutsTotal, setMonthlyPayoutsTotal] = useState(0);
 
-  const fetchRechargeRequests = async () => {
+
+  const fetchFinancialData = async () => {
        if (isClient) {
-            const q = query(collection(db, "rechargeRequests"), where("status", "==", "pending"));
-            const querySnapshot = await getDocs(q);
-            const requests = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as RechargeRequest));
+            // Fetch pending recharges
+            const rechargeQuery = query(collection(db, "rechargeRequests"), where("status", "==", "pending"));
+            const rechargeSnapshot = await getDocs(rechargeQuery);
+            const requests = rechargeSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as RechargeRequest));
             setRechargeRequests(requests);
+
+            // Fetch pending payouts
+            const payoutRequestsQuery = query(collection(db, "payoutRequests"), where("status", "==", "pending"));
+            const payoutRequestsSnapshot = await getDocs(payoutRequestsQuery);
+            const pendingTotal = payoutRequestsSnapshot.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
+            setPendingPayoutsTotal(pendingTotal);
+
+             // Fetch payouts this month
+            const now = new Date();
+            const startOfMonth = Timestamp.fromDate(new Date(now.getFullYear(), now.getMonth(), 1));
+            const payoutsQuery = query(collection(db, "payouts"), where("date", ">=", startOfMonth));
+            const payoutsSnapshot = await getDocs(payoutsQuery);
+            const monthlyTotal = payoutsSnapshot.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
+            setMonthlyPayoutsTotal(monthlyTotal);
         }
   }
 
   useEffect(() => {
-    fetchRechargeRequests();
+    fetchFinancialData();
   }, [isClient]);
 
   const addFundsForm = useForm<z.infer<typeof addFundsSchema>>({
@@ -125,7 +143,7 @@ export default function FinancialManagementPage() {
             title: 'Recharge Approved',
             description: `₹${request.amount} has been added to ${request.studentEmail}'s wallet.`
         });
-        fetchRechargeRequests(); // Refresh list
+        fetchFinancialData(); // Refresh list
     } catch(e) {
          toast({ variant: 'destructive', title: 'Error', description: 'Failed to approve recharge.'});
     }
@@ -140,7 +158,7 @@ export default function FinancialManagementPage() {
             title: 'Recharge Rejected',
             description: `The recharge request for ${request.studentEmail} has been rejected.`
         });
-        fetchRechargeRequests();
+        fetchFinancialData();
      } catch(e) {
          toast({ variant: 'destructive', title: 'Error', description: 'Failed to reject recharge.'});
      }
@@ -283,12 +301,12 @@ export default function FinancialManagementPage() {
           <CardContent className="space-y-4">
              <div>
                 <h4 className="font-semibold">Pending Payouts</h4>
-                <p className="text-2xl font-bold">₹0.00</p>
+                <p className="text-2xl font-bold">₹{pendingPayoutsTotal.toFixed(2)}</p>
              </div>
              <Separator />
              <div>
                 <h4 className="font-semibold">Payouts This Month</h4>
-                <p className="text-2xl font-bold text-green-600">₹0.00</p>
+                <p className="text-2xl font-bold text-green-600">₹{monthlyPayoutsTotal.toFixed(2)}</p>
              </div>
              <Button className="w-full" onClick={handleProcessPayouts}>Process Pending Payouts</Button>
           </CardContent>
