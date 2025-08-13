@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "deploy": "vercel --prod"
+    "deploy": "vercel"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.0.0-rc.3",
