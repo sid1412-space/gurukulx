@@ -1,0 +1,14 @@
+{
+  "hosting": {
+    "source": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "frameworksBackend": {
+      "id": "tutorconnect-bu422-backend",
+      "region": "us-central1"
+    }
+  }
+}
