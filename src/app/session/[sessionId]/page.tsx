@@ -1,8 +1,7 @@
-
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useState, useEffect, useRef }from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, PhoneOff, MessageSquare, AlertTriangle, Timer, Wallet, Wand2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -45,7 +44,7 @@ export default function SessionPage() {
 
   // Session timer and wallet states
   const [sessionDuration, setSessionDuration] = useState(0); // in seconds
-  const [walletBalance, setWalletBalance] = useState(0); 
+  const [walletBalance, setWalletBalance] = useState(0);
   const [pricePerMinute, setPricePerMinute] = useState(1);
   const [tutorData, setTutorData] = useState<any>(null);
   const [studentData, setStudentData] = useState<any>(null);
@@ -53,21 +52,22 @@ export default function SessionPage() {
 
   const isClient = useIsClient();
 
-   // Set tutor as busy when session starts and fetch tutor data
+  // Set tutor as busy when session starts and fetch tutor data
   useEffect(() => {
     const startSession = async () => {
-        if (isClient && hasAgreedToTerms && tutorId && auth.currentUser) {
-            const tutorRef = doc(db, 'users', tutorId as string);
-            const studentRef = doc(db, 'users', auth.currentUser.uid);
-            
+      if (isClient && hasAgreedToTerms && tutorId && auth.currentUser) {
+        const tutorRef = doc(db, 'users', tutorId as string);
+        const studentRef = doc(db, 'users', auth.currentUser.uid);
+
+        try {
             // Set tutor busy immediately
             await updateDoc(tutorRef, { isBusy: true });
-            
+
             const [tutorSnap, studentSnap] = await Promise.all([
                 getDoc(tutorRef),
                 getDoc(studentRef)
             ]);
-           
+
             if (tutorSnap.exists()) {
                 const data = tutorSnap.data();
                 setTutorData(data);
@@ -77,25 +77,29 @@ export default function SessionPage() {
             if (studentSnap.exists()) {
                 setStudentData(studentSnap.data());
             }
+        } catch (error) {
+            console.error("Failed to start session:", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not initialize session details.' });
         }
+      }
     };
     startSession();
-  }, [hasAgreedToTerms, isClient, tutorId, auth.currentUser]);
+  }, [hasAgreedToTerms, isClient, tutorId]);
 
   // Wallet and student data listener
-   useEffect(() => {
-        if (isClient && userRole === 'student' && auth.currentUser) {
-            const studentRef = doc(db, 'users', auth.currentUser.uid);
-            const unsubscribe = onSnapshot(studentRef, (doc) => {
-                if(doc.exists()){
-                    setWalletBalance(doc.data().walletBalance || 0);
-                }
-            });
-            return () => unsubscribe();
+  useEffect(() => {
+    if (isClient && userRole === 'student' && auth.currentUser) {
+      const studentRef = doc(db, 'users', auth.currentUser.uid);
+      const unsubscribe = onSnapshot(studentRef, (doc) => {
+        if (doc.exists()) {
+          setWalletBalance(doc.data().walletBalance || 0);
         }
-    }, [isClient, userRole, auth.currentUser]);
+      });
+      return () => unsubscribe();
+    }
+  }, [isClient, userRole]);
 
-  // Timer and wallet deduction logic
+  // Timer logic
   useEffect(() => {
     if (!hasAgreedToTerms) return;
 
@@ -106,33 +110,35 @@ export default function SessionPage() {
     return () => clearInterval(timerInterval);
   }, [hasAgreedToTerms]);
 
+  // ✅ FIXED: Wallet deduction logic is now safer and more accurate
   useEffect(() => {
-    const deductFunds = async () => {
-        if (!hasAgreedToTerms || !pricePerMinute || userRole !== 'student' || sessionDuration === 0 || !auth.currentUser) return;
+    if (!hasAgreedToTerms || userRole !== 'student' || !auth.currentUser || pricePerMinute <= 0) return;
 
-        // Deduct funds every 60 seconds (1 minute)
-        if (sessionDuration > 0 && sessionDuration % 60 === 0) {
-            const newBalance = walletBalance - pricePerMinute;
+    const deductionInterval = setInterval(async () => {
+        if (walletBalance < pricePerMinute) {
+            toast({
+                variant: 'destructive',
+                title: 'Insufficient Funds',
+                description: 'The session will now end.',
+            });
+            hangUp();
+        } else {
+            const studentRef = doc(db, 'users', auth.currentUser.uid);
             
-            if (newBalance < 0) {
-                toast({
-                  variant: 'destructive',
-                  title: 'Insufficient Funds',
-                  description: 'Your wallet balance is empty. The session will now end.',
-                });
-                hangUp();
-            } else {
-              const studentRef = doc(db, 'users', auth.currentUser.uid);
-              await updateDoc(studentRef, { walletBalance: newBalance });
-              toast({
-                  title: 'Charge Applied',
-                  description: `₹${pricePerMinute.toFixed(2)} deducted. New balance: ₹${newBalance.toFixed(2)}`,
-              });
-            }
+            // Use atomic increment for a safe deduction on the server
+            await updateDoc(studentRef, {
+                walletBalance: increment(-pricePerMinute)
+            });
+
+            toast({
+                title: 'Charge Applied',
+                description: `₹${pricePerMinute.toFixed(2)} was deducted for the last minute.`,
+            });
         }
-    };
-    deductFunds();
-  }, [sessionDuration, hasAgreedToTerms, pricePerMinute, userRole, toast, walletBalance]);
+    }, 60000); // 60000 milliseconds = 1 minute
+
+    return () => clearInterval(deductionInterval);
+  }, [hasAgreedToTerms, userRole, pricePerMinute, walletBalance]);
 
 
   useEffect(() => {
@@ -164,28 +170,26 @@ export default function SessionPage() {
   };
 
   const hangUp = async () => {
-     if (isClient && tutorId) {
-        const tutorRef = doc(db, 'users', tutorId as string);
-        await updateDoc(tutorRef, { isBusy: false });
-        
-        if (userRole === 'student' && auth.currentUser && tutorData && studentData && sessionDuration > 5) {
-            const cost = (sessionDuration / 60) * pricePerMinute;
+    if (isClient && tutorId) {
+      const tutorRef = doc(db, 'users', tutorId as string);
+      await updateDoc(tutorRef, { isBusy: false });
 
-            await addDoc(collection(db, 'sessions'), {
-                studentId: auth.currentUser.uid,
-                studentName: studentData.name,
-                studentAvatar: studentData.avatar,
-                tutorId: tutorId,
-                tutorName: tutorData.name,
-                tutorAvatar: tutorData.avatar,
-                subject: (tutorData.applicationDetails?.expertise || 'General').toString(),
-                date: serverTimestamp(),
-                duration: sessionDuration,
-                cost: cost,
-                status: 'Completed',
-                sessionId: sessionId,
-            });
-        }
+      if (userRole === 'student' && auth.currentUser && tutorData && studentData && sessionDuration > 5) {
+        // ✅ FIXED: Removed redundant cost calculation. The wallet deduction is the source of truth.
+        await addDoc(collection(db, 'sessions'), {
+          studentId: auth.currentUser.uid,
+          studentName: studentData.name,
+          studentAvatar: studentData.avatar,
+          tutorId: tutorId,
+          tutorName: tutorData.name,
+          tutorAvatar: tutorData.avatar,
+          subject: (tutorData.applicationDetails?.expertise || 'General').toString(),
+          date: serverTimestamp(),
+          duration: sessionDuration, // Log the total duration in seconds
+          status: 'Completed',
+          sessionId: sessionId,
+        });
+      }
     }
     jitsiApi?.executeCommand('hangup');
     const destination = userRole === 'tutor' ? '/tutor/sessions' : '/dashboard/sessions';
@@ -249,78 +253,78 @@ export default function SessionPage() {
          <div className="flex items-center justify-between gap-4">
              <div className="flex items-center gap-4">
                  <div className="p-2 border rounded-lg">
-                    <div className="flex items-center gap-2 text-sm">
-                        <Timer className="text-primary"/>
-                        <span>{formatDuration(sessionDuration)}</span>
-                    </div>
-                </div>
-                {userRole === 'student' && (
-                 <div className="p-2 border rounded-lg">
-                    <div className="flex items-center gap-2 text-sm">
-                        <Wallet className="text-green-600"/>
-                        <span className="font-semibold">₹{walletBalance.toFixed(2)}</span>
-                    </div>
-                </div>
-                )}
-            </div>
+                     <div className="flex items-center gap-2 text-sm">
+                         <Timer className="text-primary"/>
+                         <span>{formatDuration(sessionDuration)}</span>
+                     </div>
+                 </div>
+                 {userRole === 'student' && (
+                  <div className="p-2 border rounded-lg">
+                      <div className="flex items-center gap-2 text-sm">
+                          <Wallet className="text-green-600"/>
+                          <span className="font-semibold">₹{walletBalance.toFixed(2)}</span>
+                      </div>
+                  </div>
+                 )}
+             </div>
 
-            <div className="flex items-center gap-1">
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="rounded-full" onClick={toggleMute}>
-                                {isMuted ? <MicOff /> : <Mic />}
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>{isMuted ? 'Unmute' : 'Mute'}</p>
-                        </TooltipContent>
-                    </Tooltip>
-                    
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setIsChatOpen(prev => !prev)}>
-                                <MessageSquare />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Toggle Chat</p>
-                        </TooltipContent>
-                    </Tooltip>
+             <div className="flex items-center gap-1">
+                 <TooltipProvider>
+                     <Tooltip>
+                         <TooltipTrigger asChild>
+                             <Button variant="ghost" size="icon" className="rounded-full" onClick={toggleMute}>
+                                 {isMuted ? <MicOff /> : <Mic />}
+                             </Button>
+                         </TooltipTrigger>
+                         <TooltipContent>
+                             <p>{isMuted ? 'Unmute' : 'Mute'}</p>
+                         </TooltipContent>
+                     </Tooltip>
+                     
+                     <Tooltip>
+                         <TooltipTrigger asChild>
+                             <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setIsChatOpen(prev => !prev)}>
+                                 <MessageSquare />
+                             </Button>
+                         </TooltipTrigger>
+                         <TooltipContent>
+                             <p>Toggle Chat</p>
+                         </TooltipContent>
+                     </Tooltip>
 
-                    {userRole === 'tutor' && (
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="rounded-full">
-                                    <Wand2 />
-                                </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                <AlertDialogTitle>Generate Practice Problems</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    Enter a topic, and the AI will generate exercises and add them to the whiteboard.
-                                </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <Input ref={practiceTopicRef} placeholder="e.g., Photosynthesis" />
-                                <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleGenerateExercises} disabled={isGenerating}>
-                                    {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Generate
-                                </AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                    )}
-                     <Separator orientation="vertical" className="h-6 mx-2"/>
-                    <Button variant="destructive" size="sm" className="rounded-full px-4" onClick={hangUp}>
-                        <PhoneOff className="mr-2 h-4 w-4" />
-                        End Call
-                    </Button>
-                </TooltipProvider>
-            </div>
-         </div>
+                     {userRole === 'tutor' && (
+                         <AlertDialog>
+                             <AlertDialogTrigger asChild>
+                                 <Button variant="ghost" size="icon" className="rounded-full">
+                                     <Wand2 />
+                                 </Button>
+                             </AlertDialogTrigger>
+                             <AlertDialogContent>
+                                 <AlertDialogHeader>
+                                 <AlertDialogTitle>Generate Practice Problems</AlertDialogTitle>
+                                 <AlertDialogDescription>
+                                     Enter a topic, and the AI will generate exercises and add them to the whiteboard.
+                                 </AlertDialogDescription>
+                                 </AlertDialogHeader>
+                                 <Input ref={practiceTopicRef} placeholder="e.g., Photosynthesis" />
+                                 <AlertDialogFooter>
+                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                 <AlertDialogAction onClick={handleGenerateExercises} disabled={isGenerating}>
+                                     {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                     Generate
+                                 </AlertDialogAction>
+                                 </AlertDialogFooter>
+                             </AlertDialogContent>
+                         </AlertDialog>
+                     )}
+                      <Separator orientation="vertical" className="h-6 mx-2"/>
+                     <Button variant="destructive" size="sm" className="rounded-full px-4" onClick={hangUp}>
+                         <PhoneOff className="mr-2 h-4 w-4" />
+                         End Call
+                     </Button>
+                 </TooltipProvider>
+             </div>
+          </div>
        </header>
        <main className="flex-grow relative bg-muted/20">
             {jitsiLoadFailed && (
