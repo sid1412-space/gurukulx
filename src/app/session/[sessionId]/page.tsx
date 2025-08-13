@@ -60,6 +60,9 @@ export default function SessionPage() {
             const tutorRef = doc(db, 'users', tutorId as string);
             const studentRef = doc(db, 'users', auth.currentUser.uid);
             
+            // Set tutor busy immediately
+            await updateDoc(tutorRef, { isBusy: true });
+            
             const [tutorSnap, studentSnap] = await Promise.all([
                 getDoc(tutorRef),
                 getDoc(studentRef)
@@ -165,10 +168,8 @@ export default function SessionPage() {
         const tutorRef = doc(db, 'users', tutorId as string);
         await updateDoc(tutorRef, { isBusy: false });
         
-        // Save session details and update tutor earnings
         if (userRole === 'student' && auth.currentUser && tutorData && studentData && sessionDuration > 5) {
             const cost = (sessionDuration / 60) * pricePerMinute;
-            const tutorEarnings = cost * 0.85; // Tutor gets 85%
 
             await addDoc(collection(db, 'sessions'), {
                 studentId: auth.currentUser.uid,
@@ -183,13 +184,6 @@ export default function SessionPage() {
                 cost: cost,
                 status: 'Completed',
                 sessionId: sessionId,
-            });
-
-             // Update tutor's earnings
-            await updateDoc(tutorRef, {
-                pendingEarnings: increment(tutorEarnings),
-                todayEarnings: increment(tutorEarnings),
-                todaySessions: increment(1)
             });
         }
     }
@@ -357,7 +351,3 @@ export default function SessionPage() {
     </div>
   );
 }
-
-    
-
-    
