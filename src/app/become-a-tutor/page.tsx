@@ -5,6 +5,7 @@ import { Briefcase, DollarSign, Clock, CheckCircle } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import Image from 'next/image';
+import { Card } from '@/components/ui/card';
 
 const benefits = [
   {
@@ -159,14 +160,3 @@ export default function BecomeATutorPage() {
     </div>
   );
 }
-
-// Temporary Card component to avoid dependency issues if not present elsewhere
-function Card({ className, children }: { className?: string; children: React.ReactNode }) {
-  return (
-    <div className={`rounded-lg border bg-card text-card-foreground shadow-sm ${className}`}>
-      {children}
-    </div>
-  );
-}
-
-    
