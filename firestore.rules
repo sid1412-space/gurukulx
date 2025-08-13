@@ -3,63 +3,71 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper function for admin check
+  
+    // Helper function to check if a user is the admin
     function isAdmin() {
-      // In a real app, use custom claims: request.auth.token.admin == true
-      return request.auth != null && request.auth.token.email == 'gurukulxconnect@yahoo.com';
+      return request.auth.token.email == 'gurukulxconnect@yahoo.com';
     }
     
-    // Helper function to check ownership
-    function isOwner(userId) {
-      return request.auth.uid == userId;
+    // Helper function to check if a user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
     }
 
+    // Users collection
     match /users/{userId} {
-      // ANY authenticated user can READ any user profile.
-      // This is needed so students can see tutor profiles and vice-versa.
-      // Sensitive data should not be in the main user document if it needs to be private,
-      // or should be protected by more specific rules in subcollections.
-      allow read: if request.auth != null;
-      
-      // Users can only WRITE to their own document.
-      allow write: if isOwner(userId) || isAdmin();
+      // Allow anyone to read user profiles (for tutor listings)
+      allow read: if isAuthenticated();
+      // Allow users to create their own profile, or admins to create any
+      allow create: if request.auth.uid == userId || isAdmin();
+      // Allow users to update their own profile, or admins to update any
+      allow update: if request.auth.uid == userId || isAdmin();
+      // Allow admins to delete users
+      allow delete: if isAdmin();
     }
     
+    // Sessions collection
+    match /sessions/{sessionId} {
+        // Only the student, tutor, or an admin can read a session
+        allow read: if isAuthenticated() && (resource.data.studentId == request.auth.uid || resource.data.tutorId == request.auth.uid || isAdmin());
+        // Students can create sessions
+        allow create: if isAuthenticated();
+        // Allow updating a session (e.g. for ratings) by the student, tutor or admin
+        allow update: if isAuthenticated() && (resource.data.studentId == request.auth.uid || resource.data.tutorId == request.auth.uid || isAdmin());
+        // Only admins can delete sessions
+        allow delete: if isAdmin();
+    }
+    
+    // Session Requests (temporary documents)
     match /sessionRequests/{requestId} {
-      // Tutors can read requests made to them
-      allow read: if request.auth.uid == resource.data.tutorId;
-      // Students can read requests they made
-      allow read: if request.auth.uid == resource.data.studentId;
-      
-      // Students can create requests
-      allow create: if request.auth.uid == request.resource.data.studentId;
+        // Any authenticated user can read (tutor needs to see it)
+        allow read: if isAuthenticated();
+        // Students can create requests
+        allow create: if isAuthenticated();
+        // Only the tutor involved or an admin can update (accept/reject)
+        allow update: if isAuthenticated() && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'tutor' || isAdmin());
+        // The tutor or admin can delete (reject)
+        allow delete: if isAuthenticated() && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'tutor' || isAdmin());
+    }
 
-      // Tutors can update requests (accept/reject)
-      allow update: if request.auth.uid == resource.data.tutorId;
-      
-      // Students or Tutors can delete (cancel) requests
-      allow delete: if request.auth.uid == resource.data.studentId || request.auth.uid == resource.data.tutorId;
+    // Recharge Requests
+    match /rechargeRequests/{rechargeId} {
+        // Students can read their own, admins can read all
+        allow read: if (isAuthenticated() && resource.data.studentId == request.auth.uid) || isAdmin();
+        // Students can create their own
+        allow create: if isAuthenticated() && request.resource.data.studentId == request.auth.uid;
+        // Only admins can update (approve/reject)
+        allow update, delete: if isAdmin();
     }
     
-     match /rechargeRequests/{rechargeId} {
-        // Admins can read/update all requests
-        allow read, update: if isAdmin();
-        // Students can create their own recharge requests
-        allow create: if request.auth.uid == request.resource.data.studentId;
-     }
-
+    // Payout Requests
      match /payoutRequests/{payoutId} {
-        // Admins can read/update all requests
-        allow read, update: if isAdmin();
-        // Tutors can create their own payout requests
-        allow create: if request.auth.uid == request.resource.data.tutorId;
-     }
-     
-      match /payouts/{payoutId} {
-        // Tutors can read their own payout history
-        allow read: if request.auth.uid == resource.data.tutorId;
-     }
-
+        // Tutors can read their own, admins can read all
+        allow read: if (isAuthenticated() && resource.data.tutorId == request.auth.uid) || isAdmin();
+        // Tutors can create their own
+        allow create: if isAuthenticated() && request.resource.data.tutorId == request.auth.uid;
+        // Only admins can update (approve/reject)
+        allow update, delete: if isAdmin();
+    }
   }
 }
