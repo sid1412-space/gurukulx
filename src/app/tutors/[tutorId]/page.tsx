@@ -27,6 +27,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, onSnapshot, addDoc, collection, serverTimestamp, updateDoc, deleteDoc } from 'firebase/firestore';
+import { createSessionRequest } from '@/lib/actions';
 
 
 export default function TutorProfilePage() {
@@ -109,19 +110,17 @@ export default function TutorProfilePage() {
 
   const handleRequestSession = async () => {
     if (tutor && auth.currentUser) {
-      const studentRef = doc(db, 'users', auth.currentUser.uid);
-      const studentSnap = await getDoc(studentRef);
-      const studentName = studentSnap.exists() ? studentSnap.data().name : 'A Student';
-
-      const requestDoc = await addDoc(collection(db, 'sessionRequests'), {
-          tutorId: tutor.id,
-          studentId: auth.currentUser.uid,
-          studentName: studentName, 
-          status: 'pending',
-          createdAt: serverTimestamp()
-      });
-      setSessionRequestId(requestDoc.id);
-      setIsWaiting(true);
+      const result = await createSessionRequest(tutor.id, auth.currentUser.uid);
+      if (result.success && result.data) {
+        setSessionRequestId(result.data.sessionRequestId);
+        setIsWaiting(true);
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Request Failed',
+          description: result.error || 'Could not initiate the session request.'
+        });
+      }
     }
   };
   
