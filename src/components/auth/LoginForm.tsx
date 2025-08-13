@@ -46,6 +46,17 @@ export default function LoginForm() {
   });
 
   const handleRedirect = async (user: User) => {
+    // Specific check for the admin user email
+    if (user.email === 'gurukulxconnect@yahoo.com') {
+      localStorage.setItem('isLoggedIn', 'true');
+      localStorage.setItem('loggedInUser', user.email);
+      localStorage.setItem('isTutor', 'false');
+      localStorage.setItem('isAdmin', 'true');
+      window.dispatchEvent(new Event("storage"));
+      router.push('/admin');
+      return;
+    }
+  
     const userRef = doc(db, "users", user.uid);
     let docSnap = await getDoc(userRef);
 
@@ -69,13 +80,14 @@ export default function LoginForm() {
     if (userData) {
         localStorage.setItem('isLoggedIn', 'true');
         localStorage.setItem('loggedInUser', userData.email);
-        localStorage.setItem('isTutor', (userData.role === 'tutor' || userData.role === 'banned').toString());
-        localStorage.setItem('isAdmin', (userData.role === 'admin').toString());
+        const isTutor = userData.role === 'tutor' || userData.role === 'banned';
+        localStorage.setItem('isTutor', isTutor.toString());
+        localStorage.setItem('isAdmin', 'false'); // Explicitly set to false for non-admins
 
-        if (userData.role === 'admin') destination = '/admin';
-        if (userData.role === 'tutor' || userData.role === 'banned') destination = '/tutor/dashboard';
+        if (isTutor) {
+            destination = '/tutor/dashboard';
+        }
     } else {
-        // Fallback in case document creation fails, though unlikely.
         toast({ variant: 'destructive', title: 'Error', description: 'Could not retrieve user profile.' });
         setIsLoading(false);
         return;
