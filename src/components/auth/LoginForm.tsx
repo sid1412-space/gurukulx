@@ -47,35 +47,38 @@ export default function LoginForm() {
 
   const handleRedirect = async (user: User) => {
     const userRef = doc(db, "users", user.uid);
-    const docSnap = await getDoc(userRef);
+    let docSnap = await getDoc(userRef);
 
-    let destination = '/dashboard'; // Default for students
-    
-    if (docSnap.exists()) {
-        const userData = docSnap.data();
-        localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('loggedInUser', userData.email); // Store email for client-side use
-        localStorage.setItem('isTutor', (userData.role === 'tutor' || userData.role === 'banned').toString());
-        localStorage.setItem('isAdmin', (userData.role === 'admin').toString());
-
-        if(userData.role === 'admin') destination = '/admin';
-        if(userData.role === 'tutor' || userData.role === 'banned') destination = '/tutor/dashboard';
-    } else {
-        // This case handles new Google sign-ins that aren't in our DB
+    // If the user exists in Auth but not in Firestore, create their document.
+    if (!docSnap.exists()) {
         const newUserDoc = {
-             uid: user.uid,
+            uid: user.uid,
             name: user.displayName || "New User",
             email: user.email,
-            role: 'student',
+            role: 'student', // Default role
             walletBalance: 1000,
             createdAt: new Date().toISOString(),
         };
         await setDoc(userRef, newUserDoc);
-        
+        docSnap = await getDoc(userRef); // Re-fetch the document
+    }
+
+    let destination = '/dashboard'; // Default for students
+    const userData = docSnap.data();
+
+    if (userData) {
         localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('loggedInUser', newUserDoc.email);
-        localStorage.setItem('isTutor', 'false');
-        localStorage.setItem('isAdmin', 'false');
+        localStorage.setItem('loggedInUser', userData.email);
+        localStorage.setItem('isTutor', (userData.role === 'tutor' || userData.role === 'banned').toString());
+        localStorage.setItem('isAdmin', (userData.role === 'admin').toString());
+
+        if (userData.role === 'admin') destination = '/admin';
+        if (userData.role === 'tutor' || userData.role === 'banned') destination = '/tutor/dashboard';
+    } else {
+        // Fallback in case document creation fails, though unlikely.
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not retrieve user profile.' });
+        setIsLoading(false);
+        return;
     }
 
     // This makes sure other tabs know about the login status change
@@ -95,8 +98,7 @@ export default function LoginForm() {
         title: 'Login Failed',
         description: error.message,
       });
-    } finally {
-      setIsLoading(false);
+       setIsLoading(false);
     }
   }
 
