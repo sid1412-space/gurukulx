@@ -134,7 +134,7 @@ export default function RechargePage() {
               Please pay <span className="font-bold text-primary">₹{rechargeAmount.toFixed(2)}</span> using the QR Code or UPI ID below.
             </p>
             <div className="flex justify-center">
-               <Image
+               <img
                     src={getQrCode()}
                     alt={`Payment QR Code for ₹${rechargeAmount}`}
                     width={250}
