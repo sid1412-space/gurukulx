@@ -61,9 +61,7 @@ export default function SessionPage() {
             const studentRef = doc(db, 'users', auth.currentUser.uid);
             
             // Set tutor to busy immediately
-            if (userRole === 'tutor') {
-                await updateDoc(tutorRef, { isBusy: true });
-            }
+            await updateDoc(tutorRef, { isBusy: true });
 
             const [tutorSnap, studentSnap] = await Promise.all([
                 getDoc(tutorRef),
@@ -354,3 +352,5 @@ export default function SessionPage() {
     </div>
   );
 }
+
+    
