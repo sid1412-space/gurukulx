@@ -19,8 +19,9 @@ import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import React, { useEffect, useState } from 'react';
-import { auth } from '@/lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { auth, db } from '@/lib/firebase';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 
 const adminMenuItems = [
   { href: '/admin', label: 'Overview', icon: LayoutDashboard },
@@ -41,14 +42,14 @@ export default function AdminLayout({
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user: User | null) => {
       if (user) {
         try {
-          const isAdmin = user.email === 'gurukulxconnect@yahoo.com';
-          
-          if (isAdmin) {
+          const userDocRef = doc(db, 'users', user.uid);
+          const userDoc = await getDoc(userDocRef);
+
+          if (userDoc.exists() && userDoc.data().role === 'admin') {
             setIsAuthorized(true);
-            // Also update localStorage for consistency if needed by other components
             localStorage.setItem('isLoggedIn', 'true');
             localStorage.setItem('isAdmin', 'true');
           } else {
