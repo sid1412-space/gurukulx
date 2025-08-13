@@ -11,7 +11,7 @@ export default function Logo({ className }: LogoProps) {
   return (
     <Link href="/" className={cn('flex items-center gap-2', className)}>
       <Image 
-        src="https://i.ibb.co/68Zz67G/logo.png"
+        src="https://i.ibb.co/mJ3xYQ4/logo.png"
         alt="GurukulX Logo"
         width={32}
         height={32}

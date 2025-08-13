@@ -67,12 +67,12 @@ export default function BecomeATutorPage() {
               </div>
               <div className="relative animate-fade-in flex items-center justify-center">
                 <Image
-                  src="https://i.ibb.co/xqvy59YP/Chat-GPT-Image-Aug-12-2025-11-06-21-PM.png"
-                  alt="GurukulX Logo"
+                  src="https://i.ibb.co/mJ3xYQ4/logo.png"
+                  alt="Tutor working on a laptop"
                   width={400}
                   height={400}
                   className="rounded-xl shadow-2xl"
-                  data-ai-hint="logo"
+                  data-ai-hint="person laptop"
                   priority
                 />
               </div>
