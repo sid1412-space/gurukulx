@@ -19,6 +19,8 @@ import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import React, { useEffect, useState } from 'react';
+import { auth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const adminMenuItems = [
   { href: '/admin', label: 'Overview', icon: LayoutDashboard },
@@ -36,30 +38,54 @@ export default function AdminLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [isAuthorized, setIsAuthorized] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    const isAdmin = localStorage.getItem('isAdmin') === 'true';
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const idTokenResult = await user.getIdTokenResult();
+          const isAdmin = idTokenResult.claims.admin === true;
+          
+          if (isAdmin) {
+            setIsAuthorized(true);
+            // Also update localStorage for consistency if needed by other components
+            localStorage.setItem('isLoggedIn', 'true');
+            localStorage.setItem('isAdmin', 'true');
+          } else {
+            router.push('/login');
+          }
+        } catch (error) {
+          console.error("Error checking admin status:", error);
+          router.push('/login');
+        }
+      } else {
+        router.push('/login');
+      }
+      setIsLoading(false);
+    });
 
-    // This layout should only render if the user is a logged-in admin.
-    if (loggedIn && isAdmin) {
-      setIsAuthorized(true);
-    } else {
-      // If they are not a logged-in admin, send them to the login page.
-      router.push('/login');
-    }
-  }, [router, pathname]);
+    return () => unsubscribe();
+  }, [router]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await auth.signOut();
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('isAdmin');
     localStorage.removeItem('isTutor');
-    setIsAuthorized(false);
-    // Dispatch a storage event to notify other tabs/windows (like the header)
+    localStorage.removeItem('loggedInUser');
     window.dispatchEvent(new Event("storage"));
     router.push('/');
   }
 
+  if (isLoading) {
+     return (
+        <div className="flex items-center justify-center h-screen bg-background">
+            <p>Verifying authorization...</p>
+        </div>
+    );
+  }
+  
   if (!isAuthorized) {
      return (
         <div className="flex items-center justify-center h-screen bg-background">
