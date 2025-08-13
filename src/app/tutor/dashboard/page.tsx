@@ -10,7 +10,7 @@ import { useIsClient } from '@/hooks/use-is-client';
 import TutorNotification from '@/components/tutors/TutorNotification';
 import { DollarSign, CalendarCheck, Hourglass, AlertCircle, CheckCircle } from 'lucide-react';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 
 
 export default function TutorDashboardPage() {
@@ -26,24 +26,26 @@ export default function TutorDashboardPage() {
   const isClient = useIsClient();
   
   useEffect(() => {
-    const fetchTutorData = async () => {
-        if (isClient && auth.currentUser) {
-            const tutorRef = doc(db, 'users', auth.currentUser.uid);
-            const docSnap = await getDoc(tutorRef);
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                setTutorData({
-                    name: data.name || 'Tutor',
-                    isOnline: data.isOnline !== false,
-                    isBusy: data.isBusy === true,
-                    todayEarnings: data.todayEarnings || 0,
-                    todaySessions: data.todaySessions || 0,
-                    applicationStatus: data.applicationStatus || 'Approved', // Default to approved for older accounts
-                });
-            }
+    if (isClient && auth.currentUser) {
+      const tutorRef = doc(db, 'users', auth.currentUser.uid);
+      
+      const unsubscribe = onSnapshot(tutorRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setTutorData({
+            name: data.name || 'Tutor',
+            isOnline: data.isOnline !== false,
+            isBusy: data.isBusy === true,
+            todayEarnings: data.todayEarnings || 0,
+            todaySessions: data.todaySessions || 0,
+            applicationStatus: data.applicationStatus || 'Approved',
+          });
         }
+      });
+      
+      // Cleanup listener on component unmount
+      return () => unsubscribe();
     }
-    fetchTutorData();
   }, [isClient]);
 
   const handleStatusChange = async (online: boolean) => {
