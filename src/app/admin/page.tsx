@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useIsClient } from '@/hooks/use-is-client';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, collectionGroup,getCountFromServer } from 'firebase/firestore';
+import { collection, query, where, getDocs, getCountFromServer, Timestamp } from 'firebase/firestore';
 
 
 export default function AdminOverviewPage() {
@@ -28,27 +28,48 @@ export default function AdminOverviewPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      // Fetch stats
+      // Fetch user stats
       const tutorsQuery = query(collection(db, "users"), where("role", "==", "tutor"));
       const studentsQuery = query(collection(db, "users"), where("role", "==", "student"));
       
-      const tutorsSnapshot = await getCountFromServer(tutorsQuery);
-      const studentsSnapshot = await getCountFromServer(studentsQuery);
+      const [tutorsSnapshot, studentsSnapshot] = await Promise.all([
+          getCountFromServer(tutorsQuery),
+          getCountFromServer(studentsQuery)
+      ]);
 
-      setStats(prev => ({ 
-          ...prev, 
+      // Fetch session data for the current month
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+      const sessionsQuery = query(collection(db, "sessions"), 
+        where("date", ">=", Timestamp.fromDate(startOfMonth)),
+        where("date", "<=", Timestamp.fromDate(endOfMonth))
+      );
+      const sessionsSnapshot = await getDocs(sessionsQuery);
+      
+      const sessionsThisMonth = sessionsSnapshot.size;
+      const totalCostThisMonth = sessionsSnapshot.docs.reduce((sum, doc) => sum + (doc.data().cost || 0), 0);
+      const platformCommission = 0.15; // 15%
+      const monthlyRevenue = totalCostThisMonth * platformCommission;
+
+      setStats({ 
           totalTutors: tutorsSnapshot.data().count, 
-          activeStudents: studentsSnapshot.data().count 
-      }));
+          activeStudents: studentsSnapshot.data().count,
+          sessionsThisMonth: sessionsThisMonth,
+          monthlyRevenue: monthlyRevenue,
+      });
 
       // Fetch action items
       const applicantsQuery = query(collection(db, "users"), where("applicationStatus", "==", "Pending"));
       const rechargeQuery = query(collection(db, "rechargeRequests"), where("status", "==", "pending"));
       const payoutQuery = query(collection(db, "payoutRequests"), where("status", "==", "pending"));
 
-      const applicantsSnapshot = await getCountFromServer(applicantsQuery);
-      const rechargeSnapshot = await getCountFromServer(rechargeQuery);
-      const payoutSnapshot = await getCountFromServer(payoutQuery);
+      const [applicantsSnapshot, rechargeSnapshot, payoutSnapshot] = await Promise.all([
+         getCountFromServer(applicantsQuery),
+         getCountFromServer(rechargeQuery),
+         getCountFromServer(payoutQuery)
+      ]);
       
       setActionItemsData({
           newApplicants: applicantsSnapshot.data().count,
@@ -65,8 +86,8 @@ export default function AdminOverviewPage() {
   const statCards = [
     { title: 'Total Tutors', value: stats.totalTutors.toLocaleString(), icon: Users },
     { title: 'Active Students', value: stats.activeStudents.toLocaleString(), icon: Users },
-    { title: 'Sessions This Month', value: '0', icon: BookOpen },
-    { title: 'Monthly Revenue', value: '₹0', icon: DollarSign },
+    { title: 'Sessions This Month', value: stats.sessionsThisMonth.toLocaleString(), icon: BookOpen },
+    { title: 'Monthly Revenue', value: `₹${stats.monthlyRevenue.toFixed(2)}`, icon: DollarSign },
   ];
 
   const actionItems = [
