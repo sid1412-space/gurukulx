@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useIsClient } from '@/hooks/use-is-client';
 import TutorNotification from '@/components/tutors/TutorNotification';
-import { DollarSign, CalendarCheck } from 'lucide-react';
+import { DollarSign, CalendarCheck, Hourglass, AlertCircle, CheckCircle } from 'lucide-react';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
@@ -21,6 +21,7 @@ export default function TutorDashboardPage() {
       isBusy: false,
       todayEarnings: 0,
       todaySessions: 0,
+      applicationStatus: '',
   });
   const isClient = useIsClient();
   
@@ -37,6 +38,7 @@ export default function TutorDashboardPage() {
                     isBusy: data.isBusy === true,
                     todayEarnings: data.todayEarnings || 0,
                     todaySessions: data.todaySessions || 0,
+                    applicationStatus: data.applicationStatus || 'Approved', // Default to approved for older accounts
                 });
             }
         }
@@ -59,7 +61,49 @@ export default function TutorDashboardPage() {
         toast({ variant: 'destructive', title: 'Error', description: 'Failed to update status.' });
     }
   };
+  
+  if (!isClient) {
+    return null; // or a loading skeleton
+  }
 
+  // Render a specific view for applicants whose status is not yet 'Approved'
+  if (tutorData.applicationStatus !== 'Approved') {
+    const isPending = tutorData.applicationStatus === 'Pending';
+    const StatusIcon = isPending ? Hourglass : AlertCircle;
+    const cardBorder = isPending ? 'border-amber-500' : 'border-destructive';
+    const iconColor = isPending ? 'text-amber-500' : 'text-destructive';
+
+    return (
+        <div className="space-y-8 animate-fade-in">
+             <header>
+                <h1 className="text-3xl font-bold tracking-tight font-headline">Welcome, {tutorData.name}!</h1>
+                <p className="text-muted-foreground">Here is the current status of your tutor application.</p>
+            </header>
+            <Card className={`border-2 ${cardBorder}`}>
+                <CardHeader>
+                    <CardTitle className={`flex items-center gap-2 ${iconColor}`}>
+                        <StatusIcon className="h-6 w-6"/>
+                        Application {tutorData.applicationStatus}
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {isPending ? (
+                        <p className="text-muted-foreground">
+                            Your application is currently under review by our team. We will notify you via email once a decision has been made. Thank you for your patience.
+                        </p>
+                    ) : (
+                         <p className="text-muted-foreground">
+                            Unfortunately, your application was not approved at this time. For more information, please contact our support team.
+                        </p>
+                    )}
+                </CardContent>
+            </Card>
+        </div>
+    );
+  }
+
+
+  // The standard dashboard for approved tutors
   return (
     <div className="space-y-8 animate-fade-in">
       <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
