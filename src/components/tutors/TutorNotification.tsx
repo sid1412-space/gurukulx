@@ -55,7 +55,8 @@ export default function TutorNotification() {
   const handleAccept = async () => {
     if (!activeRequest || !auth.currentUser) return;
 
-    const sessionId = `sess_${Math.random().toString(36).substring(2, 11)}`;
+    // Use the guaranteed unique request ID as the session ID
+    const sessionId = activeRequest.id;
     const requestRef = doc(db, 'sessionRequests', activeRequest.id);
     const tutorRef = doc(db, 'users', auth.currentUser.uid);
     
@@ -114,7 +115,7 @@ export default function TutorNotification() {
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <Avatar className="h-12 w-12">
-                        <AvatarImage src="https://placehold.co/100x100.png" alt="Student" />
+                        <AvatarImage src="https://placehold.co/100x100.png" alt="Student" data-ai-hint="person avatar" />
                         <AvatarFallback>S</AvatarFallback>
                     </Avatar>
                     <div>
