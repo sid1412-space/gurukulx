@@ -30,11 +30,11 @@ export default function Hero() {
           <div className="relative animate-fade-in duration-700 flex items-center justify-center">
              <Image
               src="https://i.ibb.co/mJ3xYQ4/logo.png"
-              alt="GurukulX Logo"
-              width={400}
-              height={400}
+              alt="An illustration of a person learning online"
+              width={500}
+              height={500}
               className="rounded-xl shadow-2xl transform hover:scale-105 transition-transform duration-500"
-              data-ai-hint="logo"
+              data-ai-hint="education learning"
               priority
             />
           </div>
