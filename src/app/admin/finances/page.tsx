@@ -128,7 +128,7 @@ export default function FinancialManagementPage() {
         description: `Added ₹${values.earnings.toFixed(2)} to ${values.tutorEmail}'s pending earnings and daily stats.`,
       });
       updateEarningsForm.reset();
-      fetchFinancialData(); // Refresh data in case this impacts other stats
+      fetchFinancialData(); // Refresh data on the page
     } catch (error) {
       toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not update tutor earnings.' });
     }
