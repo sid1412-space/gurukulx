@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Bell } from 'lucide-react';
 import { useIsClient } from '@/hooks/use-is-client';
 import { auth, db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, doc, updateDoc, Unsubscribe } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, Unsubscribe, deleteDoc } from 'firebase/firestore';
 
 
 interface SessionRequest {
@@ -28,58 +28,72 @@ export default function TutorNotification() {
   const [activeRequest, setActiveRequest] = useState<SessionRequest | null>(null);
 
   useEffect(() => {
-    if (!isClient || !auth.currentUser) return;
-
+    if (!isClient) return;
+  
     let unsubscribe: Unsubscribe | undefined;
-
-    const authUnsubscribe = auth.onAuthStateChanged(user => {
-        if (user) {
-            const requestsQuery = query(
-                collection(db, 'sessionRequests'),
-                where('tutorId', '==', user.uid),
-                where('status', '==', 'pending')
-            );
-    
-            unsubscribe = onSnapshot(requestsQuery, (snapshot) => {
-                if (!snapshot.empty) {
-                    const requestDoc = snapshot.docs[0];
-                    setActiveRequest({ id: requestDoc.id, ...requestDoc.data() } as SessionRequest);
-                } else {
-                    setActiveRequest(null);
-                }
-            });
-        } else {
-            if (unsubscribe) unsubscribe();
-        }
+  
+    const authStateChanged = auth.onAuthStateChanged(user => {
+      // If there's an existing listener, unsubscribe from it first.
+      if (unsubscribe) {
+        unsubscribe();
+        setActiveRequest(null);
+      }
+  
+      if (user) {
+        const requestsQuery = query(
+          collection(db, 'sessionRequests'),
+          where('tutorId', '==', user.uid),
+          where('status', '==', 'pending')
+        );
+  
+        unsubscribe = onSnapshot(requestsQuery, (snapshot) => {
+          if (!snapshot.empty) {
+            const requestDoc = snapshot.docs[0];
+            setActiveRequest({ id: requestDoc.id, ...requestDoc.data() } as SessionRequest);
+          } else {
+            setActiveRequest(null);
+          }
+        });
+      }
     });
-
-
+  
+    // Cleanup function to unsubscribe from both listeners when the component unmounts.
     return () => {
-        authUnsubscribe();
-        if (unsubscribe) unsubscribe();
-    }
-  }, [isClient]);
+      authStateChanged();
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [isClient, router]);
+
 
   const handleAccept = async () => {
-    if (!activeRequest) return;
+    if (!activeRequest || !auth.currentUser) return;
 
     const sessionId = `sess_${Math.random().toString(36).substring(2, 11)}`;
     const requestRef = doc(db, 'sessionRequests', activeRequest.id);
+    const tutorRef = doc(db, 'users', auth.currentUser.uid);
     
-    await updateDoc(requestRef, {
-        status: 'accepted',
-        sessionId: sessionId,
-    });
-    
-    setActiveRequest(null);
-    router.push(`/session/${sessionId}?tutorId=${activeRequest.tutorId}&role=tutor`);
+    try {
+        await updateDoc(requestRef, {
+            status: 'accepted',
+            sessionId: sessionId,
+        });
+        await updateDoc(tutorRef, { isBusy: true });
+        
+        setActiveRequest(null);
+        router.push(`/session/${sessionId}?tutorId=${activeRequest.tutorId}&role=tutor`);
+
+    } catch (e) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not accept the session.'})
+    }
   };
 
   const handleReject = async () => {
     if (!activeRequest) return;
     
     const requestRef = doc(db, 'sessionRequests', activeRequest.id);
-    await updateDoc(requestRef, { status: 'rejected' });
+    await deleteDoc(requestRef);
     
     setActiveRequest(null);
 

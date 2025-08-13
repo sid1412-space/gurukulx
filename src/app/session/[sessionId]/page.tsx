@@ -68,7 +68,7 @@ export default function SessionPage() {
             if (tutorSnap.exists()) {
                 const data = tutorSnap.data();
                 setTutorData(data);
-                await updateDoc(tutorRef, { isBusy: true });
+                // Tutor status is set to busy when they accept the request
                 setPricePerMinute(data.price || 1);
             }
 
@@ -350,5 +350,3 @@ export default function SessionPage() {
     </div>
   );
 }
-
-    

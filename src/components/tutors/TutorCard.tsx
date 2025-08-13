@@ -78,16 +78,16 @@ export default function TutorCard({ tutor }: TutorCardProps) {
                 if (timeoutRef.current) clearTimeout(timeoutRef.current);
                 setIsWaiting(false);
                 router.push(`/session/${requestData.sessionId}?tutorId=${tutor.id}&role=student`);
-            } else if (requestData.status === 'rejected') {
-                if (timeoutRef.current) clearTimeout(timeoutRef.current);
-                setIsWaiting(false);
-                setSessionRequestId(null);
-                toast({
-                    variant: 'destructive',
-                    title: 'Session Rejected',
-                    description: `${tutor.name} is unable to take your session right now.`,
-                });
             }
+        } else { // Document was deleted (rejected)
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            setIsWaiting(false);
+            setSessionRequestId(null);
+            toast({
+                variant: 'destructive',
+                title: 'Session Rejected',
+                description: `${tutor.name} is unable to take your session right now.`,
+            });
         }
     });
 
