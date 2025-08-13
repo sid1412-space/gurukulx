@@ -80,7 +80,7 @@ export default function SessionPage() {
         }
     };
     startSession();
-  }, [hasAgreedToTerms, isClient, tutorId, userRole]);
+  }, [hasAgreedToTerms, isClient, tutorId, auth.currentUser]);
 
   // Wallet and student data listener
    useEffect(() => {
