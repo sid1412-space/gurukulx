@@ -29,7 +29,7 @@ export default function Hero() {
           </div>
           <div className="relative animate-fade-in duration-700 flex items-center justify-center">
              <Image
-              src="https://i.ibb.co/mJ3xYQ4/logo.png"
+              src="https://placehold.co/500x500.png"
               alt="An illustration of a person learning online"
               width={500}
               height={500}
