@@ -19,6 +19,9 @@ import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import React, { useEffect, useState } from 'react';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth, db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 const tutorMenuItems = [
   { href: '/tutor/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -35,58 +38,64 @@ export default function TutorLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [isAuthorized, setIsAuthorized] = useState(false);
-  const [isBanned, setIsBanned] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    const isTutor = localStorage.getItem('isTutor') === 'true';
-    const currentUserEmail = localStorage.getItem('loggedInUser');
+    const unsubscribe = onAuthStateChanged(auth, async (user: User | null) => {
+      if (user) {
+        try {
+          const userDocRef = doc(db, 'users', user.uid);
+          const userDoc = await getDoc(userDocRef);
+          
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            const isTutorRole = ['tutor', 'applicant'].includes(userData.role);
 
-    if (loggedIn && isTutor && currentUserEmail) {
-        const usersJSON = localStorage.getItem('userDatabase') || '[]';
-        const users = JSON.parse(usersJSON);
-        const currentUser = users.find((u:any) => u.email === currentUserEmail);
-        
-        if(currentUser && currentUser.role === 'banned') {
-            setIsBanned(true);
-            setIsAuthorized(false);
-        } else {
-            setIsBanned(false);
-            setIsAuthorized(true);
+            if (isTutorRole) {
+                setIsAuthorized(true);
+            } else if (userData.role === 'banned') {
+                router.push('/tutor/banned');
+            } else {
+                router.push('/login');
+            }
+          } else {
+            router.push('/login');
+          }
+        } catch (error) {
+          console.error("Error checking authorization:", error);
+          router.push('/login');
         }
-    } else {
-      router.push('/login');
-    }
-  }, [router, pathname]);
+      } else {
+        router.push('/login');
+      }
+      setIsLoading(false);
+    });
 
-  const handleLogout = () => {
+    return () => unsubscribe();
+  }, [router]);
+
+  const handleLogout = async () => {
+    await auth.signOut();
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('isAdmin');
     localStorage.removeItem('isTutor');
     localStorage.removeItem('loggedInUser');
-    setIsAuthorized(false);
-    setIsBanned(false);
     window.dispatchEvent(new Event("storage"));
     router.push('/');
   }
 
-  if (isBanned) {
-    return (
-        <div className="flex flex-col items-center justify-center h-screen bg-background text-center p-4">
-            <AlertTriangle className="h-16 w-16 text-destructive mb-4" />
-            <h1 className="text-2xl font-bold">Account Access Restricted</h1>
-            <p className="text-muted-foreground mt-2 max-w-md">
-                You have been banned from the platform. For more details, please contact us at <a href="mailto:gurukulxconnect@yahoo.com" className="underline text-primary">gurukulxconnect@yahoo.com</a> for further details.
-            </p>
-            <Button onClick={handleLogout} className="mt-6">Logout</Button>
+  if (isLoading) {
+     return (
+        <div className="flex items-center justify-center h-screen bg-background">
+            <p>Verifying authorization...</p>
         </div>
-    )
+    );
   }
-
+  
   if (!isAuthorized) {
      return (
         <div className="flex items-center justify-center h-screen bg-background">
-            <p>Redirecting to login...</p>
+            <p>Redirecting...</p>
         </div>
     );
   }
