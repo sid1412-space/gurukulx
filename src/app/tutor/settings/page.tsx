@@ -83,8 +83,8 @@ export default function TutorSettingsPage() {
                 profileForm.reset({
                     name: userData.name || '',
                     email: userData.email,
-                    bio: userData.applicationDetails?.qualification || '',
-                    subjects: (userData.applicationDetails?.expertise || []).toString()
+                    bio: userData.bio || '',
+                    subjects: (userData.subjects || []).join(', ')
                 });
                 payoutForm.reset(userData.payoutDetails || {
                     accountHolderName: '', accountNumber: '', ifscCode: '', upiId: ''
@@ -119,8 +119,8 @@ export default function TutorSettingsPage() {
         await updateDoc(userRef, {
             name: values.name,
             avatar: avatarPreview,
-            'applicationDetails.expertise': values.subjects,
-            'applicationDetails.qualification': values.bio
+            bio: values.bio,
+            subjects: values.subjects ? values.subjects.split(',').map(s => s.trim()) : [],
         });
         toast({
             title: 'Profile Updated',
@@ -229,7 +229,7 @@ export default function TutorSettingsPage() {
                           <FormControl>
                             <Input placeholder="e.g., Physics, Calculus" {...field} />
                           </FormControl>
-                          <FormDescription>Separate subjects with commas.</FormDescription>
+                          <FormDescription>Separate subjects with commas. This will be shown on your profile.</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -243,7 +243,7 @@ export default function TutorSettingsPage() {
                           <FormControl>
                             <Textarea placeholder="Tell students about your teaching style and experience." className="resize-none" {...field}/>
                           </FormControl>
-                           <FormDescription>This is your qualification that students will see.</FormDescription>
+                           <FormDescription>This will be shown on your public profile.</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}

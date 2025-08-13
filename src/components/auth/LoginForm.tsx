@@ -81,7 +81,7 @@ export default function LoginForm() {
         localStorage.setItem('isLoggedIn', 'true');
         localStorage.setItem('loggedInUser', userData.email);
         
-        const isTutorOrApplicant = userData.role === 'tutor' || userData.role === 'banned' || userData.role === 'applicant';
+        const isTutorOrApplicant = ['tutor', 'banned', 'applicant'].includes(userData.role);
         localStorage.setItem('isTutor', isTutorOrApplicant.toString());
         localStorage.setItem('isAdmin', 'false'); // Explicitly set to false for non-admins
 

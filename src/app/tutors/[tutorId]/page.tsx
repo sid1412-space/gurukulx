@@ -180,7 +180,7 @@ export default function TutorProfilePage() {
             </div>
             
             <div className="mt-6 flex flex-wrap justify-center gap-2">
-                {(tutor.applicationDetails?.expertise || []).map((subject: string) => (
+                {(tutor.subjects || []).map((subject: string) => (
                     <Badge key={subject} variant="secondary" className="text-base px-4 py-1">{subject}</Badge>
                 ))}
             </div>
@@ -192,7 +192,7 @@ export default function TutorProfilePage() {
                 <div className="md:col-span-2 space-y-6">
                     <section>
                          <h2 className="text-xl font-bold font-headline mb-2">About Me</h2>
-                         <p className="text-muted-foreground whitespace-pre-wrap">{tutor.bio}</p>
+                         <p className="text-muted-foreground whitespace-pre-wrap">{tutor.bio || 'This tutor has not written a bio yet.'}</p>
                     </section>
                      <Separator />
                     <section>
