@@ -18,6 +18,8 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { useState, useEffect } from 'react';
 import RatingDialog from '@/components/session/RatingDialog';
 import { useIsClient } from '@/hooks/use-is-client';
+import { auth, db } from '@/lib/firebase';
+import { collection, query, where, getDocs, onSnapshot, doc } from 'firebase/firestore';
 
 
 type Session = { 
@@ -26,35 +28,11 @@ type Session = {
   tutorName: string;
   tutorAvatar: string;
   subject: string;
-  date: string;
-  duration: number;
+  date: any; // Keep as any to handle Firestore Timestamps
+  duration: number; // in seconds
   cost: number;
   status: 'Completed' | 'Upcoming';
 };
-
-const MOCK_SESSIONS: Session[] = [
-  {
-    id: 'ses_1',
-    tutorName: 'Dr. Arwin',
-    tutorAvatar: 'https://i.ibb.co/kX3Drj2/3d-illustration-person-with-sunglasses-23-2149436188.jpg',
-    subject: 'Physics',
-    date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    duration: 30,
-    cost: 400,
-    status: 'Completed',
-    rating: 5,
-  },
-  {
-    id: 'ses_2',
-    tutorName: 'Alena Y.',
-    tutorAvatar: 'https://i.ibb.co/zVvL48G/3d-illustration-business-woman-holding-clipboard-with-copy-space-107791-16474.jpg',
-    subject: 'Chemistry',
-    date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    duration: 45,
-    cost: 600,
-    status: 'Completed',
-  },
-];
 
 export default function SessionHistoryPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -62,8 +40,15 @@ export default function SessionHistoryPage() {
   const isClient = useIsClient();
 
   useEffect(() => {
-    if(isClient) {
-        setSessions(MOCK_SESSIONS);
+    if(isClient && auth.currentUser) {
+        const q = query(collection(db, "sessions"), where("studentId", "==", auth.currentUser.uid));
+        
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const sessionsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Session));
+            setSessions(sessionsData);
+        });
+
+        return () => unsubscribe();
     }
   }, [isClient]);
 
@@ -75,8 +60,10 @@ export default function SessionHistoryPage() {
     setRatingSession(null);
   };
 
-  const handleRateSession = (sessionId: string, rating: number, feedback: string) => {
-    console.log(`Rating session ${sessionId} with ${rating} stars and feedback: ${feedback}`);
+  const handleRateSession = async (sessionId: string, rating: number, feedback: string) => {
+    const sessionRef = doc(db, 'sessions', sessionId);
+    await doc(sessionRef).set({ rating: rating, feedback: feedback }, { merge: true });
+
     setSessions(prevSessions => 
       prevSessions.map(s => s.id === sessionId ? { ...s, rating: rating } : s)
     );
@@ -112,7 +99,7 @@ export default function SessionHistoryPage() {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {sessions.length === 0 ? (
+                    {isClient && sessions.length === 0 ? (
                         <TableRow>
                             <TableCell colSpan={7} className="text-center text-muted-foreground py-12">
                                 You have no completed sessions.
@@ -133,13 +120,13 @@ export default function SessionHistoryPage() {
                             <TableCell>{session.subject}</TableCell>
                             <TableCell>
                                 <div className="flex flex-col">
-                                    <span>{format(new Date(session.date), 'PPP')}</span>
+                                    <span>{session.date ? format(session.date.toDate(), 'PPP') : 'N/A'}</span>
                                     <span className="text-xs text-muted-foreground">
-                                        {formatDistanceToNow(new Date(session.date), { addSuffix: true })}
+                                        {session.date ? formatDistanceToNow(session.date.toDate(), { addSuffix: true }) : ''}
                                     </span>
                                 </div>
                             </TableCell>
-                            <TableCell>{session.duration} min</TableCell>
+                            <TableCell>{Math.round(session.duration / 60)} min</TableCell>
                             <TableCell>₹{session.cost.toFixed(2)}</TableCell>
                             <TableCell>
                                 <Badge variant={session.status === 'Completed' ? 'default' : 'outline'}>

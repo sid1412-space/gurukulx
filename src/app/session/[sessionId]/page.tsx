@@ -6,7 +6,7 @@ import { useState, useEffect, useRef }from 'react';
 import { Mic, MicOff, PhoneOff, MessageSquare, AlertTriangle, Timer, Wallet, Wand2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, useParams } from 'next/navigation';
 import type { JitsiAPI } from '@jitsi/react-sdk';
 import { useIsClient } from '@/hooks/use-is-client';
 import ChatPanel from '@/components/session/ChatPanel';
@@ -18,7 +18,7 @@ import { getExerciseSuggestions } from '@/lib/actions';
 import { Separator } from '@/components/ui/separator';
 import Lobby from '@/components/session/Lobby';
 import { auth, db } from '@/lib/firebase';
-import { doc, updateDoc, getDoc, onSnapshot } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, onSnapshot, addDoc, collection, serverTimestamp } from 'firebase/firestore';
 
 
 const Whiteboard = dynamic(() => import('@/components/session/Whiteboard'), { ssr: false });
@@ -28,8 +28,11 @@ const JitsiMeetComponent = dynamic(() => import('@/components/session/JitsiMeetC
 export default function SessionPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const params = useParams();
+
   const userRole = searchParams.get('role'); // 'student' or 'tutor'
   const tutorId = searchParams.get('tutorId');
+  const sessionId = params.sessionId;
   const { toast } = useToast();
 
   const [jitsiApi, setJitsiApi] = useState<JitsiAPI | null>(null);
@@ -44,6 +47,7 @@ export default function SessionPage() {
   const [sessionDuration, setSessionDuration] = useState(0); // in seconds
   const [walletBalance, setWalletBalance] = useState(0); 
   const [pricePerMinute, setPricePerMinute] = useState(1);
+  const [tutorData, setTutorData] = useState<any>(null);
 
   const isClient = useIsClient();
 
@@ -51,11 +55,13 @@ export default function SessionPage() {
   useEffect(() => {
     const startSession = async () => {
         if (isClient && hasAgreedToTerms && tutorId) {
-            const tutorRef = doc(db, 'users', tutorId);
+            const tutorRef = doc(db, 'users', tutorId as string);
             const tutorSnap = await getDoc(tutorRef);
             if (tutorSnap.exists()) {
+                const data = tutorSnap.data();
+                setTutorData(data);
                 await updateDoc(tutorRef, { isBusy: true });
-                setPricePerMinute(tutorSnap.data().price || 1);
+                setPricePerMinute(data.price || 1);
             }
         }
     };
@@ -146,8 +152,25 @@ export default function SessionPage() {
 
   const hangUp = async () => {
      if (isClient && tutorId) {
-        const tutorRef = doc(db, 'users', tutorId);
+        const tutorRef = doc(db, 'users', tutorId as string);
         await updateDoc(tutorRef, { isBusy: false });
+        
+        // Save session details
+        if (userRole === 'student' && auth.currentUser && tutorData && sessionDuration > 5) {
+            const cost = (sessionDuration / 60) * pricePerMinute;
+            await addDoc(collection(db, 'sessions'), {
+                studentId: auth.currentUser.uid,
+                tutorId: tutorId,
+                tutorName: tutorData.name,
+                tutorAvatar: tutorData.avatar,
+                subject: (tutorData.applicationDetails?.expertise || ['General']).toString(),
+                date: serverTimestamp(),
+                duration: sessionDuration,
+                cost: cost,
+                status: 'Completed',
+                sessionId: sessionId,
+            });
+        }
     }
     jitsiApi?.executeCommand('hangup');
     const destination = userRole === 'tutor' ? '/tutor/sessions' : '/dashboard/sessions';
