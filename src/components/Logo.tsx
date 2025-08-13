@@ -11,13 +11,13 @@ export default function Logo({ className }: LogoProps) {
   return (
     <Link href="/" className={cn('flex items-center gap-2', className)}>
       <Image 
-        src="https://i.ibb.co/xqvy59YP/Chat-GPT-Image-Aug-12-2025-11-06-21-PM.png"
+        src="https://i.ibb.co/68Zz67G/logo.png"
         alt="GurukulX Logo"
         width={32}
         height={32}
         className="h-8 w-8"
       />
-      <span className="text-xl font-bold text-foreground">The Future of Tutoring</span>
+      <span className="text-xl font-bold text-foreground">GurukulX</span>
     </Link>
   );
 }
