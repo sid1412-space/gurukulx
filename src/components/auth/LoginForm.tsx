@@ -80,11 +80,12 @@ export default function LoginForm() {
     if (userData) {
         localStorage.setItem('isLoggedIn', 'true');
         localStorage.setItem('loggedInUser', userData.email);
-        const isTutor = userData.role === 'tutor' || userData.role === 'banned';
-        localStorage.setItem('isTutor', isTutor.toString());
+        
+        const isTutorOrApplicant = userData.role === 'tutor' || userData.role === 'banned' || userData.role === 'applicant';
+        localStorage.setItem('isTutor', isTutorOrApplicant.toString());
         localStorage.setItem('isAdmin', 'false'); // Explicitly set to false for non-admins
 
-        if (isTutor) {
+        if (isTutorOrApplicant) {
             destination = '/tutor/dashboard';
         }
     } else {
