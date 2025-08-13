@@ -23,7 +23,7 @@ const prompt = ai.definePrompt({
     name: 'suggestExercisesPrompt',
     input: { schema: SuggestExercisesInputSchema },
     output: { schema: SuggestExercisesOutputSchema },
-    prompt: `You are a helpful tutor. A student has asked the following question: "{{question}}".
+    prompt: `You are a helpful tutor. A student has asked the following question: "{{{question}}}".
 
 Based on this question, please suggest 3-5 practice exercises that would help them better understand the topic. The exercises should be relevant to the student's question and cover a range of difficulties.`,
 });
