@@ -51,13 +51,13 @@ export default function BecomeATutorPage() {
         {/* Hero Section */}
         <section className="bg-secondary/30 py-20 sm:py-32">
           <div className="container mx-auto max-w-7xl px-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-              <div className="animate-slide-in-from-bottom">
+            <div className="grid grid-cols-1 items-center">
+              <div className="animate-slide-in-from-bottom text-center">
                 <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl font-headline">
                   Share Your Knowledge. <br />
                   <span className="text-primary">Change a Life.</span>
                 </h1>
-                <p className="mt-6 text-lg text-muted-foreground max-w-lg">
+                <p className="mt-6 text-lg text-muted-foreground max-w-2xl mx-auto">
                   Join GurukulX as a tutor and connect with students who need your expertise. Enjoy the flexibility of teaching online and earn on your own terms.
                 </p>
                 <div className="mt-10">
@@ -65,17 +65,6 @@ export default function BecomeATutorPage() {
                     <Button size="lg">Apply Now</Button>
                   </Link>
                 </div>
-              </div>
-              <div className="relative animate-fade-in flex items-center justify-center">
-                <Image
-                  src="https://placehold.co/400x400.png"
-                  alt="Tutor working on a laptop"
-                  width={400}
-                  height={400}
-                  className="rounded-xl shadow-2xl"
-                  data-ai-hint="person laptop"
-                  priority
-                />
               </div>
             </div>
           </div>
