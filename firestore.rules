@@ -1,78 +1,70 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper Functions
+    // Helper functions
     function isAuth() {
       return request.auth != null;
     }
 
-    function isUserId(userId) {
+    function isUser(userId) {
       return isAuth() && request.auth.uid == userId;
     }
     
-    // Check for role in custom claims, falling back to email for the admin.
-    function isRole(role) {
-        return isAuth() && request.auth.token.role == role;
-    }
-
     function isAdmin() {
-      return isAuth() && request.auth.token.email == 'gurukulxconnect@yahoo.com';
+        return isAuth() && request.auth.token.email == 'gurukulxconnect@yahoo.com';
     }
 
-    // AUTHENTICATED USER CHECKS
-    // These functions combine role checks for cleaner rules.
-    function isOwner(userId) {
-      return isUserId(userId);
-    }
-    
-    function isTutor() {
-        return isRole('tutor');
-    }
-    
-    function isStudent() {
-        return isRole('student');
-    }
-
-    // --- COLLECTION RULES ---
-
-    // Users can be read by anyone authenticated, but only modified by the owner or an admin.
+    // USERS collection
     match /users/{userId} {
-      allow read: if isAuth() || isAdmin();
-      allow update: if isOwner(userId) || isAdmin();
-      allow create: if isAuth(); // On signup
-      allow delete: if isAdmin();
+      // Admins can read/write any user document
+      // Any authenticated user can read any user document (for profiles, listings)
+      // A user can update their own document
+      allow read, write: if isAdmin();
+      allow read: if isAuth();
+      allow update: if isUser(userId);
     }
     
-    // Sessions can be created by students. Read/Update only by participants or admin.
+    // SESSIONS collection
     match /sessions/{sessionId} {
-        allow read, update: if isAdmin() || (isAuth() && (resource.data.studentId == request.auth.uid || resource.data.tutorId == request.auth.uid));
-        allow create: if isStudent() || isAdmin();
+       // Admins can manage all sessions
+       // Users can read/write their own session documents
+       allow read, write: if isAdmin();
+       allow read, create: if isAuth();
+       allow update: if isAuth() && (resource.data.studentId == request.auth.uid || resource.data.tutorId == request.auth.uid);
     }
 
-    // Session requests can be created by students. Read/Update/Delete by the target tutor or admin.
-    match /sessionRequests/{requestId} {
-        allow create: if isStudent() || isAdmin();
-        allow read, update, delete: if isTutor() || isAdmin();
-    }
-
-    // Recharge requests can be created by students. Only admins can read/update them.
+    // RECHARGE REQUESTS collection
     match /rechargeRequests/{rechargeId} {
-        allow create: if isStudent() || isAdmin();
-        allow read, update, delete: if isAdmin();
+        // Admins can manage all recharge requests
+        // Students can create their own recharge requests
+        allow read, write: if isAdmin();
+        allow create: if isAuth();
     }
     
-    // Payout requests can be created by tutors. Only admins can read/delete them.
+    // PAYOUT REQUESTS collection
     match /payoutRequests/{payoutRequestId} {
-        allow create: if isTutor() || isAdmin();
-        allow read, delete: if isAdmin();
+        // Admins can manage all payout requests
+        // Tutors can create their own payout requests
+        allow read, write: if isAdmin();
+        allow create: if isAuth();
     }
     
-    // Payouts can only be read and created by admins.
+    // PAYOUTS collection
     match /payouts/{payoutId} {
-        allow read, create: if isAdmin();
+       // Admins can create and read all payouts
+       // Tutors can read their own payouts
+       allow read, write: if isAdmin();
+       allow read: if isAuth();
+    }
+
+    // SESSION REQUESTS collection
+    match /sessionRequests/{requestId} {
+        // Admins can read all requests
+        // Tutors and Students involved can read/write/delete their requests
+        allow read, write, delete: if isAdmin() || (isAuth() && (resource.data.studentId == request.auth.uid || resource.data.tutorId == request.auth.uid));
+        allow create: if isAuth();
     }
   }
 }
