@@ -107,7 +107,9 @@ export default function TutorManagementPage() {
     await updateDoc(userRef, {
         role: 'tutor',
         applicationStatus: 'Approved',
-        price: +tutorRate
+        price: +tutorRate,
+        isOnline: true,
+        isBusy: false,
     });
 
     toast({
@@ -430,5 +432,3 @@ export default function TutorManagementPage() {
     </div>
   );
 }
-
-    
