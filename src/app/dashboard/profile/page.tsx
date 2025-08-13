@@ -17,6 +17,7 @@ import { useIsClient } from '@/hooks/use-is-client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { onAuthStateChanged, User } from 'firebase/auth';
 
 
 const profileSchema = z.object({
@@ -31,8 +32,8 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
-  const isClient = useIsClient();
   const [user, setUser] = useState<any>(null);
+  const [authUser, setAuthUser] = useState<User | null>(null);
   const [avatarPreview, setAvatarPreview] = useState('https://placehold.co/128x128.png');
 
 
@@ -41,9 +42,20 @@ export default function ProfilePage() {
   });
 
   useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setAuthUser(user);
+      } else {
+        setLoading(false);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
     const fetchUserData = async () => {
-        if (isClient && auth.currentUser) {
-            const userRef = doc(db, 'users', auth.currentUser.uid);
+        if (authUser) {
+            const userRef = doc(db, 'users', authUser.uid);
             const docSnap = await getDoc(userRef);
             if (docSnap.exists()) {
                 const userData = docSnap.data();
@@ -60,7 +72,7 @@ export default function ProfilePage() {
         }
     };
     fetchUserData();
-  }, [isClient, form]);
+  }, [authUser, form]);
 
   
   const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
