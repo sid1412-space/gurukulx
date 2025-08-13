@@ -3,18 +3,47 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow authenticated users to read and write to any document.
-    // This is suitable for development but should be refined for production.
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+  
+    // Helper function to check for admin role by email
+    function isAdmin() {
+      return request.auth.token.email == 'gurukulxconnect@yahoo.com';
     }
 
-    // Make tutor profiles public so anyone can see them.
-    // This rule allows anyone to read documents in the 'users' collection
-    // if the document has the role of 'tutor'.
+    // Users can only read/write their own document
     match /users/{userId} {
-      allow read: if resource.data.role == 'tutor' || (request.auth != null && request.auth.uid == userId);
-      allow write: if request.auth != null && request.auth.uid == userId;
+      // Anyone can read a tutor's public profile details
+      allow get: if true;
+      // Users can create their own account
+      allow create: if request.auth.uid == userId;
+      // Users can only update their own document, but not change their role (unless admin)
+      allow update: if request.auth.uid == userId || isAdmin();
+      // Only admins can delete users
+      allow delete: if isAdmin();
+      // Admins can read the full list
+      allow list: if isAdmin();
     }
+    
+    // Recharge requests can be created by the user, and read/updated by admin
+    match /rechargeRequests/{rechargeId} {
+      allow read, update, delete: if isAdmin();
+      allow create: if request.auth.uid == request.resource.data.studentId;
+      allow list: if isAdmin();
+    }
+    
+    // Payout requests can be created by the tutor, and read/updated by admin
+    match /payoutRequests/{payoutId} {
+       allow read, update, delete: if isAdmin();
+       allow create: if request.auth.uid == request.resource.data.tutorId;
+       allow list: if isAdmin();
+    }
+    
+    // Session requests can be created by students, and handled by the relevant tutor or admin
+    match /sessionRequests/{requestId} {
+      allow read, create, update, delete: if request.auth.uid == resource.data.studentId 
+                                        || request.auth.uid == resource.data.tutorId 
+                                        || isAdmin();
+      allow list: if isAdmin() || request.auth.uid == request.query.get('tutorId');
+    }
+
   }
 }
