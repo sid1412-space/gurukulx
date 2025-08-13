@@ -60,6 +60,11 @@ export default function SessionPage() {
             const tutorRef = doc(db, 'users', tutorId as string);
             const studentRef = doc(db, 'users', auth.currentUser.uid);
             
+            // Set tutor to busy immediately
+            if (userRole === 'tutor') {
+                await updateDoc(tutorRef, { isBusy: true });
+            }
+
             const [tutorSnap, studentSnap] = await Promise.all([
                 getDoc(tutorRef),
                 getDoc(studentRef)
@@ -68,7 +73,6 @@ export default function SessionPage() {
             if (tutorSnap.exists()) {
                 const data = tutorSnap.data();
                 setTutorData(data);
-                // Tutor status is set to busy when they accept the request
                 setPricePerMinute(data.price || 1);
             }
 
@@ -78,7 +82,7 @@ export default function SessionPage() {
         }
     };
     startSession();
-  }, [hasAgreedToTerms, isClient, tutorId]);
+  }, [hasAgreedToTerms, isClient, tutorId, userRole]);
 
   // Wallet and student data listener
    useEffect(() => {
@@ -350,3 +354,5 @@ export default function SessionPage() {
     </div>
   );
 }
+
+    

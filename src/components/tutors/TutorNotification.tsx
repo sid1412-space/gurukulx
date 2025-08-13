@@ -28,42 +28,24 @@ export default function TutorNotification() {
   const [activeRequest, setActiveRequest] = useState<SessionRequest | null>(null);
 
   useEffect(() => {
-    if (!isClient) return;
+    if (!isClient || !auth.currentUser) return;
   
-    let unsubscribe: Unsubscribe | undefined;
-  
-    const authStateChanged = auth.onAuthStateChanged(user => {
-      // If there's an existing listener, unsubscribe from it first.
-      if (unsubscribe) {
-        unsubscribe();
+    const requestsQuery = query(
+        collection(db, 'sessionRequests'),
+        where('tutorId', '==', auth.currentUser.uid),
+        where('status', '==', 'pending')
+    );
+
+    const unsubscribe = onSnapshot(requestsQuery, (snapshot) => {
+        if (!snapshot.empty) {
+        const requestDoc = snapshot.docs[0];
+        setActiveRequest({ id: requestDoc.id, ...requestDoc.data() } as SessionRequest);
+        } else {
         setActiveRequest(null);
-      }
-  
-      if (user) {
-        const requestsQuery = query(
-          collection(db, 'sessionRequests'),
-          where('tutorId', '==', user.uid),
-          where('status', '==', 'pending')
-        );
-  
-        unsubscribe = onSnapshot(requestsQuery, (snapshot) => {
-          if (!snapshot.empty) {
-            const requestDoc = snapshot.docs[0];
-            setActiveRequest({ id: requestDoc.id, ...requestDoc.data() } as SessionRequest);
-          } else {
-            setActiveRequest(null);
-          }
-        });
-      }
+        }
     });
-  
-    // Cleanup function to unsubscribe from both listeners when the component unmounts.
-    return () => {
-      authStateChanged();
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
+
+    return () => unsubscribe();
   }, [isClient, router]);
 
 
@@ -75,11 +57,11 @@ export default function TutorNotification() {
     const tutorRef = doc(db, 'users', auth.currentUser.uid);
     
     try {
+        await updateDoc(tutorRef, { isBusy: true });
         await updateDoc(requestRef, {
             status: 'accepted',
             sessionId: sessionId,
         });
-        await updateDoc(tutorRef, { isBusy: true });
         
         setActiveRequest(null);
         router.push(`/session/${sessionId}?tutorId=${activeRequest.tutorId}&role=tutor`);
@@ -146,3 +128,5 @@ export default function TutorNotification() {
     </Card>
   );
 }
+
+    

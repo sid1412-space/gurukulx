@@ -78,16 +78,27 @@ export default function TutorCard({ tutor }: TutorCardProps) {
                 if (timeoutRef.current) clearTimeout(timeoutRef.current);
                 setIsWaiting(false);
                 router.push(`/session/${requestData.sessionId}?tutorId=${tutor.id}&role=student`);
+            } else if (requestData.status === 'rejected') {
+                 if (timeoutRef.current) clearTimeout(timeoutRef.current);
+                setIsWaiting(false);
+                setSessionRequestId(null);
+                toast({
+                    variant: 'destructive',
+                    title: 'Session Rejected',
+                    description: `${tutor?.name} is unable to take your session right now.`,
+                });
             }
-        } else { // Document was deleted (rejected)
-            if (timeoutRef.current) clearTimeout(timeoutRef.current);
-            setIsWaiting(false);
-            setSessionRequestId(null);
-            toast({
-                variant: 'destructive',
-                title: 'Session Rejected',
-                description: `${tutor.name} is unable to take your session right now.`,
-            });
+        } else { // Document was deleted (also a rejection)
+             if (timeoutRef.current) clearTimeout(timeoutRef.current);
+             if (isWaiting) { // Only show toast if we were actively waiting
+                setIsWaiting(false);
+                setSessionRequestId(null);
+                toast({
+                    variant: 'destructive',
+                    title: 'Session Rejected',
+                    description: `${tutor?.name} is unable to take the session right now.`,
+                });
+            }
         }
     });
 
@@ -96,23 +107,13 @@ export default function TutorCard({ tutor }: TutorCardProps) {
         handleCancelRequest(true);
     }, 120000); // 2 minutes
 
-    // This is the cleanup function that runs when the component unmounts
     return () => {
         unsubscribe();
         if (timeoutRef.current) {
             clearTimeout(timeoutRef.current);
         }
-        // If the component unmounts while waiting, cancel the request
-        if (sessionRequestId) {
-           const requestRef = doc(db, 'sessionRequests', sessionRequestId);
-           getDoc(requestRef).then(doc => {
-               if (doc.exists()) {
-                   deleteDoc(requestRef);
-               }
-           });
-        }
     };
-  }, [sessionRequestId, router, tutor.id, tutor.name, toast]);
+  }, [sessionRequestId, router, tutor.id, tutor.name, toast, isWaiting]);
 
   const handleRequestSession = async () => {
     if (!auth.currentUser) {
@@ -139,7 +140,6 @@ export default function TutorCard({ tutor }: TutorCardProps) {
   const handleCancelRequest = async (isTimeout = false) => {
     if(sessionRequestId) {
         const requestRef = doc(db, 'sessionRequests', sessionRequestId);
-        // Check if doc exists before deleting to avoid errors if already deleted
         const docSnap = await getDoc(requestRef);
         if (docSnap.exists()) {
             await deleteDoc(requestRef);
@@ -184,7 +184,7 @@ export default function TutorCard({ tutor }: TutorCardProps) {
             </div>
              {isClient && (
                 <div className="flex items-center gap-2 mt-2 text-xs">
-                    <span className={cn("h-2.5 w-2.5 rounded-full animate-pulse", statusColor)}></span>
+                    <span className={cn("h-2.5 w-2.5 rounded-full", statusColor, tutor.isOnline && !tutor.isBusy && "animate-pulse")}></span>
                     <span>{statusText}</span>
                 </div>
             )}
@@ -244,3 +244,5 @@ export default function TutorCard({ tutor }: TutorCardProps) {
     </Card>
   );
 }
+
+    
