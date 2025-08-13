@@ -18,7 +18,7 @@ import { getExerciseSuggestions } from '@/lib/actions';
 import { Separator } from '@/components/ui/separator';
 import Lobby from '@/components/session/Lobby';
 import { auth, db } from '@/lib/firebase';
-import { doc, updateDoc, getDoc, onSnapshot, addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, onSnapshot, addDoc, collection, serverTimestamp, increment } from 'firebase/firestore';
 
 
 const Whiteboard = dynamic(() => import('@/components/session/Whiteboard'), { ssr: false });
@@ -60,9 +60,6 @@ export default function SessionPage() {
             const tutorRef = doc(db, 'users', tutorId as string);
             const studentRef = doc(db, 'users', auth.currentUser.uid);
             
-            // Set tutor to busy immediately
-            await updateDoc(tutorRef, { isBusy: true });
-
             const [tutorSnap, studentSnap] = await Promise.all([
                 getDoc(tutorRef),
                 getDoc(studentRef)
@@ -93,7 +90,7 @@ export default function SessionPage() {
             });
             return () => unsubscribe();
         }
-    }, [isClient, userRole]);
+    }, [isClient, userRole, auth.currentUser]);
 
   // Timer and wallet deduction logic
   useEffect(() => {
@@ -124,7 +121,6 @@ export default function SessionPage() {
             } else {
               const studentRef = doc(db, 'users', auth.currentUser.uid);
               await updateDoc(studentRef, { walletBalance: newBalance });
-              // Tutor earnings can be updated here or via a server function for more robustness
               toast({
                   title: 'Charge Applied',
                   description: `₹${pricePerMinute.toFixed(2)} deducted. New balance: ₹${newBalance.toFixed(2)}`,
@@ -169,9 +165,11 @@ export default function SessionPage() {
         const tutorRef = doc(db, 'users', tutorId as string);
         await updateDoc(tutorRef, { isBusy: false });
         
-        // Save session details
+        // Save session details and update tutor earnings
         if (userRole === 'student' && auth.currentUser && tutorData && studentData && sessionDuration > 5) {
             const cost = (sessionDuration / 60) * pricePerMinute;
+            const tutorEarnings = cost * 0.85; // Tutor gets 85%
+
             await addDoc(collection(db, 'sessions'), {
                 studentId: auth.currentUser.uid,
                 studentName: studentData.name,
@@ -179,12 +177,19 @@ export default function SessionPage() {
                 tutorId: tutorId,
                 tutorName: tutorData.name,
                 tutorAvatar: tutorData.avatar,
-                subject: (tutorData.applicationDetails?.expertise || ['General']).toString(),
+                subject: (tutorData.applicationDetails?.expertise || 'General').toString(),
                 date: serverTimestamp(),
                 duration: sessionDuration,
                 cost: cost,
                 status: 'Completed',
                 sessionId: sessionId,
+            });
+
+             // Update tutor's earnings
+            await updateDoc(tutorRef, {
+                pendingEarnings: increment(tutorEarnings),
+                todayEarnings: increment(tutorEarnings),
+                todaySessions: increment(1)
             });
         }
     }
@@ -352,5 +357,7 @@ export default function SessionPage() {
     </div>
   );
 }
+
+    
 
     
