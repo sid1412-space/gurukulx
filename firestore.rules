@@ -4,70 +4,52 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
   
-    // Helper function to check if a user is the admin
+    // Helper functions
     function isAdmin() {
       return request.auth.token.email == 'gurukulxconnect@yahoo.com';
     }
     
-    // Helper function to check if a user is authenticated
-    function isAuthenticated() {
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function isSignedIn() {
       return request.auth != null;
     }
 
-    // Users collection
-    match /users/{userId} {
-      // Allow anyone to read user profiles (for tutor listings)
-      allow read: if isAuthenticated();
-      // Allow users to create their own profile, or admins to create any
-      allow create: if request.auth.uid == userId || isAdmin();
-      // Allow users to update their own profile, or admins to update any
-      allow update: if request.auth.uid == userId || isAdmin();
-      // Allow admins to delete users
-      allow delete: if isAdmin();
-    }
-    
-    // Sessions collection
-    match /sessions/{sessionId} {
-        // Only the student, tutor, or an admin can read a session
-        allow read: if isAuthenticated() && (resource.data.studentId == request.auth.uid || resource.data.tutorId == request.auth.uid || isAdmin());
-        // Students can create sessions
-        allow create: if isAuthenticated();
-        // Allow updating a session (e.g. for ratings) by the student, tutor or admin
-        allow update: if isAuthenticated() && (resource.data.studentId == request.auth.uid || resource.data.tutorId == request.auth.uid || isAdmin());
-        // Only admins can delete sessions
-        allow delete: if isAdmin();
-    }
-    
-    // Session Requests (temporary documents)
-    match /sessionRequests/{requestId} {
-        // Any authenticated user can read (tutor needs to see it)
-        allow read: if isAuthenticated();
-        // Students can create requests
-        allow create: if isAuthenticated();
-        // Only the tutor involved or an admin can update (accept/reject)
-        allow update: if isAuthenticated() && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'tutor' || isAdmin());
-        // The tutor or admin can delete (reject)
-        allow delete: if isAuthenticated() && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'tutor' || isAdmin());
+    match /{document=**} {
+      allow read, write: if isAdmin();
     }
 
-    // Recharge Requests
-    match /rechargeRequests/{rechargeId} {
-        // Students can read their own, admins can read all
-        allow read: if (isAuthenticated() && resource.data.studentId == request.auth.uid) || isAdmin();
-        // Students can create their own
-        allow create: if isAuthenticated() && request.resource.data.studentId == request.auth.uid;
-        // Only admins can update (approve/reject)
-        allow update, delete: if isAdmin();
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId) || isAdmin();
     }
     
-    // Payout Requests
-     match /payoutRequests/{payoutId} {
-        // Tutors can read their own, admins can read all
-        allow read: if (isAuthenticated() && resource.data.tutorId == request.auth.uid) || isAdmin();
-        // Tutors can create their own
-        allow create: if isAuthenticated() && request.resource.data.tutorId == request.auth.uid;
-        // Only admins can update (approve/reject)
-        allow update, delete: if isAdmin();
+    match /sessions/{sessionId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn(); // For ratings
+    }
+
+    match /sessionRequests/{requestId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn(); 
+    }
+    
+    match /rechargeRequests/{requestId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin();
+    }
+
+    match /payoutRequests/{requestId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin();
     }
   }
 }
