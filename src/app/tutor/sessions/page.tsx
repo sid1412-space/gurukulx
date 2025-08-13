@@ -18,6 +18,8 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { useState, useEffect } from 'react';
 import RatingDialog from '@/components/session/RatingDialog';
 import { useIsClient } from '@/hooks/use-is-client';
+import { auth, db } from '@/lib/firebase';
+import { collection, query, where, getDocs, onSnapshot, doc } from 'firebase/firestore';
 
 
 type Session = { 
@@ -26,35 +28,12 @@ type Session = {
   studentName: string;
   studentAvatar: string;
   subject: string;
-  date: string;
-  duration: number;
+  date: any;
+  duration: number; // in seconds
   cost: number;
   status: 'Completed' | 'Upcoming';
 };
 
-const MOCK_SESSIONS: Session[] = [
-    {
-        id: 'ses_1',
-        studentName: 'Rohan S.',
-        studentAvatar: 'https://i.ibb.co/6PDeR78/3d-illustration-person-23-2149436182.jpg',
-        subject: 'Physics',
-        date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        duration: 30,
-        cost: 400,
-        status: 'Completed',
-        rating: 5,
-    },
-    {
-        id: 'ses_3',
-        studentName: 'Priya K.',
-        studentAvatar: 'https://i.ibb.co/yqgC1D4/3d-illustration-person-with-glasses-23-2149436185.jpg',
-        subject: 'Physics',
-        date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-        duration: 60,
-        cost: 800,
-        status: 'Completed'
-    },
-];
 
 export default function TutorSessionHistoryPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -62,9 +41,15 @@ export default function TutorSessionHistoryPage() {
   const isClient = useIsClient();
 
   useEffect(() => {
-    if(isClient) {
-        // This would be a firestore query in a real app
-        setSessions(MOCK_SESSIONS);
+    if(isClient && auth.currentUser) {
+        const q = query(collection(db, "sessions"), where("tutorId", "==", auth.currentUser.uid));
+        
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const sessionsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Session));
+            setSessions(sessionsData);
+        });
+
+        return () => unsubscribe();
     }
   }, [isClient]);
 
@@ -76,8 +61,10 @@ export default function TutorSessionHistoryPage() {
     setRatingSession(null);
   };
 
-  const handleRateSession = (sessionId: string, rating: number, feedback: string) => {
-    console.log(`Rating session ${sessionId} with ${rating} stars and feedback: ${feedback}`);
+  const handleRateSession = async (sessionId: string, rating: number, feedback: string) => {
+    // In a real app, you might want tutors to rate students too.
+    // For now, this just updates the local state for demonstration.
+    console.log(`Tutor rated session ${sessionId} with ${rating} stars and feedback: ${feedback}`);
      setSessions(prevSessions => 
       prevSessions.map(s => s.id === sessionId ? { ...s, rating: rating } : s)
     );
@@ -112,7 +99,7 @@ export default function TutorSessionHistoryPage() {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {sessions.length === 0 ? (
+                    {isClient && sessions.length === 0 ? (
                         <TableRow>
                             <TableCell colSpan={6} className="text-center text-muted-foreground py-12">
                                 You have no completed sessions.
@@ -125,7 +112,7 @@ export default function TutorSessionHistoryPage() {
                                 <div className="flex items-center gap-3">
                                     <Avatar className="h-10 w-10">
                                         <AvatarImage src={session.studentAvatar} alt="Student Avatar" data-ai-hint="person avatar"/>
-                                        <AvatarFallback>S</AvatarFallback>
+                                        <AvatarFallback>{session.studentName ? session.studentName.charAt(0) : 'S'}</AvatarFallback>
                                     </Avatar>
                                     <span className="font-medium">{session.studentName}</span>
                                 </div>
@@ -133,13 +120,13 @@ export default function TutorSessionHistoryPage() {
                             <TableCell>{session.subject}</TableCell>
                             <TableCell>
                                 <div className="flex flex-col">
-                                    <span>{format(new Date(session.date), 'PPP')}</span>
+                                    <span>{session.date ? format(session.date.toDate(), 'PPP') : 'N/A'}</span>
                                     <span className="text-xs text-muted-foreground">
-                                        {formatDistanceToNow(new Date(session.date), { addSuffix: true })}
+                                        {session.date ? formatDistanceToNow(session.date.toDate(), { addSuffix: true }) : ''}
                                     </span>
                                 </div>
                             </TableCell>
-                            <TableCell>{session.duration} min</TableCell>
+                            <TableCell>{Math.round(session.duration / 60)} min</TableCell>
                             <TableCell className="font-semibold text-green-600">₹{(session.cost * 0.85).toFixed(2)}</TableCell>
                             <TableCell className="text-right space-x-1">
                                <Button variant="ghost" size="sm">
@@ -177,3 +164,5 @@ export default function TutorSessionHistoryPage() {
     </div>
   );
 }
+
+    

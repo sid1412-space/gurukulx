@@ -48,20 +48,32 @@ export default function SessionPage() {
   const [walletBalance, setWalletBalance] = useState(0); 
   const [pricePerMinute, setPricePerMinute] = useState(1);
   const [tutorData, setTutorData] = useState<any>(null);
+  const [studentData, setStudentData] = useState<any>(null);
+
 
   const isClient = useIsClient();
 
    // Set tutor as busy when session starts and fetch tutor data
   useEffect(() => {
     const startSession = async () => {
-        if (isClient && hasAgreedToTerms && tutorId) {
+        if (isClient && hasAgreedToTerms && tutorId && auth.currentUser) {
             const tutorRef = doc(db, 'users', tutorId as string);
-            const tutorSnap = await getDoc(tutorRef);
+            const studentRef = doc(db, 'users', auth.currentUser.uid);
+            
+            const [tutorSnap, studentSnap] = await Promise.all([
+                getDoc(tutorRef),
+                getDoc(studentRef)
+            ]);
+           
             if (tutorSnap.exists()) {
                 const data = tutorSnap.data();
                 setTutorData(data);
                 await updateDoc(tutorRef, { isBusy: true });
                 setPricePerMinute(data.price || 1);
+            }
+
+            if (studentSnap.exists()) {
+                setStudentData(studentSnap.data());
             }
         }
     };
@@ -156,10 +168,12 @@ export default function SessionPage() {
         await updateDoc(tutorRef, { isBusy: false });
         
         // Save session details
-        if (userRole === 'student' && auth.currentUser && tutorData && sessionDuration > 5) {
+        if (userRole === 'student' && auth.currentUser && tutorData && studentData && sessionDuration > 5) {
             const cost = (sessionDuration / 60) * pricePerMinute;
             await addDoc(collection(db, 'sessions'), {
                 studentId: auth.currentUser.uid,
+                studentName: studentData.name,
+                studentAvatar: studentData.avatar,
                 tutorId: tutorId,
                 tutorName: tutorData.name,
                 tutorAvatar: tutorData.avatar,
@@ -336,3 +350,5 @@ export default function SessionPage() {
     </div>
   );
 }
+
+    
