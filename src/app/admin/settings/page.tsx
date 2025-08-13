@@ -29,7 +29,7 @@ export default function AdminSettingsPage() {
 
   const securityForm = useForm<z.infer<typeof securitySchema>>({
     resolver: zodResolver(securitySchema),
-    defaultValues: { adminEmail: 'quotesparkconnect@yahoo.com' },
+    defaultValues: { adminEmail: 'gurukulxconnect@yahoo.com' },
   });
 
   const paymentForm = useForm<z.infer<typeof paymentSchema>>({

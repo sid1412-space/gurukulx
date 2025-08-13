@@ -44,8 +44,7 @@ export default function AdminLayout({
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
-          const idTokenResult = await user.getIdTokenResult();
-          const isAdmin = idTokenResult.claims.admin === true;
+          const isAdmin = user.email === 'gurukulxconnect@yahoo.com';
           
           if (isAdmin) {
             setIsAuthorized(true);
