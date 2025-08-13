@@ -96,11 +96,23 @@ export default function TutorCard({ tutor }: TutorCardProps) {
         handleCancelRequest(true);
     }, 120000); // 2 minutes
 
+    // This is the cleanup function that runs when the component unmounts
     return () => {
         unsubscribe();
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+        }
+        // If the component unmounts while waiting, cancel the request
+        if (sessionRequestId) {
+           const requestRef = doc(db, 'sessionRequests', sessionRequestId);
+           getDoc(requestRef).then(doc => {
+               if (doc.exists()) {
+                   deleteDoc(requestRef);
+               }
+           });
+        }
     };
-  }, [isWaiting, sessionRequestId, router, tutor.id, tutor.name, toast]);
+  }, [sessionRequestId, router, tutor.id, tutor.name, toast]);
 
   const handleRequestSession = async () => {
     if (!auth.currentUser) {
@@ -126,8 +138,14 @@ export default function TutorCard({ tutor }: TutorCardProps) {
   
   const handleCancelRequest = async (isTimeout = false) => {
     if(sessionRequestId) {
-        await deleteDoc(doc(db, 'sessionRequests', sessionRequestId));
+        const requestRef = doc(db, 'sessionRequests', sessionRequestId);
+        // Check if doc exists before deleting to avoid errors if already deleted
+        const docSnap = await getDoc(requestRef);
+        if (docSnap.exists()) {
+            await deleteDoc(requestRef);
+        }
     }
+
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setIsWaiting(false);
     setSessionRequestId(null);
@@ -141,11 +159,11 @@ export default function TutorCard({ tutor }: TutorCardProps) {
     }
   }
 
+  const primarySubject = tutor.applicationDetails?.expertise;
   const statusText = tutor.isBusy ? 'In Session' : (tutor.isOnline ? 'Online' : 'Offline');
   const statusColor = tutor.isBusy ? 'bg-yellow-500' : (tutor.isOnline ? 'bg-green-500' : 'bg-gray-400');
   const hasFunds = walletBalance > 0;
-  const primarySubject = tutor.applicationDetails?.expertise;
-
+  
   return (
     <Card className="h-full flex flex-col hover:shadow-lg transition-shadow duration-300">
       <CardHeader>
