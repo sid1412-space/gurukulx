@@ -21,7 +21,12 @@ export default function DashboardPage() {
     // Effect for fetching static tutor data
     useEffect(() => {
         const fetchTutors = async () => {
-            const tutorsQuery = query(collection(db, "users"), where("role", "==", "tutor"));
+            const tutorsQuery = query(
+              collection(db, "users"), 
+              where("role", "==", "tutor"),
+              where("isOnline", "==", true),
+              where("isBusy", "==", false)
+            );
             const tutorsSnapshot = await getDocs(tutorsQuery);
             const tutorsData = tutorsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setAllTutors(tutorsData);
@@ -51,7 +56,7 @@ export default function DashboardPage() {
 
     const recommendedTutors = useMemo(() => {
         if (!allTutors.length) return [];
-        return allTutors.filter(tutor => tutor.isOnline && !tutor.isBusy).slice(0, 3);
+        return allTutors.slice(0, 3);
     }, [allTutors]);
 
 
