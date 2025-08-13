@@ -3,47 +3,77 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Helper function to check for admin role by email
+
+    // Helper functions
+    function isAuth() {
+      return request.auth != null;
+    }
+    function isUser(userId) {
+      return isAuth() && request.auth.uid == userId;
+    }
     function isAdmin() {
-      return request.auth.token.email == 'gurukulxconnect@yahoo.com';
+        // This email is the designated admin for the platform.
+        return isAuth() && request.auth.token.email == 'gurukulxconnect@yahoo.com';
     }
 
-    // Users can only read/write their own document
+    // Default deny all access to prevent unauthorized actions.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Admins have unrestricted read and write access to all data.
+    match /{document=**} {
+        allow read, write: if isAdmin();
+    }
+
+    // Users Collection Rules
     match /users/{userId} {
-      // Anyone can read a tutor's public profile details
-      allow get: if true;
-      // Users can create their own account
-      allow create: if request.auth.uid == userId;
-      // Users can only update their own document, but not change their role (unless admin)
-      allow update: if request.auth.uid == userId || isAdmin();
-      // Only admins can delete users
+      // Any authenticated user can read tutor profiles. Students can't read other student profiles.
+      allow get: if isAuth() && (resource.data.role == 'tutor' || isUser(userId));
+
+      // Any authenticated user can query/list the tutors.
+      allow list: if isAuth();
+
+      // Any authenticated user can create their own user document upon sign-up.
+      allow create: if isAuth();
+
+      // A user can only update their own profile.
+      allow update: if isUser(userId) || isAdmin();
+
+      // Only an admin can delete a user account.
       allow delete: if isAdmin();
-      // Admins can read the full list
-      allow list: if isAdmin();
-    }
-    
-    // Recharge requests can be created by the user, and read/updated by admin
-    match /rechargeRequests/{rechargeId} {
-      allow read, update, delete: if isAdmin();
-      allow create: if request.auth.uid == request.resource.data.studentId;
-      allow list: if isAdmin();
-    }
-    
-    // Payout requests can be created by the tutor, and read/updated by admin
-    match /payoutRequests/{payoutId} {
-       allow read, update, delete: if isAdmin();
-       allow create: if request.auth.uid == request.resource.data.tutorId;
-       allow list: if isAdmin();
-    }
-    
-    // Session requests can be created by students, and handled by the relevant tutor or admin
-    match /sessionRequests/{requestId} {
-      allow read, create, update, delete: if request.auth.uid == resource.data.studentId 
-                                        || request.auth.uid == resource.data.tutorId 
-                                        || isAdmin();
-      allow list: if isAdmin() || request.auth.uid == request.query.get('tutorId');
     }
 
+    // Session Requests Collection Rules
+    match /sessionRequests/{requestId} {
+        // Students can create requests for a session.
+        allow create: if isAuth() && request.resource.data.studentId == request.auth.uid;
+
+        // The specific tutor or student involved can read the request.
+        allow read: if isAuth() && (resource.data.tutorId == request.auth.uid || resource.data.studentId == request.auth.uid);
+
+        // The tutor can update (accept/reject), and the student can delete (cancel).
+        allow update, delete: if isAuth() && (resource.data.tutorId == request.auth.uid || resource.data.studentId == request.auth.uid);
+    }
+
+    // Financial Collections Rules (Recharge, Payouts)
+    match /rechargeRequests/{requestId} {
+        // Students can create recharge requests.
+        allow create: if isAuth();
+        // Only admins can view and process them.
+        allow read, update: if isAdmin();
+    }
+
+     match /payoutRequests/{requestId} {
+        // Tutors can create payout requests.
+        allow create: if isAuth();
+        // Only admins can view and process them.
+        allow read, update: if isAdmin();
+    }
+    
+    match /payouts/{payoutId} {
+        // A tutor can only read their own payout history.
+        allow read: if isAuth() && resource.data.tutorId == request.auth.uid;
+    }
   }
 }
