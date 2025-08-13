@@ -20,7 +20,7 @@ export default function DashboardPage() {
 
     useEffect(() => {
         const fetchData = async () => {
-            if (isClient) {
+            if (isClient && auth.currentUser) {
                 // Fetch tutors
                 const tutorsQuery = query(collection(db, "users"), where("role", "==", "tutor"));
                 const tutorsSnapshot = await getDocs(tutorsQuery);
@@ -28,14 +28,12 @@ export default function DashboardPage() {
                 setAllTutors(tutorsData);
 
                 // Fetch current student's data
-                if (auth.currentUser) {
-                    const studentRef = doc(db, 'users', auth.currentUser.uid);
-                    const studentSnap = await getDoc(studentRef);
-                    if (studentSnap.exists()) {
-                        const studentData = studentSnap.data();
-                        setStudentName(studentData.name || 'User');
-                        setWalletBalance(studentData.walletBalance || 0);
-                    }
+                const studentRef = doc(db, 'users', auth.currentUser.uid);
+                const studentSnap = await getDoc(studentRef);
+                if (studentSnap.exists()) {
+                    const studentData = studentSnap.data();
+                    setStudentName(studentData.name || 'User');
+                    setWalletBalance(studentData.walletBalance || 0);
                 }
             }
         };
@@ -118,5 +116,5 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
     </div>
-  );
+    );
 }
