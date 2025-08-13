@@ -4,71 +4,62 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
+    // Helper function for admin check
     function isAdmin() {
-      // Check for the specific admin email. This is less secure than custom claims but works for this context.
+      // In a real app, use custom claims: request.auth.token.admin == true
       return request.auth != null && request.auth.token.email == 'gurukulxconnect@yahoo.com';
     }
-
+    
+    // Helper function to check ownership
     function isOwner(userId) {
-      return request.auth != null && request.auth.uid == userId;
-    }
-    
-    function isTutor() {
-      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'tutor';
-    }
-    
-    function isStudent() {
-      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'student';
+      return request.auth.uid == userId;
     }
 
-    // Admins can do anything.
-    match /{document=**} {
-      allow read, write: if isAdmin();
-    }
-    
-    // USERS collection rules
     match /users/{userId} {
-      // Anyone can query the user list to find tutors. This is safe because other rules prevent access to sensitive fields.
-      allow list, read: if request.auth != null;
+      // ANY authenticated user can READ any user profile.
+      // This is needed so students can see tutor profiles and vice-versa.
+      // Sensitive data should not be in the main user document if it needs to be private,
+      // or should be protected by more specific rules in subcollections.
+      allow read: if request.auth != null;
       
-      // Users can create their own account.
-      allow create: if request.auth != null;
-
-      // Users can only update or delete their own profile.
-      allow update, delete: if isOwner(userId);
-    }
-
-    // RECHARGE REQUESTS collection rules
-    match /rechargeRequests/{requestId} {
-      allow create: if isStudent();
-      // Admin only for read/update
-      allow read, update: if isAdmin();
-    }
-
-    // PAYOUT REQUESTS collection rules
-    match /payoutRequests/{requestId} {
-      allow create: if isTutor();
-      // Admin only for read/update
-      allow read, update: if isAdmin();
+      // Users can only WRITE to their own document.
+      allow write: if isOwner(userId) || isAdmin();
     }
     
-    // PAYOUTS collection rules
-     match /payouts/{payoutId} {
-      // Tutors can read their own payout history
-      allow read: if isTutor() && isOwner(resource.data.tutorId);
-       // Admin only for write
-      allow write: if isAdmin();
-    }
-
-    // SESSION REQUESTS collection rules
     match /sessionRequests/{requestId} {
-      // Students create requests
-      allow create: if isStudent(); 
-      // Students can read/delete their own requests
-      allow read, delete: if isOwner(request.resource.data.studentId);
-      // Tutors can read/update the requests sent to them
-      allow read, update: if isOwner(request.resource.data.tutorId); 
+      // Tutors can read requests made to them
+      allow read: if request.auth.uid == resource.data.tutorId;
+      // Students can read requests they made
+      allow read: if request.auth.uid == resource.data.studentId;
+      
+      // Students can create requests
+      allow create: if request.auth.uid == request.resource.data.studentId;
+
+      // Tutors can update requests (accept/reject)
+      allow update: if request.auth.uid == resource.data.tutorId;
+      
+      // Students or Tutors can delete (cancel) requests
+      allow delete: if request.auth.uid == resource.data.studentId || request.auth.uid == resource.data.tutorId;
     }
+    
+     match /rechargeRequests/{rechargeId} {
+        // Admins can read/update all requests
+        allow read, update: if isAdmin();
+        // Students can create their own recharge requests
+        allow create: if request.auth.uid == request.resource.data.studentId;
+     }
+
+     match /payoutRequests/{payoutId} {
+        // Admins can read/update all requests
+        allow read, update: if isAdmin();
+        // Tutors can create their own payout requests
+        allow create: if request.auth.uid == request.resource.data.tutorId;
+     }
+     
+      match /payouts/{payoutId} {
+        // Tutors can read their own payout history
+        allow read: if request.auth.uid == resource.data.tutorId;
+     }
+
   }
 }
