@@ -9,7 +9,7 @@ import { useIsClient } from '@/hooks/use-is-client';
 import { useEffect, useState, useMemo } from 'react';
 import TutorCard from '@/components/tutors/TutorCard';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, collection, query, where, getDocs, onSnapshot, Unsubscribe } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 
 
 export default function DashboardPage() {
@@ -21,31 +21,27 @@ export default function DashboardPage() {
     useEffect(() => {
       if (!isClient) return;
 
-      let unsubscribe: Unsubscribe | undefined;
-
-      const fetchData = async () => {
-        // Fetch tutors
+      const fetchTutors = async () => {
         const tutorsQuery = query(collection(db, "users"), where("role", "==", "tutor"));
         const tutorsSnapshot = await getDocs(tutorsQuery);
         const tutorsData = tutorsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setAllTutors(tutorsData);
-
-        // Fetch current student's data and listen for wallet changes
-        if (auth.currentUser) {
-            const studentRef = doc(db, 'users', auth.currentUser.uid);
-            unsubscribe = onSnapshot(studentRef, (doc) => {
-                if (doc.exists()) {
-                    const studentData = doc.data();
-                    setStudentName(studentData.name || 'User');
-                    setWalletBalance(studentData.walletBalance || 0);
-                }
-            });
-        }
       };
+      
+      fetchTutors();
 
-      fetchData();
-
-      // Return the cleanup function
+      let unsubscribe: (() => void) | undefined;
+      if (auth.currentUser) {
+        const studentRef = doc(db, 'users', auth.currentUser.uid);
+        unsubscribe = onSnapshot(studentRef, (doc) => {
+            if (doc.exists()) {
+                const studentData = doc.data();
+                setStudentName(studentData.name || 'User');
+                setWalletBalance(studentData.walletBalance || 0);
+            }
+        });
+      }
+      
       return () => {
         if (unsubscribe) {
           unsubscribe();
@@ -55,7 +51,6 @@ export default function DashboardPage() {
 
     const recommendedTutors = useMemo(() => {
         if (!allTutors.length) return [];
-        // A simple recommendation logic: filter out non-available tutors and take top 3
         return allTutors.filter(tutor => tutor.isOnline && !tutor.isBusy).slice(0, 3);
     }, [allTutors]);
 
