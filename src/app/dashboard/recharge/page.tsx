@@ -10,7 +10,6 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DollarSign, QrCode, UploadCloud, Hourglass } from 'lucide-react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
@@ -33,7 +32,7 @@ const qrCodeMapping: { [key: number]: string } = {
   200: 'https://i.ibb.co/mCjX1qBS/200.jpg',
   500: 'https://i.ibb.co/7d7MpxCC/500.jpg',
   1000: 'https://i.ibb.co/twttTb7f/1000.jpg',
-  default: 'https://i.ibb.co/7d7MpxCC/500.jpg' // Fallback for custom amounts
+  default: 'https://i.ibb.co/k2MDtfnR/manual.jpg' // Fallback for custom amounts
 };
 
 export default function RechargePage() {
