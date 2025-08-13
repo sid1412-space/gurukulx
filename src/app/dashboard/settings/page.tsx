@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -10,47 +9,110 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Loader2, Palette, Bell, KeyRound } from 'lucide-react';
+
+// Firebase imports for real functionality
+import { getAuth, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
+import { auth, db } from '@/lib/firebase';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(1, "Current password is required."),
   newPassword: z.string().min(6, 'New password must be at least 6 characters.'),
 });
 
-const notificationSchema = z.object({}); // Empty schema for the form wrapper
 
 export default function SettingsPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  // State to hold notification settings fetched from the database
+  const [notificationSettings, setNotificationSettings] = useState({
+    email: true,
+    sessionReminders: false,
+  });
 
   const passwordForm = useForm<z.infer<typeof passwordSchema>>({
     resolver: zodResolver(passwordSchema),
     defaultValues: { currentPassword: '', newPassword: '' },
   });
+  
+  // useEffect to load the user's settings when the page loads
+  useEffect(() => {
+    const fetchUserSettings = async () => {
+        if (auth.currentUser) {
+            const userRef = doc(db, "users", auth.currentUser.uid);
+            const docSnap = await getDoc(userRef);
+            if (docSnap.exists() && docSnap.data().notificationSettings) {
+                setNotificationSettings(docSnap.data().notificationSettings);
+            }
+        }
+    };
+    fetchUserSettings();
+  }, []);
 
-  const notificationForm = useForm<z.infer<typeof notificationSchema>>({
-    defaultValues: {},
-  });
-
-  function onPasswordSubmit(values: z.infer<typeof passwordSchema>) {
+  // ✅ FIXED: This function now correctly updates the password in Firebase
+  async function onPasswordSubmit(values: z.infer<typeof passwordSchema>) {
     setIsLoading(true);
-    console.log(values);
-    setTimeout(() => {
-      toast({
-        title: 'Password Updated',
-        description: 'Your password has been changed successfully.',
-      });
-      setIsLoading(false);
-      passwordForm.reset();
-    }, 1000);
+    const auth = getAuth();
+    const currentUser = auth.currentUser;
+
+    if (!currentUser || !currentUser.email) {
+        toast({ variant: 'destructive', title: 'Error', description: 'User not found.' });
+        setIsLoading(false);
+        return;
+    }
+
+    try {
+        const credential = EmailAuthProvider.credential(currentUser.email, values.currentPassword);
+        await reauthenticateWithCredential(currentUser, credential);
+        await updatePassword(currentUser, values.newPassword);
+
+        toast({
+            title: 'Password Updated',
+            description: 'Your password has been changed successfully.',
+        });
+        passwordForm.reset();
+
+    } catch (error: any) {
+        console.error(error);
+        toast({
+            variant: 'destructive',
+            title: 'Error updating password',
+            description: 'Please check your current password and try again.',
+        });
+    } finally {
+        setIsLoading(false);
+    }
   }
 
-  const handleToggle = (feature: string, enabled: boolean) => {
-    toast({
-        title: `${feature} ${enabled ? 'Enabled' : 'Disabled'}`,
-        description: `Your notification settings have been updated.`
-    });
+  // ✅ FIXED: This function now saves the notification preference to Firestore
+  const handleToggle = async (field: 'email' | 'sessionReminders', enabled: boolean) => {
+    if (!auth.currentUser) return;
+    
+    // Optimistically update UI
+    const newSettings = { ...notificationSettings, [field]: enabled };
+    setNotificationSettings(newSettings);
+
+    const userRef = doc(db, "users", auth.currentUser.uid);
+    try {
+        await updateDoc(userRef, {
+            notificationSettings: newSettings
+        });
+        toast({
+            title: `Notifications Updated`,
+            description: `Your settings have been saved.`
+        });
+    } catch (error) {
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Could not save your settings.'
+        });
+        // Revert UI change on error
+        setNotificationSettings(notificationSettings);
+    }
   }
 
 
@@ -63,10 +125,10 @@ export default function SettingsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-             <Card>
+            <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2"><KeyRound/> Change Password</CardTitle>
-                  <CardDescription>For your security, we recommend using a strong password.</CardDescription>
+                    <CardTitle className="flex items-center gap-2"><KeyRound/> Change Password</CardTitle>
+                    <CardDescription>For your security, we recommend using a strong password.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Form {...passwordForm}>
@@ -104,32 +166,38 @@ export default function SettingsPage() {
                     </form>
                   </Form>
                 </CardContent>
-              </Card>
+            </Card>
         </div>
 
         <div className="space-y-8">
             <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Bell/> Notifications</CardTitle>
-                <CardDescription>Choose how you want to be notified.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Form {...notificationForm}>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                      <FormLabel htmlFor="email-notifications">Email Notifications</FormLabel>
-                      <Switch id="email-notifications" defaultChecked onCheckedChange={(checked) => handleToggle('Email notifications', checked)}/>
+              <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><Bell/> Notifications</CardTitle>
+                  <CardDescription>Choose how you want to be notified.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <FormLabel htmlFor="email-notifications">Email Notifications</FormLabel>
+                        <Switch 
+                          id="email-notifications" 
+                          checked={notificationSettings.email}
+                          onCheckedChange={(checked) => handleToggle('email', checked)}
+                        />
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <FormLabel htmlFor="push-notifications">Session Reminders</FormLabel>
+                        <Switch 
+                          id="push-notifications"
+                          checked={notificationSettings.sessionReminders}
+                          onCheckedChange={(checked) => handleToggle('sessionReminders', checked)}
+                        />
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                      <FormLabel htmlFor="push-notifications">Session Reminders</FormLabel>
-                      <Switch id="push-notifications" onCheckedChange={(checked) => handleToggle('Session reminders', checked)}/>
-                  </div>
-                </div>
-              </Form>
-            </CardContent>
+              </CardContent>
             </Card>
 
-             <Card>
+            <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Palette/> Appearance</CardTitle>
                     <CardDescription>Customize the look and feel.</CardDescription>
