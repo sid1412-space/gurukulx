@@ -120,12 +120,15 @@ export default function FinancialManagementPage() {
     try {
       await updateDoc(tutorRef, {
         pendingEarnings: increment(values.earnings),
+        todayEarnings: increment(values.earnings),
+        todaySessions: increment(1),
       });
       toast({
         title: 'Earnings Updated',
-        description: `Added ₹${values.earnings.toFixed(2)} to ${values.tutorEmail}'s pending earnings.`,
+        description: `Added ₹${values.earnings.toFixed(2)} to ${values.tutorEmail}'s pending earnings and daily stats.`,
       });
       updateEarningsForm.reset();
+      fetchFinancialData(); // Refresh data in case this impacts other stats
     } catch (error) {
       toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not update tutor earnings.' });
     }
