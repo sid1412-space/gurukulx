@@ -46,21 +46,9 @@ export default function LoginForm() {
   });
 
   const handleRedirect = async (user: User) => {
-    // Specific check for the admin user email
-    if (user.email === 'gurukulxconnect@yahoo.com') {
-      localStorage.setItem('isLoggedIn', 'true');
-      localStorage.setItem('loggedInUser', user.email);
-      localStorage.setItem('isTutor', 'false');
-      localStorage.setItem('isAdmin', 'true');
-      window.dispatchEvent(new Event("storage"));
-      router.push('/admin');
-      return;
-    }
-  
     const userRef = doc(db, "users", user.uid);
     let docSnap = await getDoc(userRef);
 
-    // If the user exists in Auth but not in Firestore, create their document.
     if (!docSnap.exists()) {
         const newUserDoc = {
             uid: user.uid,
@@ -74,29 +62,31 @@ export default function LoginForm() {
         docSnap = await getDoc(userRef); // Re-fetch the document
     }
 
-    let destination = '/dashboard'; // Default for students
     const userData = docSnap.data();
 
     if (userData) {
         localStorage.setItem('isLoggedIn', 'true');
         localStorage.setItem('loggedInUser', userData.email);
-        
-        const isTutorOrApplicant = ['tutor', 'banned', 'applicant'].includes(userData.role);
-        localStorage.setItem('isTutor', isTutorOrApplicant.toString());
-        localStorage.setItem('isAdmin', 'false'); // Explicitly set to false for non-admins
 
-        if (isTutorOrApplicant) {
-            destination = '/tutor/dashboard';
+        const isTutorRole = ['tutor', 'banned', 'applicant'].includes(userData.role);
+        const isAdminRole = userData.role === 'admin';
+
+        localStorage.setItem('isTutor', isTutorRole.toString());
+        localStorage.setItem('isAdmin', isAdminRole.toString());
+        
+        window.dispatchEvent(new Event("storage"));
+
+        if (isAdminRole) {
+            router.push('/admin');
+        } else if (isTutorRole) {
+            router.push('/tutor/dashboard');
+        } else {
+            router.push('/dashboard');
         }
     } else {
         toast({ variant: 'destructive', title: 'Error', description: 'Could not retrieve user profile.' });
         setIsLoading(false);
-        return;
     }
-
-    // This makes sure other tabs know about the login status change
-    window.dispatchEvent(new Event("storage"));
-    router.push(destination);
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {

@@ -153,6 +153,7 @@ export default function TutorProfilePage() {
   const statusText = tutor.isBusy ? 'In Session' : (tutor.isOnline ? 'Online' : 'Offline');
   const statusColor = tutor.isBusy ? 'bg-yellow-500' : (tutor.isOnline ? 'bg-green-500' : 'bg-gray-400');
   const hasFunds = walletBalance > 0;
+  const primarySubject = tutor.applicationDetails?.expertise;
 
   return (
     <div className="bg-secondary/30">
@@ -180,9 +181,9 @@ export default function TutorProfilePage() {
             </div>
             
             <div className="mt-6 flex flex-wrap justify-center gap-2">
-                {(tutor.subjects || []).map((subject: string) => (
-                    <Badge key={subject} variant="secondary" className="text-base px-4 py-1">{subject}</Badge>
-                ))}
+                {primarySubject && (
+                    <Badge variant="secondary" className="text-base px-4 py-1">{primarySubject}</Badge>
+                )}
             </div>
             </CardContent>
             

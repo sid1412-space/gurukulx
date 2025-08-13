@@ -84,7 +84,7 @@ export default function TutorSettingsPage() {
                     name: userData.name || '',
                     email: userData.email,
                     bio: userData.bio || '',
-                    subjects: (userData.subjects || []).join(', ')
+                    subjects: userData.applicationDetails?.expertise ? [userData.applicationDetails.expertise].join(', ') : '',
                 });
                 payoutForm.reset(userData.payoutDetails || {
                     accountHolderName: '', accountNumber: '', ifscCode: '', upiId: ''
@@ -120,7 +120,7 @@ export default function TutorSettingsPage() {
             name: values.name,
             avatar: avatarPreview,
             bio: values.bio,
-            subjects: values.subjects ? values.subjects.split(',').map(s => s.trim()) : [],
+            'applicationDetails.expertise': values.subjects ? values.subjects.split(',')[0].trim() : '',
         });
         toast({
             title: 'Profile Updated',
@@ -225,11 +225,11 @@ export default function TutorSettingsPage() {
                       name="subjects"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Your Subjects</FormLabel>
+                          <FormLabel>Your Primary Subject</FormLabel>
                           <FormControl>
-                            <Input placeholder="e.g., Physics, Calculus" {...field} />
+                            <Input placeholder="e.g., Physics" {...field} />
                           </FormControl>
-                          <FormDescription>Separate subjects with commas. This will be shown on your profile.</FormDescription>
+                          <FormDescription>This will be shown on your profile as your main area of expertise.</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
