@@ -55,11 +55,11 @@ export default function LoginForm() {
         const userData = docSnap.data();
         localStorage.setItem('isLoggedIn', 'true');
         localStorage.setItem('loggedInUser', userData.email); // Store email for client-side use
-        localStorage.setItem('isTutor', (userData.role === 'tutor').toString());
+        localStorage.setItem('isTutor', (userData.role === 'tutor' || userData.role === 'banned').toString());
         localStorage.setItem('isAdmin', (userData.role === 'admin').toString());
 
         if(userData.role === 'admin') destination = '/admin';
-        if(userData.role === 'tutor') destination = '/tutor/dashboard';
+        if(userData.role === 'tutor' || userData.role === 'banned') destination = '/tutor/dashboard';
     } else {
         // This case handles new Google sign-ins that aren't in our DB
         const newUserDoc = {
