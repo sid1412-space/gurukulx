@@ -20,6 +20,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import React, { useEffect, useState } from 'react';
 import { useIsClient } from '@/hooks/use-is-client';
+import { auth, db } from '@/lib/firebase';
+import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+
 
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -38,53 +42,66 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [isAuthorized, setIsAuthorized] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [userInitial, setUserInitial] = useState('U');
-  const isClient = useIsClient();
+
 
   useEffect(() => {
-    if (isClient) {
-        const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
-        const isTutor = localStorage.getItem('isTutor') === 'true';
-        const isAdmin = localStorage.getItem('isAdmin') === 'true';
+    const unsubscribe = onAuthStateChanged(auth, async (user: FirebaseUser | null) => {
+      if (user) {
+        try {
+          const userDocRef = doc(db, 'users', user.uid);
+          const userDoc = await getDoc(userDocRef);
 
-        if (loggedIn && !isTutor && !isAdmin) {
+          if (userDoc.exists() && userDoc.data().role === 'student') {
             setIsAuthorized(true);
-            const loggedInUserEmail = localStorage.getItem('loggedInUser');
-            if (loggedInUserEmail) {
-              const usersJSON = localStorage.getItem('userDatabase');
-              if (usersJSON) {
-                const users = JSON.parse(usersJSON);
-                const currentUser = users.find((u: any) => u.email === loggedInUserEmail);
-                if (currentUser && currentUser.name) {
-                  setUserInitial(currentUser.name.charAt(0).toUpperCase());
-                }
-              }
+            const userData = userDoc.data();
+            if (userData.name) {
+                setUserInitial(userData.name.charAt(0).toUpperCase());
             }
-        } else {
+          } else {
             router.push('/login');
+          }
+        } catch (error) {
+          console.error("Error checking student status:", error);
+          router.push('/login');
         }
-    }
-  }, [isClient, router, pathname]);
+      } else {
+        router.push('/login');
+      }
+      setIsLoading(false);
+    });
 
-  const handleLogout = () => {
+    return () => unsubscribe();
+  }, [router]);
+
+
+  const handleLogout = async () => {
+    await auth.signOut();
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('isAdmin');
     localStorage.removeItem('isTutor');
     localStorage.removeItem('loggedInUser');
-    setIsAuthorized(false);
     window.dispatchEvent(new Event("storage"));
     router.push('/');
   }
 
-  if (!isAuthorized) {
+  if (isLoading) {
      return (
         <div className="flex items-center justify-center h-screen bg-background">
-            <div className="flex flex-col items-center gap-2">
-                 <p className="text-muted-foreground">Redirecting...</p>
-            </div>
+            <p>Verifying authorization...</p>
         </div>
     );
   }
+  
+  if (!isAuthorized) {
+     return (
+        <div className="flex items-center justify-center h-screen bg-background">
+            <p>Redirecting to login...</p>
+        </div>
+    );
+  }
+
 
   return (
     <SidebarProvider>
