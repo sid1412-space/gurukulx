@@ -31,7 +31,9 @@ type Tutor = {
   id: string;
   name: string;
   avatar: string;
-  subjects?: string[];
+  applicationDetails?: {
+      expertise?: string;
+  };
   bio: string;
   rating: number;
   price: number;
@@ -142,6 +144,7 @@ export default function TutorCard({ tutor }: TutorCardProps) {
   const statusText = tutor.isBusy ? 'In Session' : (tutor.isOnline ? 'Online' : 'Offline');
   const statusColor = tutor.isBusy ? 'bg-yellow-500' : (tutor.isOnline ? 'bg-green-500' : 'bg-gray-400');
   const hasFunds = walletBalance > 0;
+  const primarySubject = tutor.applicationDetails?.expertise;
 
   return (
     <Card className="h-full flex flex-col hover:shadow-lg transition-shadow duration-300">
@@ -172,9 +175,9 @@ export default function TutorCard({ tutor }: TutorCardProps) {
       </CardHeader>
       <CardContent className="flex-grow">
         <div className="flex flex-wrap gap-2 mb-4">
-          {(tutor.subjects || []).map((subject) => (
-            <Badge key={subject} variant="secondary">{subject}</Badge>
-          ))}
+          {primarySubject && (
+            <Badge variant="secondary">{primarySubject}</Badge>
+          )}
         </div>
         <CardDescription className="line-clamp-3">{tutor.bio}</CardDescription>
       </CardContent>

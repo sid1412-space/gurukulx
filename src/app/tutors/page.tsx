@@ -50,8 +50,8 @@ export default function TutorsPage() {
     let filtered = allTutors;
 
     if (selectedSubject) {
-      filtered = filtered.filter((tutor) =>
-        tutor.subjects?.includes(selectedSubject)
+       filtered = filtered.filter((tutor) =>
+        tutor.applicationDetails?.expertise === selectedSubject
       );
     }
 
@@ -59,9 +59,7 @@ export default function TutorsPage() {
       filtered = filtered.filter(
         (tutor) =>
           tutor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          tutor.subjects?.some((s:string) =>
-            s.toLowerCase().includes(searchQuery.toLowerCase())
-          )
+          tutor.applicationDetails?.expertise?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
