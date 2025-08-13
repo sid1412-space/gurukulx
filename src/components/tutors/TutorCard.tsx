@@ -32,7 +32,7 @@ type Tutor = {
   name: string;
   avatar: string;
   applicationDetails?: {
-    expertise: string[];
+    expertise: string[] | string;
   };
   bio: string;
   rating: number;
@@ -144,6 +144,10 @@ export default function TutorCard({ tutor }: TutorCardProps) {
   const statusText = tutor.isBusy ? 'In Session' : (tutor.isOnline ? 'Online' : 'Offline');
   const statusColor = tutor.isBusy ? 'bg-yellow-500' : (tutor.isOnline ? 'bg-green-500' : 'bg-gray-400');
   const hasFunds = walletBalance > 0;
+  
+  const expertise = tutor.applicationDetails?.expertise || [];
+  const subjects = typeof expertise === 'string' ? expertise.split(',').map(s => s.trim()) : expertise;
+
 
   return (
     <Card className="h-full flex flex-col hover:shadow-lg transition-shadow duration-300">
@@ -174,7 +178,7 @@ export default function TutorCard({ tutor }: TutorCardProps) {
       </CardHeader>
       <CardContent className="flex-grow">
         <div className="flex flex-wrap gap-2 mb-4">
-          {(tutor.applicationDetails?.expertise || []).map((subject) => (
+          {subjects.map((subject) => (
             <Badge key={subject} variant="secondary">{subject}</Badge>
           ))}
         </div>
