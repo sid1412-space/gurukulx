@@ -28,7 +28,7 @@ type Step = 'amount' | 'payment' | 'confirmation' | 'pending';
 const predefinedAmounts = [50, 100, 200, 500, 1000];
 
 const qrCodeMapping: { [key: number]: string } = {
-  50: 'https://i.ibb.co/L0pD1h0/qr-code.png',
+  50: 'https://i.ibb.co/fVf38xV7/photo-2025-08-13-00-27-57.jpg',
   100: 'https://i.ibb.co/L0pD1h0/qr-code.png',
   200: 'https://i.ibb.co/L0pD1h0/qr-code.png',
   500: 'https://i.ibb.co/L0pD1h0/qr-code.png',
@@ -230,5 +230,3 @@ export default function RechargePage() {
     </div>
   );
 }
-
-    
