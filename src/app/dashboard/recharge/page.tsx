@@ -31,9 +31,9 @@ const qrCodeMapping: { [key: number]: string } = {
   50: 'https://i.ibb.co/p6LNHGJf/100.jpg',
   100: 'https://i.ibb.co/p6LNHGJf/100.jpg',
   200: 'https://i.ibb.co/mCjX1qBS/200.jpg',
-  500: 'https://i.ibb.co/L0pD1h0/qr-code.png',
-  1000: 'https://i.ibb.co/L0pD1h0/qr-code.png',
-  default: 'https://i.ibb.co/L0pD1h0/qr-code.png' // Fallback for custom amounts
+  500: 'https://i.ibb.co/7d7MpxCC/500.jpg',
+  1000: 'https://i.ibb.co/twttTb7f/1000.jpg',
+  default: 'https://i.ibb.co/7d7MpxCC/500.jpg' // Fallback for custom amounts
 };
 
 export default function RechargePage() {
