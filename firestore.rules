@@ -4,52 +4,79 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
   
-    // Helper functions
+    // Helper function to check for admin role
     function isAdmin() {
-      return request.auth.token.email == 'gurukulxconnect@yahoo.com';
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.email == 'gurukulxconnect@yahoo.com';
     }
     
+    // Helper function to check if the user is the owner of the document
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
-    
-    function isSignedIn() {
-      return request.auth != null;
-    }
 
-    match /{document=**} {
-      allow read, write: if isAdmin();
-    }
-
+    // Users collection
     match /users/{userId} {
-      allow read: if isSignedIn();
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId) || isAdmin();
+      // Admins can read/write any user document
+      allow read, write: if isAdmin();
+      
+      // Any authenticated user can read any user's public profile data
+      allow get: if request.auth != null;
+      
+      // Users can update their own document, and listen for real-time changes
+      allow update, list: if request.auth != null && isOwner(userId);
     }
     
+    // Sessions collection
     match /sessions/{sessionId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn(); // For ratings
+       // Admins have full access
+       allow read, write, create: if isAdmin();
+       
+       // Students and Tutors can read sessions they are part of
+       allow read: if request.auth != null && (resource.data.studentId == request.auth.uid || resource.data.tutorId == request.auth.uid);
+       
+       // Students can create sessions
+       allow create: if request.auth != null && request.resource.data.studentId == request.auth.uid;
+
+       // Students/Tutors can update a session (e.g., to add a rating)
+       allow update: if request.auth != null && (resource.data.studentId == request.auth.uid || resource.data.tutorId == request.auth.uid);
     }
 
-    match /sessionRequests/{requestId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update, delete: if isSignedIn(); 
+    // Recharge Requests
+    match /rechargeRequests/{requestId} {
+        // Admins can read/write all requests
+        allow read, write: if isAdmin();
+        
+        // Students can create their own recharge requests
+        allow create: if request.auth != null && request.resource.data.studentId == request.auth.uid;
     }
     
-    match /rechargeRequests/{requestId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update, delete: if isAdmin();
+    // Payouts collection (historical record of processed payouts)
+    match /payouts/{payoutId} {
+       // Admins can read/write all payout records
+       allow read, write: if isAdmin();
+       
+       // Tutors can read their own payout records
+       allow read: if request.auth != null && resource.data.tutorId == request.auth.uid;
     }
-
+    
+    // Payout Requests
     match /payoutRequests/{requestId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update, delete: if isAdmin();
+       // Admins can read/write all requests
+       allow read, write, delete: if isAdmin();
+       
+       // Tutors can create their own payout requests
+       allow create: if request.auth != null && request.resource.data.tutorId == request.auth.uid;
+    }
+    
+    // Session Requests (real-time notifications)
+    match /sessionRequests/{requestId} {
+        // Tutors can read requests made to them
+        allow read: if request.auth != null && resource.data.tutorId == request.auth.uid;
+        // Students can create requests
+        allow create: if request.auth != null && request.resource.data.studentId == request.auth.uid;
+        // Tutors can update (accept) requests, students can delete (cancel) them
+        allow update, delete: if request.auth != null && (resource.data.tutorId == request.auth.uid || resource.data.studentId == request.auth.uid);
     }
   }
 }
