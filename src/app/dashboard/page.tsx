@@ -18,35 +18,35 @@ export default function DashboardPage() {
     const [walletBalance, setWalletBalance] = useState(0);
     const [studentName, setStudentName] = useState('User');
 
+    // Effect for fetching static tutor data
     useEffect(() => {
-      if (!isClient) return;
-
-      const fetchTutors = async () => {
-        const tutorsQuery = query(collection(db, "users"), where("role", "==", "tutor"));
-        const tutorsSnapshot = await getDocs(tutorsQuery);
-        const tutorsData = tutorsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setAllTutors(tutorsData);
-      };
-      
-      fetchTutors();
-
-      let unsubscribe: (() => void) | undefined;
-      if (auth.currentUser) {
-        const studentRef = doc(db, 'users', auth.currentUser.uid);
-        unsubscribe = onSnapshot(studentRef, (doc) => {
-            if (doc.exists()) {
-                const studentData = doc.data();
-                setStudentName(studentData.name || 'User');
-                setWalletBalance(studentData.walletBalance || 0);
-            }
-        });
-      }
-      
-      return () => {
-        if (unsubscribe) {
-          unsubscribe();
+        const fetchTutors = async () => {
+            const tutorsQuery = query(collection(db, "users"), where("role", "==", "tutor"));
+            const tutorsSnapshot = await getDocs(tutorsQuery);
+            const tutorsData = tutorsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setAllTutors(tutorsData);
+        };
+        
+        if (isClient) {
+            fetchTutors();
         }
-      };
+    }, [isClient]);
+
+    // Effect for listening to real-time student data changes
+    useEffect(() => {
+        if (isClient && auth.currentUser) {
+            const studentRef = doc(db, 'users', auth.currentUser.uid);
+            const unsubscribe = onSnapshot(studentRef, (doc) => {
+                if (doc.exists()) {
+                    const studentData = doc.data();
+                    setStudentName(studentData.name || 'User');
+                    setWalletBalance(studentData.walletBalance || 0);
+                }
+            });
+
+            // Cleanup subscription on component unmount
+            return () => unsubscribe();
+        }
     }, [isClient]);
 
     const recommendedTutors = useMemo(() => {
@@ -116,7 +116,7 @@ export default function DashboardPage() {
        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Activity className="h-5 w-5"/> Recent Activity</CardTitle>
-          </Header>
+          </CardHeader>
           <CardContent>
             <div className="text-center text-muted-foreground py-8">
                 <p>You have no recent activity.</p>
