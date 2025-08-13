@@ -9,7 +9,7 @@ import { useIsClient } from '@/hooks/use-is-client';
 import { useEffect, useState, useMemo } from 'react';
 import TutorCard from '@/components/tutors/TutorCard';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, onSnapshot, Unsubscribe } from 'firebase/firestore';
 
 
 export default function DashboardPage() {
@@ -19,33 +19,38 @@ export default function DashboardPage() {
     const [studentName, setStudentName] = useState('User');
 
     useEffect(() => {
-        const fetchData = async () => {
-            if (auth.currentUser) {
-                // Fetch tutors
-                const tutorsQuery = query(collection(db, "users"), where("role", "==", "tutor"));
-                const tutorsSnapshot = await getDocs(tutorsQuery);
-                const tutorsData = tutorsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                setAllTutors(tutorsData);
+      if (!isClient) return;
 
-                // Fetch current student's data and listen for wallet changes
-                const studentRef = doc(db, 'users', auth.currentUser.uid);
-                const unsubscribe = onSnapshot(studentRef, (doc) => {
-                    if (doc.exists()) {
-                        const studentData = doc.data();
-                        setStudentName(studentData.name || 'User');
-                        setWalletBalance(studentData.walletBalance || 0);
-                    }
-                });
-                return () => unsubscribe();
-            }
-        };
+      let unsubscribe: Unsubscribe | undefined;
 
-        if (isClient) {
-            const unsubscribePromise = fetchData();
-            return () => {
-                unsubscribePromise.then(unsub => unsub && unsub());
-            };
+      const fetchData = async () => {
+        // Fetch tutors
+        const tutorsQuery = query(collection(db, "users"), where("role", "==", "tutor"));
+        const tutorsSnapshot = await getDocs(tutorsQuery);
+        const tutorsData = tutorsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setAllTutors(tutorsData);
+
+        // Fetch current student's data and listen for wallet changes
+        if (auth.currentUser) {
+            const studentRef = doc(db, 'users', auth.currentUser.uid);
+            unsubscribe = onSnapshot(studentRef, (doc) => {
+                if (doc.exists()) {
+                    const studentData = doc.data();
+                    setStudentName(studentData.name || 'User');
+                    setWalletBalance(studentData.walletBalance || 0);
+                }
+            });
         }
+      };
+
+      fetchData();
+
+      // Return the cleanup function
+      return () => {
+        if (unsubscribe) {
+          unsubscribe();
+        }
+      };
     }, [isClient]);
 
     const recommendedTutors = useMemo(() => {
