@@ -1,0 +1,20 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow authenticated users to read and write to any document.
+    // This is suitable for development but should be refined for production.
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Make tutor profiles public so anyone can see them.
+    // This rule allows anyone to read documents in the 'users' collection
+    // if the document has the role of 'tutor'.
+    match /users/{userId} {
+      allow read: if resource.data.role == 'tutor' || (request.auth != null && request.auth.uid == userId);
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
