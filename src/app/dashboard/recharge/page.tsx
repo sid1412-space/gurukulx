@@ -27,12 +27,12 @@ type Step = 'amount' | 'payment' | 'confirmation' | 'pending';
 const predefinedAmounts = [50, 100, 200, 500, 1000];
 
 const qrCodeMapping: { [key: number]: string } = {
-  50: 'https://i.ibb.co/j9mCVr9F/photo-2025-08-13-00-27-57.jpg',
-  100: 'https://i.ibb.co/p6LNHGJf/100.jpg',
-  200: 'https://i.ibb.co/mCjX1qBS/200.jpg',
-  500: 'https://i.ibb.co/7d7MpxCC/500.jpg',
-  1000: 'https://i.ibb.co/twttTb7f/1000.jpg',
-  default: 'https://i.ibb.co/k2MDtfnR/manual.jpg' // Fallback for custom amounts
+  50: 'https://placehold.co/250x250.png',
+  100: 'https://placehold.co/250x250.png',
+  200: 'https://placehold.co/250x250.png',
+  500: 'https://placehold.co/250x250.png',
+  1000: 'https://placehold.co/250x250.png',
+  default: 'https://placehold.co/250x250.png' // Fallback for custom amounts
 };
 
 export default function RechargePage() {

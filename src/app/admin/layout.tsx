@@ -127,7 +127,7 @@ export default function AdminLayout({
             <div className="flex items-center gap-4">
                 <p className="text-sm font-semibold">{user?.name || 'Admin'}</p>
                 <Avatar>
-                    <AvatarImage src={user?.avatar || "https://i.ibb.co/xqvy59YP/Chat-GPT-Image-Aug-12-2025-11-06-21-PM.png"} alt="Admin Avatar" data-ai-hint="person avatar"/>
+                    <AvatarImage src={user?.avatar || "https://placehold.co/100x100.png"} alt="Admin Avatar" data-ai-hint="person avatar"/>
                     <AvatarFallback>{user?.name ? user.name.charAt(0).toUpperCase() : 'A'}</AvatarFallback>
                 </Avatar>
                   <Button variant="ghost" onClick={handleLogout}>Logout</Button>
