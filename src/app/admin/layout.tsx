@@ -40,6 +40,7 @@ export default function AdminLayout({
   const pathname = usePathname();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user: User | null) => {
@@ -50,6 +51,7 @@ export default function AdminLayout({
 
           if (userDoc.exists() && userDoc.data().role === 'admin') {
             setIsAuthorized(true);
+            setUser(userDoc.data());
             localStorage.setItem('isLoggedIn', 'true');
             localStorage.setItem('isAdmin', 'true');
           } else {
@@ -123,10 +125,10 @@ export default function AdminLayout({
         <div className="p-4 flex items-center justify-between border-b">
             <SidebarTrigger />
             <div className="flex items-center gap-4">
-                <p className="text-sm font-semibold">Admin</p>
+                <p className="text-sm font-semibold">{user?.name || 'Admin'}</p>
                 <Avatar>
-                    <AvatarImage src="https://i.ibb.co/xqvy59YP/Chat-GPT-Image-Aug-12-2025-11-06-21-PM.png" alt="Admin Avatar" data-ai-hint="person avatar"/>
-                    <AvatarFallback>A</AvatarFallback>
+                    <AvatarImage src={user?.avatar || "https://i.ibb.co/xqvy59YP/Chat-GPT-Image-Aug-12-2025-11-06-21-PM.png"} alt="Admin Avatar" data-ai-hint="person avatar"/>
+                    <AvatarFallback>{user?.name ? user.name.charAt(0).toUpperCase() : 'A'}</AvatarFallback>
                 </Avatar>
                   <Button variant="ghost" onClick={handleLogout}>Logout</Button>
             </div>

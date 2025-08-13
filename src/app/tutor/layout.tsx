@@ -39,6 +39,7 @@ export default function TutorLayout({
   const pathname = usePathname();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user: User | null) => {
@@ -49,6 +50,7 @@ export default function TutorLayout({
           
           if (userDoc.exists()) {
             const userData = userDoc.data();
+            setUser(userData);
             const isTutorRole = ['tutor', 'applicant'].includes(userData.role);
 
             if (isTutorRole) {
@@ -129,10 +131,10 @@ export default function TutorLayout({
         <div className="p-4 flex items-center justify-between border-b">
             <SidebarTrigger />
             <div className="flex items-center gap-4">
-                <p className="text-sm font-semibold">Tutor</p>
+                <p className="text-sm font-semibold">{user?.name || 'Tutor'}</p>
                 <Avatar>
-                    <AvatarImage src="https://placehold.co/100x100.png" alt="Tutor Avatar" data-ai-hint="person avatar"/>
-                    <AvatarFallback>T</AvatarFallback>
+                    <AvatarImage src={user?.avatar || "https://placehold.co/100x100.png"} alt="Tutor Avatar" data-ai-hint="person avatar"/>
+                    <AvatarFallback>{user?.name ? user.name.charAt(0).toUpperCase() : 'T'}</AvatarFallback>
                 </Avatar>
                   <Button variant="ghost" onClick={handleLogout}>Logout</Button>
             </div>
