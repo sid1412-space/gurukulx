@@ -38,10 +38,13 @@ export default function TutorNotification() {
 
     const unsubscribe = onSnapshot(requestsQuery, (snapshot) => {
         if (!snapshot.empty) {
-        const requestDoc = snapshot.docs[0];
-        setActiveRequest({ id: requestDoc.id, ...requestDoc.data() } as SessionRequest);
+          const requestDoc = snapshot.docs[0];
+          // Check if the request is still active before setting it
+          if (requestDoc.exists()) {
+             setActiveRequest({ id: requestDoc.id, ...requestDoc.data() } as SessionRequest);
+          }
         } else {
-        setActiveRequest(null);
+          setActiveRequest(null);
         }
     });
 
@@ -128,5 +131,3 @@ export default function TutorNotification() {
     </Card>
   );
 }
-
-    
