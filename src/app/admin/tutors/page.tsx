@@ -54,7 +54,7 @@ type Tutor = {
   id: string;
   email: string;
   name: string;
-  role: 'tutor' | 'banned' | 'student';
+  role: 'tutor' | 'banned' | 'student' | 'applicant';
   price?: number;
   applicationDetails?: {
       expertise?: string;
@@ -430,3 +430,5 @@ export default function TutorManagementPage() {
     </div>
   );
 }
+
+    

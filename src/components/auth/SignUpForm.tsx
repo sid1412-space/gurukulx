@@ -137,7 +137,7 @@ export default function SignUpForm() {
             uid: user.uid,
             name: values.name,
             email: values.email,
-            role: 'student', // Start as student, admin will approve
+            role: 'applicant', // Role is applicant until approved by admin
             walletBalance: 0,
             applicationStatus: 'Pending',
             applicationDetails: {
@@ -151,7 +151,7 @@ export default function SignUpForm() {
             },
             createdAt: new Date().toISOString(),
         });
-        handleSuccessfulSignup('Your application is submitted! Please log in to continue.');
+        handleSuccessfulSignup('Your application is submitted! You can log in to check the status.');
     }
   }
 
@@ -457,3 +457,5 @@ export default function SignUpForm() {
     </>
   );
 }
+
+    
