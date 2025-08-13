@@ -47,7 +47,13 @@ export default function TutorSettingsPage() {
   const [avatarPreview, setAvatarPreview] = useState('https://placehold.co/128x128.png');
 
   const profileForm = useForm<z.infer<typeof profileSchema>>({
-    resolver: zodResolver(profileSchema)
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      bio: '',
+      subjects: '',
+    },
   });
 
   const passwordForm = useForm<z.infer<typeof passwordSchema>>({
@@ -56,7 +62,13 @@ export default function TutorSettingsPage() {
   });
   
   const payoutForm = useForm<z.infer<typeof payoutSchema>>({
-    resolver: zodResolver(payoutSchema)
+    resolver: zodResolver(payoutSchema),
+    defaultValues: {
+      accountHolderName: '',
+      accountNumber: '',
+      ifscCode: '',
+      upiId: '',
+    },
   });
 
 
@@ -362,4 +374,3 @@ export default function TutorSettingsPage() {
       </div>
     </div>
   );
-}
