@@ -168,7 +168,7 @@ export default function TutorProfilePage() {
             
             {isClient && (
                  <div className="flex items-center justify-center gap-2 mt-2">
-                    <div className={cn("h-3 w-3 rounded-full", statusColor)}></div>
+                    <div className={cn("h-3 w-3 rounded-full animate-pulse", statusColor)}></div>
                     <span className="text-sm font-semibold text-muted-foreground">{statusText}</span>
                 </div>
             )}

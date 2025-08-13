@@ -49,8 +49,8 @@ export default function TutorsPage() {
   const filteredTutors = useMemo(() => {
     if (!isClient) return [];
 
-    // Filter for tutors who are online and not busy. This is the main pool of available tutors.
-    let availableTutors = allTutors.filter(tutor => tutor.role === 'tutor' && tutor.isOnline && !tutor.isBusy);
+    // Filter for users with the 'tutor' role.
+    let availableTutors = allTutors.filter(tutor => tutor.role === 'tutor');
 
     let filtered = availableTutors;
 

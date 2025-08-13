@@ -161,11 +161,11 @@ export default function TutorCard({ tutor }: TutorCardProps) {
              </Link>
             <div className="flex items-center gap-2 mt-1">
               <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-              <span className="text-muted-foreground font-semibold">{tutor.rating.toFixed(1)}</span>
+              <span className="text-muted-foreground font-semibold">{tutor.rating?.toFixed(1) || 'N/A'}</span>
             </div>
              {isClient && (
                 <div className="flex items-center gap-2 mt-2 text-xs">
-                    <span className={cn("h-2.5 w-2.5 rounded-full", statusColor)}></span>
+                    <span className={cn("h-2.5 w-2.5 rounded-full animate-pulse", statusColor)}></span>
                     <span>{statusText}</span>
                 </div>
             )}
